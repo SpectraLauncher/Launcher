@@ -1,3 +1,9 @@
+## Changes (v0.4.2)
+
+### ✨ Features & Improvements
+- **Manage mods from the browser**: when a mod you're viewing is already installed, the download window now shows **Change version** and a **remove** button instead of "Install" — swap versions or uninstall without leaving the browser. Switching versions cleans up the old file automatically.
+- **Open a mod's page**: click a mod's name in the download window to open its Modrinth or CurseForge page in your browser.
+
 ## Changes (v0.4.1)
 
 ### 🐛 Bug Fixes

@@ -388,7 +388,8 @@
     "openLogs": "打开实时日志",
     "importingModpack": "正在导入整合包…",
     "importingInstance": "正在导入：{name}",
-    "exportingInstance": "正在导出：{name}"
+    "exportingInstance": "正在导出：{name}",
+    "uninstallingMod": "正在移除 {name}"
   },
   "content": {
     "count": "{n} 个项目",
@@ -459,7 +460,8 @@
     "blocked": "{name}：作者屏蔽了第三方下载 — 请从 CurseForge 获取",
     "tabDescription": "描述",
     "tabGallery": "图库",
-    "noGallery": "没有图库图片"
+    "noGallery": "没有图库图片",
+    "uninstalled": "已移除 {name}"
   },
   "mods": {
     "manual": "手动",

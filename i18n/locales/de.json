@@ -388,7 +388,8 @@
     "openLogs": "Live-Logs öffnen",
     "importingModpack": "Importiere Modpack…",
     "importingInstance": "Importiere: {name}",
-    "exportingInstance": "Exportiere: {name}"
+    "exportingInstance": "Exportiere: {name}",
+    "uninstallingMod": "{name} wird entfernt"
   },
   "content": {
     "count": "{n} Einträge",
@@ -459,7 +460,8 @@
     "blocked": "{name}: Der Autor hat Drittanbieter-Downloads blockiert — hol es dir von CurseForge",
     "tabDescription": "Beschreibung",
     "tabGallery": "Galerie",
-    "noGallery": "Keine Galeriebilder"
+    "noGallery": "Keine Galeriebilder",
+    "uninstalled": "{name} entfernt"
   },
   "mods": {
     "manual": "manuell",

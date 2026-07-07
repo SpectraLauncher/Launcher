@@ -388,7 +388,8 @@
     "openLogs": "Открыть логи в реальном времени",
     "importingModpack": "Импорт сборки…",
     "importingInstance": "Импорт: {name}",
-    "exportingInstance": "Экспорт: {name}"
+    "exportingInstance": "Экспорт: {name}",
+    "uninstallingMod": "Удаление {name}"
   },
   "content": {
     "count": "{n} элементов",
@@ -459,7 +460,8 @@
     "blocked": "{name}: автор заблокировал сторонние загрузки — скачайте с CurseForge",
     "tabDescription": "Описание",
     "tabGallery": "Галерея",
-    "noGallery": "Нет изображений в галерее"
+    "noGallery": "Нет изображений в галерее",
+    "uninstalled": "{name} удалён"
   },
   "mods": {
     "manual": "вручную",

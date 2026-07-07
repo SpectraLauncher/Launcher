@@ -123,19 +123,48 @@
               {{ $t('modrinth.selectHint') }}
             </div>
             <div v-else class="p-4">
-              <!-- name row: title on the left, install-latest on the right -->
+              <!-- name row: title on the left, install / manage on the right -->
               <div class="flex items-start justify-between gap-3">
                 <div class="flex min-w-0 items-start gap-3">
                   <img v-if="selected.icon_url" :src="selected.icon_url" class="size-14 shrink-0 rounded-xl object-cover" :alt="selected.title" />
                   <div class="min-w-0">
                     <div class="flex items-center gap-2">
-                      <span class="truncate text-lg font-bold">{{ selected.title }}</span>
+                      <button
+                        type="button"
+                        class="group/title flex min-w-0 items-center gap-1.5 text-left transition hover:text-primary-400"
+                        :title="$t('mods.openPage')"
+                        @click="openProjectPage(selected)"
+                      >
+                        <span class="truncate text-lg font-bold">{{ selected.title }}</span>
+                        <UIcon name="i-lucide-external-link" class="size-4 shrink-0 opacity-0 transition group-hover/title:opacity-100" />
+                      </button>
                       <UBadge v-if="installedIds.has(selected.project_id)" color="success" variant="subtle" size="xs" :label="$t('modrinth.installedShort')" />
                     </div>
                     <div class="text-xs text-neutral-500">{{ $t('modrinth.by', { author: selected.author }) }}</div>
                   </div>
                 </div>
+                <!-- installed mod: change version + uninstall; otherwise: install -->
+                <div v-if="selectedInstalled" class="flex shrink-0 items-center gap-1.5">
+                  <UButton
+                    icon="i-lucide-replace"
+                    color="neutral"
+                    variant="soft"
+                    :disabled="loadingVersions || !versions.length || uninstalling"
+                    :label="$t('mods.changeVersion')"
+                    @click="showAllVersions = true"
+                  />
+                  <UButton
+                    icon="i-lucide-trash-2"
+                    color="error"
+                    variant="soft"
+                    square
+                    :loading="uninstalling"
+                    :title="$t('common.remove')"
+                    @click="doUninstall"
+                  />
+                </div>
                 <UButton
+                  v-else
                   class="shrink-0"
                   :loading="!!installing"
                   :disabled="!latest || loadingVersions"
@@ -276,8 +305,10 @@
 
 <script setup lang="ts">
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { invoke } from '@tauri-apps/api/core'
+import { open as openUrl } from '@tauri-apps/plugin-shell'
 import { marked } from 'marked'
-import type { ModrinthHit, ModrinthVersion, ModrinthCategory, ModrinthSortIndex, ModrinthGalleryItem, ModrinthProjectType } from '~/types/modrinth'
+import type { ModrinthHit, ModrinthVersion, ModrinthCategory, ModrinthSortIndex, ModrinthGalleryItem, ModrinthProjectType, InstalledItem } from '~/types/modrinth'
 import type { LoaderType } from '~/types/launcher'
 
 const { isOpen, config, close } = useModrinthBrowser()
@@ -356,6 +387,7 @@ const selected = ref<ModrinthHit | null>(null)
 const versions = ref<ModrinthVersion[]>([])
 const loadingVersions = ref(false)
 const installing = ref<string | null>(null)
+const uninstalling = ref(false)
 const modpackProgress = ref<{ current: number; total: number } | null>(null)
 const showAllVersions = ref(false)
 
@@ -388,8 +420,16 @@ async function renderBody(md: string) {
   bodyHtml.value = DOMPurify.sanitize(raw, { ADD_ATTR: ['target'] })
 }
 
-// project_ids already installed in the target instance.
+// project_ids already installed in the target instance, plus the full records
+// (keyed by project_id) so we can uninstall a mod straight from the browser.
 const installedIds = ref<Set<string>>(new Set())
+const installedItems = ref<Map<string, InstalledItem>>(new Map())
+
+// The current selection, if it's already installed and can be removed here.
+// Change-version / uninstall from the browser is a mod-only affordance.
+const selectedInstalled = computed(() =>
+  selected.value && kind.value === 'mod' ? installedItems.value.get(selected.value.project_id) ?? null : null,
+)
 
 const latest = computed<ModrinthVersion | null>(() =>
   versions.value.length
@@ -403,11 +443,14 @@ async function loadInstalled() {
     try {
       const items = await modrinth.getInstalled(cfg.instanceId)
       installedIds.value = new Set(items.map(i => i.project_id))
+      installedItems.value = new Map(items.map(i => [i.project_id, i]))
     } catch {
       installedIds.value = new Set()
+      installedItems.value = new Map()
     }
   } else {
     installedIds.value = new Set()
+    installedItems.value = new Map()
   }
 }
 
@@ -499,6 +542,9 @@ async function doInstall(version: ModrinthVersion) {
   const cfg = config.value
   if (!cfg) return
   const name = selected.value?.title ?? ''
+  // When re-installing a different version of an already-installed mod, remember
+  // the previous jar so we can remove it once the new one lands (a version swap).
+  const prevInstalled = selectedInstalled.value
   installing.value = version.id
   const taskId = activity.startTask(
     cfg.mode === 'createModpack' ? t('activity.installingModpack', { name }) : t('activity.installingMod', { name }),
@@ -539,6 +585,8 @@ async function doInstall(version: ModrinthVersion) {
           loaderValue.value,
         )
         installedIds.value = new Set([...installedIds.value, ...res.added.map(i => i.project_id)])
+        rememberInstalled(res.added)
+        await removeReplacedJar(cfg.instanceId, prevInstalled, res.added)
         const deps = res.added.filter(i => i.dependency).length
         toast.add({
           title: deps > 0 ? t('modrinth.installedWithDeps', { name, n: deps }) : t('modrinth.installed', { name }),
@@ -555,6 +603,8 @@ async function doInstall(version: ModrinthVersion) {
         )
         // Mark installed (incl. dependencies) in the results list.
         installedIds.value = new Set([...installedIds.value, ...added.map(i => i.project_id)])
+        rememberInstalled(added)
+        await removeReplacedJar(cfg.instanceId, prevInstalled, added)
         const deps = added.filter(i => i.dependency).length
         toast.add({
           title: deps > 0 ? t('modrinth.installedWithDeps', { name, n: deps }) : t('modrinth.installed', { name }),
@@ -569,6 +619,57 @@ async function doInstall(version: ModrinthVersion) {
     activity.endTask(taskId)
     installing.value = null
     modpackProgress.value = null
+  }
+}
+
+/** Merges freshly-installed items into the lookup used by the uninstall button. */
+function rememberInstalled(items: InstalledItem[]) {
+  const next = new Map(installedItems.value)
+  for (const it of items) next.set(it.project_id, it)
+  installedItems.value = next
+}
+
+/** After a version swap, deletes the previous jar if the filename changed. */
+async function removeReplacedJar(instanceId: string, prev: InstalledItem | null, added: InstalledItem[]) {
+  if (!prev) return
+  const fresh = added.find(a => a.project_id === prev.project_id)
+  if (fresh && fresh.filename !== prev.filename) {
+    try {
+      await invoke('delete_mod', { instanceId, filename: prev.filename })
+    } catch { /* new jar is in place; a leftover old jar is non-fatal */ }
+  }
+}
+
+/** Opens the project's page on Modrinth / CurseForge in the system browser. */
+function openProjectPage(hit: ModrinthHit) {
+  const url = isCf.value
+    ? `https://www.curseforge.com/projects/${hit.project_id}`
+    : `https://modrinth.com/project/${hit.slug || hit.project_id}`
+  openUrl(url).catch(() => { /* nothing to do if the shell can't open it */ })
+}
+
+/** Removes the selected mod's jar from the target instance. */
+async function doUninstall() {
+  const cfg = config.value
+  const hit = selected.value
+  const item = selectedInstalled.value
+  if (!cfg?.instanceId || !hit || !item) return
+  const name = item.name || hit.title
+  uninstalling.value = true
+  const taskId = activity.startTask(t('activity.uninstallingMod', { name }))
+  try {
+    await invoke('delete_mod', { instanceId: cfg.instanceId, filename: item.filename })
+    installedIds.value = new Set([...installedIds.value].filter(id => id !== hit.project_id))
+    const next = new Map(installedItems.value)
+    next.delete(hit.project_id)
+    installedItems.value = next
+    toast.add({ title: t('modrinth.uninstalled', { name }), color: 'success' })
+    cfg.onInstalled?.()
+  } catch (e) {
+    toast.add({ title: String(e), color: 'error' })
+  } finally {
+    activity.endTask(taskId)
+    uninstalling.value = false
   }
 }
 

@@ -188,7 +188,6 @@
     "shenandoah": "Shenandoah (Java 17+)",
     "custom": "Własne"
   },
-
   "export": {
     "title": "Eksport: {name}",
     "format": "Format",
@@ -389,7 +388,8 @@
     "openLogs": "Otwórz logi na żywo",
     "importingModpack": "Importowanie modpacka…",
     "importingInstance": "Importowanie: {name}",
-    "exportingInstance": "Eksportowanie: {name}"
+    "exportingInstance": "Eksportowanie: {name}",
+    "uninstallingMod": "Usuwanie {name}"
   },
   "content": {
     "count": "{n} elementów",
@@ -460,7 +460,8 @@
     "blocked": "{name}: autor zablokował pobieranie w aplikacjach trzecich — pobierz z CurseForge",
     "tabDescription": "Opis",
     "tabGallery": "Galeria",
-    "noGallery": "Brak zdjęć w galerii"
+    "noGallery": "Brak zdjęć w galerii",
+    "uninstalled": "Usunięto {name}"
   },
   "mods": {
     "manual": "ręcznie",
