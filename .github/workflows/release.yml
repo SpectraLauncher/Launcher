@@ -119,10 +119,21 @@ jobs:
           node-version: 24
           cache: 'pnpm'
 
+      # rustup is preinstalled on every runner; wrapping the install in a retry
+      # guards against the transient DNS/connection failures that occasionally
+      # hit static.rust-lang.org (especially on the Intel macOS runners).
       - name: Install Rust stable
-        uses: dtolnay/rust-toolchain@stable
+        uses: nick-fields/retry@v3
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin' || matrix.platform == 'macos-15-intel' && 'x86_64-apple-darwin' || '' }}
+          timeout_minutes: 20
+          max_attempts: 3
+          retry_wait_seconds: 30
+          shell: bash
+          command: |
+            rustup toolchain install stable --profile minimal --no-self-update
+            rustup default stable
+            target="${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin' || matrix.platform == 'macos-15-intel' && 'x86_64-apple-darwin' || '' }}"
+            if [ -n "$target" ]; then rustup target add "$target"; fi
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
