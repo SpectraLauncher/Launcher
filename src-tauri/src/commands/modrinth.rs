@@ -566,7 +566,7 @@ fn accepted_loaders(loader: &Loader) -> Vec<&'static str> {
 pub fn check_conflicts(instance_id: String) -> Result<Vec<Conflict>, String> {
     let instance: Instance =
         store::read_json(&paths::instance_config_file(&instance_id))?.ok_or("instance not found")?;
-    let accepted = accepted_loaders(&instance.loader);
+    let mut accepted = accepted_loaders(&instance.loader);
     let loader_label = match &instance.loader {
         Loader::Vanilla => "Vanilla",
         Loader::Fabric(_) => "Fabric",
@@ -576,6 +576,18 @@ pub fn check_conflicts(instance_id: String) -> Result<Vec<Conflict>, String> {
     };
     let index = read_content_index(&instance_id);
     let mut out = Vec::new();
+
+    // Check for compatibility mods (e.g. Sinytra Connector, Forgified Fabric API)
+    let has_fabric_compat = index.items.iter().filter(|i| i.kind == "mod").any(|i| {
+        let name = i.name.to_lowercase();
+        let file = i.filename.to_lowercase();
+        name.contains("sinytra connector") || file.contains("sinytra") ||
+        name.contains("forgified fabric api") || file.contains("forgified")
+    });
+
+    if has_fabric_compat && (matches!(instance.loader, Loader::Forge(_)) || matches!(instance.loader, Loader::NeoForge(_))) {
+        accepted.push("fabric");
+    }
 
     // Duplicate project ids (the same mod recorded twice).
     let mut seen: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();

@@ -1,3 +1,8 @@
+## Changes (v0.4.5)
+
+### ✨ Features & Improvements
+- **Smart Mod Conflicts**: False-positive "wrong loader" warnings have been eliminated. If you are on Forge or NeoForge and install a compatibility mod (like Sinytra Connector or Forgified Fabric API), Fabric mods will now be properly recognized as compatible without triggering conflict alerts.
+
 ## Changes (v0.4.4)
 
 ### ✨ Features & Improvements
