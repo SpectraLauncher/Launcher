@@ -73,6 +73,9 @@
     "dragGroup": "Przeciągnij grupę",
     "sponsored": "Sponsorowane",
     "sponsoredBadge": "Sponsor",
+    "sponsorServer": "Serwer",
+    "sponsorHosting": "Hosting",
+    "sponsorVisit": "Odwiedź",
     "dismissSponsor": "Ukryj sponsora",
     "install": "Zainstaluj"
   },
@@ -242,6 +245,8 @@
     "javaText": "Spectra zarządza Javą automatycznie. Ustaw domyślną ilość RAM dla instancji.",
     "javaFound": "Znaleziono {n} instalacji Javy",
     "ram": "Domyślna pamięć",
+    "privacyTitle": "Prywatność i dane",
+    "privacyText": "Wybierz, jakie dane Spectra może zbierać. Możesz to zmienić w dowolnym momencie w Ustawieniach → Prywatność.",
     "doneTitle": "Wszystko gotowe!",
     "doneText": "Utwórz lub zaimportuj instancję i zacznij grać.",
     "skip": "Pomiń",
@@ -316,8 +321,9 @@
       "accent": "Kolor akcentu",
       "themeDesc": "Wybierz jasność interfejsu.",
       "accentDesc": "Kolor akcentu używany w całym launcherze.",
-      "sponsor": "Sponsorowany modpack",
-      "sponsorDesc": "Pokazuj sponsorowany modpack na górze strony głównej."
+      "sponsor": "Treści sponsorowane",
+      "sponsorDesc": "Pokazuj sponsorowane modpacki, serwery i hostingi na górze strony głównej.",
+      "sponsorEmpty": "Brak skonfigurowanych treści sponsorowanych (edytuj useSponsor.ts, aby dodać wpisy)."
     },
     "language": {
       "title": "Język",
@@ -356,7 +362,7 @@
       "crash_reports": "Raporty awarii",
       "crash_reportsDesc": "Wysyłaj anonimowe raporty awarii, aby pomóc w naprawie błędów.",
       "anonymous_stats": "Anonimowe statystyki",
-      "anonymous_statsDesc": "Udostępniaj anonimowe statystyki użycia, aby ulepszać launcher."
+      "anonymous_statsDesc": "Udostępniaj anonimowe statystyki użycia, aby pomagać w ulepszaniu launchera. Zbierane dane to: nazwa systemu operacyjnego, wersja launchera, uruchamiana wersja Minecrafta, nazwa mod loadera, język interfejsu oraz używane funkcje launchera. Żadne dane osobowe nie są nigdy wysyłane — informacje te służą wyłącznie do określenia, które funkcje warto dalej rozwijać, a które są zbędne."
     },
     "java": {
       "title": "Instalacje Javy",

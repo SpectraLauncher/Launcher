@@ -95,7 +95,29 @@
             </div>
           </div>
 
-          <!-- 4: done -->
+          <!-- 4: privacy -->
+          <div v-else-if="step === 4" class="space-y-4">
+            <div>
+              <h2 class="text-lg font-semibold">{{ $t('onboarding.privacyTitle') }}</h2>
+              <p class="mt-1 text-sm text-muted">{{ $t('onboarding.privacyText') }}</p>
+            </div>
+            <div
+              v-for="opt in privacyOptions"
+              :key="opt.key"
+              class="flex items-start justify-between gap-4 rounded-lg border border-default p-3"
+            >
+              <div class="min-w-0">
+                <p class="flex items-center gap-2 text-sm font-medium">
+                  {{ $t(`settings.privacy.${opt.key}`) }}
+                  <UBadge v-if="opt.wip" color="neutral" variant="subtle" size="xs" label="WIP" />
+                </p>
+                <p class="mt-0.5 text-xs text-muted">{{ $t(`settings.privacy.${opt.key}Desc`) }}</p>
+              </div>
+              <USwitch v-if="settings" v-model="settings[opt.key]" class="shrink-0 mt-0.5" />
+            </div>
+          </div>
+
+          <!-- 5: done -->
           <div v-else class="flex flex-col items-center gap-4 py-6 text-center">
             <UIcon name="i-lucide-party-popper" class="size-12 text-primary-400" />
             <div>
@@ -130,12 +152,20 @@ const sysMem = useSystemMemory()
 const toast = useToast()
 const { t } = useI18n()
 
-const steps = 5
+const steps = 6
 const step = ref(0)
 const offlineName = ref('')
 const loggingIn = ref(false)
 const ram = ref(4096)
 const settings = ref<Settings | null>(null)
+
+type PrivacyKey = 'track_playtime' | 'discord_rpc' | 'crash_reports' | 'anonymous_stats'
+const privacyOptions: { key: PrivacyKey; wip?: boolean }[] = [
+  { key: 'track_playtime' },
+  { key: 'discord_rpc' },
+  { key: 'anonymous_stats' },
+  { key: 'crash_reports', wip: true },
+]
 
 const themeOptions = computed<{ value: ThemeMode, label: string, preview: string }[]>(() => [
   { value: 'dark', label: t('settings.appearance.themeDark'), preview: '#0a0a0b' },
@@ -156,6 +186,12 @@ onMounted(async () => {
   try {
     settings.value = await invoke<Settings>('get_settings')
     ram.value = settings.value.default_memory_mb || 4096
+    // Ensure privacy options are all true by default for first-run onboarding.
+    // (Rust default already sets anonymous_stats=true; mirror that for the rest.)
+    settings.value.track_playtime = settings.value.track_playtime ?? true
+    settings.value.discord_rpc = settings.value.discord_rpc ?? false
+    settings.value.crash_reports = settings.value.crash_reports ?? false
+    settings.value.anonymous_stats = settings.value.anonymous_stats ?? true
   } catch { /* keep default */ }
 })
 
@@ -181,7 +217,7 @@ async function offlineLogin() {
 }
 
 async function complete() {
-  // Persist the chosen RAM into default instance options.
+  // Persist all onboarding choices (RAM + privacy settings).
   if (settings.value) {
     try {
       await invoke('save_settings', { settings: { ...settings.value, default_memory_mb: ram.value } })

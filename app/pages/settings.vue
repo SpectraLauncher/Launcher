@@ -57,13 +57,16 @@
                 />
               </div>
             </div>
-            <div class="flex items-center justify-between gap-4">
+            <div class="flex items-center justify-between gap-4" :class="sponsor.sponsors.length === 0 ? 'opacity-40' : ''">
               <div>
                 <p class="text-sm font-medium">{{ t('settings.appearance.sponsor') }}</p>
-                <p class="text-xs text-muted">{{ t('settings.appearance.sponsorDesc') }}</p>
+                <p class="text-xs text-muted">
+                  {{ sponsor.sponsors.length === 0 ? t('settings.appearance.sponsorEmpty') : t('settings.appearance.sponsorDesc') }}
+                </p>
               </div>
               <USwitch
                 :model-value="!sponsor.dismissed.value"
+                :disabled="sponsor.sponsors.length === 0"
                 @update:model-value="(v: boolean) => v ? sponsor.restore() : sponsor.dismiss()"
               />
             </div>

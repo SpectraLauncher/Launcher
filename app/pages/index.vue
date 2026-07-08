@@ -14,8 +14,8 @@
         </div>
       </div>
 
-      <!-- sponsored modpack (always on top, above the user's groups; dismissible) -->
-      <section v-if="!sponsor.dismissed.value && !filtering" class="mb-8">
+      <!-- sponsored section (always on top; hidden when SPONSORS is empty or user dismissed) -->
+      <section v-if="sponsor.visible.value && !filtering" class="mb-8">
         <div class="mb-3.5 flex items-center gap-2">
           <span class="flex items-center gap-1.5 text-sm font-semibold text-amber-400">
             <UIcon name="i-lucide-sparkles" class="size-4" />
@@ -23,24 +23,38 @@
           </span>
           <div class="h-px flex-1 bg-amber-400/15" />
         </div>
-        <button
-          type="button"
-          class="group flex w-full items-center gap-4 rounded-2xl border border-amber-400/25 bg-linear-[120deg] from-amber-500/12 to-transparent p-4 text-left transition hover:border-amber-400/50 hover:from-amber-500/18"
-          @click="installSponsor"
-        >
-          <img :src="sponsor.sponsor.iconUrl" :alt="sponsor.sponsor.title" class="size-14 shrink-0 rounded-xl object-cover shadow-[0_4px_14px_rgba(0,0,0,0.35)]" />
-          <div class="min-w-0 flex-1">
-            <div class="flex items-center gap-2">
-              <span class="truncate font-semibold">{{ sponsor.sponsor.title }}</span>
-              <UBadge color="warning" variant="subtle" size="xs" :label="$t('library.sponsoredBadge')" />
+        <div class="flex flex-col gap-2">
+          <button
+            v-for="s in sponsor.sponsors"
+            :key="s.id"
+            type="button"
+            class="group flex w-full items-center gap-4 rounded-2xl border border-amber-400/25 bg-linear-[120deg] from-amber-500/12 to-transparent p-4 text-left transition hover:border-amber-400/50 hover:from-amber-500/18"
+            @click="onSponsorClick(s)"
+          >
+            <img :src="s.iconUrl" :alt="s.title" class="size-14 shrink-0 rounded-xl object-cover shadow-[0_4px_14px_rgba(0,0,0,0.35)]" />
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <span class="truncate font-semibold">{{ s.title }}</span>
+                <UBadge color="warning" variant="subtle" size="xs" :label="$t('library.sponsoredBadge')" />
+                <!-- type badge -->
+                <UBadge
+                  v-if="s.type !== 'modpack'"
+                  color="neutral"
+                  variant="subtle"
+                  size="xs"
+                  :label="s.type === 'server' ? $t('library.sponsorServer') : $t('library.sponsorHosting')"
+                />
+              </div>
+              <p class="mt-1 line-clamp-2 text-xs text-muted">{{ s.description }}</p>
+              <!-- server address -->
+              <p v-if="s.type === 'server' && (s as any).address" class="mt-0.5 font-mono text-xs text-amber-300/70">{{ (s as any).address }}</p>
             </div>
-            <p class="mt-1 line-clamp-2 text-xs text-muted">{{ sponsor.sponsor.description }}</p>
-          </div>
-          <span class="hidden shrink-0 items-center gap-1.5 rounded-lg bg-amber-500/15 px-3 py-2 text-sm font-medium text-amber-300 transition group-hover:bg-amber-500/25 sm:flex">
-            <UIcon name="i-lucide-download" class="size-4" />
-            {{ $t('library.install') }}
-          </span>
-        </button>
+            <span class="hidden shrink-0 items-center gap-1.5 rounded-lg bg-amber-500/15 px-3 py-2 text-sm font-medium text-amber-300 transition group-hover:bg-amber-500/25 sm:flex">
+              <UIcon :name="s.type === 'modpack' ? 'i-lucide-download' : 'i-lucide-external-link'" class="size-4" />
+              {{ s.type === 'modpack' ? $t('library.install') : $t('library.sponsorVisit') }}
+            </span>
+          </button>
+        </div>
       </section>
 
       <!-- skeleton grid during the first load -->
@@ -203,18 +217,22 @@ const { open: openCreate } = useCreateInstanceModal()
 const sponsor = useSponsor()
 const browser = useModrinthBrowser()
 
-// Opens the Modrinth browser focused on the sponsored modpack so the user can
-// pick a version and install it as a new instance.
-function installSponsor() {
-  browser.open({
-    kind: 'modpack',
-    mode: 'createModpack',
-    query: sponsor.sponsor.title,
-    onInstalled: (instance) => {
-      instances.load()
-      if (instance) router.push(`/instance/${instance.id}`)
-    },
-  })
+// Opens the appropriate action when a sponsor card is clicked.
+function onSponsorClick(s: ReturnType<typeof useSponsor>['sponsors'][number]) {
+  if (s.type === 'modpack' && s.modrinthSlug) {
+    browser.open({
+      kind: 'modpack',
+      mode: 'createModpack',
+      query: s.modrinthSlug,
+      onInstalled: (instance) => {
+        instances.load()
+        if (instance) router.push(`/instance/${instance.id}`)
+      },
+    })
+  } else {
+    // For servers, hosting, and modpacks without a Modrinth slug — open in browser.
+    import('@tauri-apps/plugin-shell').then(({ open }) => open(s.url)).catch(() => {})
+  }
 }
 
 onMounted(async () => {

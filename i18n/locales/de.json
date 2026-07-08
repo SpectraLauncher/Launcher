@@ -73,6 +73,9 @@
     "dragGroup": "Gruppe ziehen",
     "sponsored": "Gesponsert",
     "sponsoredBadge": "Sponsor",
+    "sponsorServer": "Server",
+    "sponsorHosting": "Hosting",
+    "sponsorVisit": "Besuchen",
     "dismissSponsor": "Sponsor ausblenden",
     "install": "Installieren"
   },
@@ -242,6 +245,8 @@
     "javaText": "Spectra verwaltet Java automatisch. Lege fest, wie viel RAM Instanzen standardmäßig erhalten.",
     "javaFound": "{n} Java-Installation(en) gefunden",
     "ram": "Standardspeicher",
+    "privacyTitle": "Datenschutz & Daten",
+    "privacyText": "Wähle, welche Daten Spectra sammeln darf. Du kannst das jederzeit unter Einstellungen → Datenschutz ändern.",
     "doneTitle": "Alles bereit!",
     "doneText": "Erstelle oder importiere eine Instanz und leg los.",
     "skip": "Überspringen",
@@ -316,8 +321,9 @@
       "accent": "Akzentfarbe",
       "themeDesc": "Wähle die Dunkelheit der Oberfläche.",
       "accentDesc": "Akzentfarbe für den gesamten Launcher.",
-      "sponsor": "Gesponsertes Modpack",
-      "sponsorDesc": "Das gesponserte Modpack oben auf der Startseite anzeigen."
+      "sponsor": "Gesponserte Inhalte",
+      "sponsorDesc": "Zeige gesponserte Modpacks, Server und Hostings oben auf der Startseite an.",
+      "sponsorEmpty": "Keine gesponserten Inhalte konfiguriert (bearbeite useSponsor.ts, um Einträge hinzuzufügen)."
     },
     "language": {
       "title": "Sprache",
@@ -356,7 +362,7 @@
       "crash_reports": "Absturzberichte",
       "crash_reportsDesc": "Anonyme Absturzberichte senden, um Fehler zu beheben.",
       "anonymous_stats": "Anonyme Statistiken",
-      "anonymous_statsDesc": "Anonyme Nutzungsstatistiken teilen, um den Launcher zu verbessern."
+      "anonymous_statsDesc": "Teile anonyme Nutzungsstatistiken, um den Launcher zu verbessern. Folgende Daten werden gesammelt: Name des Betriebssystems, Launcher-Version, gestartete Minecraft-Version, Mod-Loader-Name, Oberflächensprache und genutzte Launcher-Funktionen. Es werden keine personenbezogenen Daten gesendet — diese Daten dienen ausschließlich dazu zu verstehen, welche Funktionen weiterentwickelt werden sollten und welche überflüssig sind."
     },
     "java": {
       "title": "Java-Installationen",

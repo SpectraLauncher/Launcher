@@ -73,6 +73,9 @@
     "dragGroup": "拖动分组",
     "sponsored": "赞助",
     "sponsoredBadge": "赞助商",
+    "sponsorServer": "服务器",
+    "sponsorHosting": "托管",
+    "sponsorVisit": "访问",
     "dismissSponsor": "隐藏赞助",
     "install": "安装"
   },
@@ -242,6 +245,8 @@
     "javaText": "Spectra 自动管理 Java。设置实例默认获得多少 RAM。",
     "javaFound": "找到 {n} 个 Java 安装",
     "ram": "默认内存",
+    "privacyTitle": "隐私与数据",
+    "privacyText": "选择 Spectra 可以收集哪些数据。您随时可以在设置 → 隐私中更改.",
     "doneTitle": "一切就绪！",
     "doneText": "创建或导入一个实例，开始游戏吧。",
     "skip": "跳过",
@@ -316,8 +321,9 @@
       "accent": "强调色",
       "themeDesc": "选择界面的暗度。",
       "accentDesc": "整个启动器使用的强调色。",
-      "sponsor": "赞助整合包",
-      "sponsorDesc": "在首页顶部显示赞助整合包。"
+      "sponsor": "赞助内容",
+      "sponsorDesc": "在主页顶部显示赞助的整合包、服务器和托管服务。",
+      "sponsorEmpty": "未配置赞助内容（编辑 useSponsor.ts 以添加条目）。"
     },
     "language": {
       "title": "语言",
@@ -356,7 +362,7 @@
       "crash_reports": "崩溃报告",
       "crash_reportsDesc": "发送匿名崩溃报告以帮助修复错误。",
       "anonymous_stats": "匿名统计",
-      "anonymous_statsDesc": "分享匿名使用统计以改进启动器。"
+      "anonymous_statsDesc": "分享匿名使用统计信息以帮助改进启动器。收集的数据包括：操作系统名称、启动器版本、启动的 Minecraft 版本、模组加载器名称、界面语言及使用的启动器功能。不会发送任何个人数据——这些数据仅用于了解哪些功能值得进一步开发，哪些功能是多余的。"
     },
     "java": {
       "title": "Java 安装",

@@ -210,7 +210,7 @@ impl Default for Settings {
             track_playtime: true,
             discord_rpc: false,
             crash_reports: false,
-            anonymous_stats: false,
+            anonymous_stats: true,
         }
     }
 }

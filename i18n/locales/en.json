@@ -73,6 +73,9 @@
     "dragGroup": "Drag group",
     "sponsored": "Sponsored",
     "sponsoredBadge": "Sponsor",
+    "sponsorServer": "Server",
+    "sponsorHosting": "Hosting",
+    "sponsorVisit": "Visit",
     "dismissSponsor": "Hide sponsor",
     "install": "Install"
   },
@@ -242,6 +245,8 @@
     "javaText": "Spectra manages Java automatically. Set how much RAM instances get by default.",
     "javaFound": "{n} Java installation(s) found",
     "ram": "Default memory",
+    "privacyTitle": "Privacy & data",
+    "privacyText": "Choose what data Spectra may collect. You can change these at any time in Settings → Privacy.",
     "doneTitle": "You're all set!",
     "doneText": "Create or import an instance and start playing.",
     "skip": "Skip",
@@ -316,8 +321,9 @@
       "accent": "Accent color",
       "themeDesc": "Choose the interface darkness.",
       "accentDesc": "Accent color used across the launcher.",
-      "sponsor": "Sponsored modpack",
-      "sponsorDesc": "Show the sponsored modpack at the top of the home page."
+      "sponsor": "Sponsored content",
+      "sponsorDesc": "Show sponsored modpacks, servers and hosting at the top of the home page.",
+      "sponsorEmpty": "No sponsored content configured (edit useSponsor.ts to add entries)."
     },
     "language": {
       "title": "Language",
@@ -356,7 +362,7 @@
       "crash_reports": "Crash reports",
       "crash_reportsDesc": "Send anonymous crash reports to help fix bugs.",
       "anonymous_stats": "Anonymous statistics",
-      "anonymous_statsDesc": "Share anonymous usage statistics to improve the launcher."
+      "anonymous_statsDesc": "Share anonymous usage statistics to help improve the launcher. The following data is collected: operating system name, launcher version, launched Minecraft version, mod loader name, interface language, and which launcher features are used. No personal data is ever sent — this data is used only to understand which features are worth developing further and which are redundant."
     },
     "java": {
       "title": "Java installations",

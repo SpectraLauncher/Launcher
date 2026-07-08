@@ -73,6 +73,9 @@
     "dragGroup": "Arrastrar grupo",
     "sponsored": "Patrocinado",
     "sponsoredBadge": "Patrocinador",
+    "sponsorServer": "Servidor",
+    "sponsorHosting": "Hosting",
+    "sponsorVisit": "Visitar",
     "dismissSponsor": "Ocultar patrocinador",
     "install": "Instalar"
   },
@@ -242,6 +245,8 @@
     "javaText": "Spectra gestiona Java automáticamente. Define cuánta RAM reciben las instancias por defecto.",
     "javaFound": "{n} instalación(es) de Java encontrada(s)",
     "ram": "Memoria predeterminada",
+    "privacyTitle": "Privacidad y datos",
+    "privacyText": "Elige qué datos puede recopilar Spectra. Puedes cambiarlo en cualquier momento en Ajustes → Privacidad.",
     "doneTitle": "¡Todo listo!",
     "doneText": "Crea o importa una instancia y empieza a jugar.",
     "skip": "Omitir",
@@ -316,8 +321,9 @@
       "accent": "Color de acento",
       "themeDesc": "Elige la oscuridad de la interfaz.",
       "accentDesc": "Color de acento usado en todo el launcher.",
-      "sponsor": "Modpack patrocinado",
-      "sponsorDesc": "Mostrar el modpack patrocinado en la parte superior de la página de inicio."
+      "sponsor": "Contenido patrocinado",
+      "sponsorDesc": "Muestra modpacks, servidores y hostings patrocinados en la parte superior de la página de inicio.",
+      "sponsorEmpty": "No se ha configurado contenido patrocinado (edita useSponsor.ts para añadir entradas)."
     },
     "language": {
       "title": "Idioma",
@@ -356,7 +362,7 @@
       "crash_reports": "Informes de fallos",
       "crash_reportsDesc": "Enviar informes de fallos anónimos para ayudar a corregir errores.",
       "anonymous_stats": "Estadísticas anónimas",
-      "anonymous_statsDesc": "Comparte estadísticas de uso anónimas para mejorar el launcher."
+      "anonymous_statsDesc": "Comparte estadísticas de uso anónimas para ayudar a mejorar el launcher. Los datos recopilados son: nombre del sistema operativo, versión del launcher, versión de Minecraft lanzada, nombre del mod loader, idioma de la interfaz y funciones del launcher utilizadas. No se envían datos personales — esta información se usa únicamente para saber qué funciones vale la pena desarrollar y cuáles son prescindibles."
     },
     "java": {
       "title": "Instalaciones de Java",

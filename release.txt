@@ -1,3 +1,9 @@
+## Changes (v0.4.3)
+
+### ✨ Features & Improvements
+- **Privacy Setup & Control**: A new privacy step has been added to the first-run setup wizard. The "Anonymous statistics" description now provides a transparent list of exactly what data is collected.
+- **Dynamic Sponsor System**: The sponsor section on the home page has been fully redesigned. It now supports displaying an unlimited number of sponsors of different types (modpacks, Minecraft servers, and hosting providers) with a new static configuration backend.
+
 ## Changes (v0.4.2)
 
 ### ✨ Features & Improvements
