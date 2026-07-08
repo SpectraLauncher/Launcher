@@ -1,3 +1,8 @@
+## Changes (v0.4.4)
+
+### ✨ Features & Improvements
+- **Cleaner Settings UI**: The "Sponsored content" toggle in settings now intelligently hides itself completely when no sponsors are configured, keeping the interface clean and relevant.
+
 ## Changes (v0.4.3)
 
 ### ✨ Features & Improvements
