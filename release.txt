@@ -1,3 +1,8 @@
+## Changes (v0.4.6)
+
+### ✨ Features & Improvements
+- **External Links Handler**: All external web links (e.g., links inside mod and modpack descriptions) now reliably open in your system's default web browser instead of attempting to load inside the launcher window.
+
 ## Changes (v0.4.5)
 
 ### ✨ Features & Improvements
