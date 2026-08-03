@@ -204,6 +204,7 @@ const sysMem = useSystemMemory()
 const toast = useToast()
 const { t } = useI18n()
 const exportModal = useExportModal()
+const shareModal = useShareModal()
 const changeLoaderModal = useChangeLoaderModal()
 
 const id = computed(() => String(route.params.id))
@@ -360,6 +361,11 @@ const menuItems = computed(() => [[
     label: t('instance.export'),
     icon: 'i-lucide-package',
     onSelect: () => { if (instance.value) exportModal.open(id.value, instance.value.name) },
+  },
+  {
+    label: t('share.menu'),
+    icon: 'i-lucide-share-2',
+    onSelect: () => { if (instance.value) shareModal.open(id.value, instance.value.name) },
   },
   {
     label: t('changeLoader.menu'),

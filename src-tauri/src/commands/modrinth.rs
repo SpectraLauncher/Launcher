@@ -1222,7 +1222,7 @@ pub async fn export_mrpack(
 /// Recursively walks the game dir, adding files under `overrides/` while honoring
 /// the exclude set and skipping regenerable folders, junk, manifest files, and
 /// (unless `optional_disabled`) disabled mods.
-fn add_overrides(
+pub fn add_overrides(
     zip: &mut zip::ZipWriter<std::fs::File>,
     base: &Path,
     rel: &str,

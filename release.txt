@@ -1,3 +1,11 @@
+## Changes (v0.5.0)
+
+### ✨ Features & Improvements
+- **Share an instance with a code**: pick **Share instance** from an instance's ⋯ menu and Spectra hands you a 6-character code (and a link) to pass around. Whoever gets it opens **New instance → Import → From a share code** and receives a full clone: mods, resource packs, shaders, datapacks, configs and your server list. Codes stay valid for 7 days.
+- **Every mod keeps its source**: shares travel as a list of projects rather than a pile of jars, so a CurseForge-heavy pack stays small and arrives as *CurseForge* mods on the other side — update checks keep working exactly as they should. Mods you added by hand are matched against Modrinth and CurseForge first; anything that matches nothing is listed before you share, and only ships if you tick it.
+- **Links open the launcher**: the share link opens a page with an **Open in Spectra Launcher** button that jumps straight into the app with the code filled in (`spectra://`).
+- **Nothing personal leaves your PC**: worlds, screenshots and crash reports are never part of a share.
+
 ## Changes (v0.4.6)
 
 ### ✨ Features & Improvements

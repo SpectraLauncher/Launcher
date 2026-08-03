@@ -405,7 +405,7 @@ pub fn restore_backup_from_bytes(bytes: &[u8]) -> Result<Instance, String> {
 }
 
 /// Joins a relative archive path onto `base`, rejecting traversal outside it.
-fn join_safe(base: &Path, rel: &str) -> Result<PathBuf, String> {
+pub fn join_safe(base: &Path, rel: &str) -> Result<PathBuf, String> {
     let mut out = base.to_path_buf();
     for comp in Path::new(rel).components() {
         match comp {

@@ -52,7 +52,10 @@
       "fromLauncher": "Depuis un autre launcher",
       "fromLauncherDesc": "Instances détectées depuis Prism, CurseForge et l'application Modrinth.",
       "none": "Aucune instance trouvée dans d'autres launchers.",
-      "importBtn": "Importer"
+      "importBtn": "Importer",
+      "fromCode": "Avec un code",
+      "fromCodeDesc": "Collez le code (ou le lien) qu’on vous a envoyé.",
+      "useCode": "Utiliser le code"
     }
   },
   "library": {
@@ -583,5 +586,20 @@
     "requiredJava": "Minecraft {version} nécessite Java {major}. Le launcher le sélectionne automatiquement.",
     "javaDetected": "Détecté sur ton système : {label}",
     "javaWillDownload": "Aucun Java compatible détecté — le launcher le téléchargera."
+  },
+  "share": {
+    "menu": "Partager l'instance",
+    "title": "Partager « {name} »",
+    "intro": "Crée un code court qui permet à n’importe qui de cloner cette instance. Les mods voyagent sous forme de liens vers Modrinth/CurseForge, pas de fichiers.",
+    "codeLabel": "Code",
+    "copyCode": "Copier le code",
+    "copyLink": "Copier le lien",
+    "createBtn": "Créer le code",
+    "expires": "Le code reste valable {days} jours.",
+    "includeUnresolved": "Inclure {n} fichiers non reconnus",
+    "includeUnresolvedDesc": "JAR locaux ou privés que personne ne peut télécharger — ajoute {size} au paquet.",
+    "privacyNote": "Les mondes, captures d’écran et rapports de plantage ne sont jamais partagés.",
+    "needsCurseforge": "{n} mods nécessitent une clé API CurseForge — ajoutez-la dans les Paramètres puis réessayez.",
+    "someFailed": "Impossible de télécharger {n} mods."
   }
 }

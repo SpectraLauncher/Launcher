@@ -52,7 +52,10 @@
       "fromLauncher": "从其他启动器",
       "fromLauncherDesc": "检测到的来自 Prism、CurseForge 和 Modrinth 应用的实例。",
       "none": "在其他启动器中未找到实例。",
-      "importBtn": "导入"
+      "importBtn": "导入",
+      "fromCode": "使用分享代码",
+      "fromCodeDesc": "粘贴别人发给你的代码（或链接）。",
+      "useCode": "使用代码"
     }
   },
   "library": {
@@ -583,5 +586,20 @@
     "requiredJava": "Minecraft {version} 需要 Java {major}。启动器会自动选择。",
     "javaDetected": "在你的系统中检测到：{label}",
     "javaWillDownload": "未检测到匹配的 Java — 启动器将下载它。"
+  },
+  "share": {
+    "menu": "分享实例",
+    "title": "分享“{name}”",
+    "intro": "生成一个短代码，任何人都能用它克隆这个实例。模组以 Modrinth/CurseForge 链接的形式传输，而不是文件。",
+    "codeLabel": "分享代码",
+    "copyCode": "复制代码",
+    "copyLink": "复制链接",
+    "createBtn": "生成代码",
+    "expires": "代码还可使用 {days} 天。",
+    "includeUnresolved": "包含 {n} 个无法识别的文件",
+    "includeUnresolvedDesc": "本地或私有的 jar，别人无法下载——会让分享包增加 {size}。",
+    "privacyNote": "存档、截图和崩溃报告永远不会被分享。",
+    "needsCurseforge": "{n} 个模组需要 CurseForge API 密钥——请在设置中添加后重试。",
+    "someFailed": "有 {n} 个模组下载失败。"
   }
 }

@@ -71,12 +71,15 @@ struct CrashInfo {
     crash_report_rel: Option<String>,
 }
 
-fn to_lyceris_loader(loader: &Loader) -> Option<Box<dyn LyLoader>> {
+fn to_lyceris_loader(loader: &Loader, mc: &str) -> Option<Box<dyn LyLoader>> {
     match loader {
         Loader::Vanilla => None,
         Loader::Fabric(v) => Some(Fabric(v.clone()).into()),
         Loader::Quilt(v) => Some(Quilt(v.clone()).into()),
-        Loader::Forge(v) => Some(Forge(v.clone()).into()),
+        // Lyceris rebuilds the installer version as `{mc}-{v}`, so it wants only
+        // the Forge build (e.g. "47.4.0"), not the full maven id "1.20.1-47.4.0"
+        // we store — otherwise the MC version doubles and the download 404s.
+        Loader::Forge(v) => Some(Forge(v.strip_prefix(&format!("{mc}-")).unwrap_or(v).to_string()).into()),
         Loader::NeoForge(v) => Some(NeoForge(v.clone()).into()),
     }
 }
@@ -274,7 +277,7 @@ async fn launch_inner(app: &AppHandle, id: &str, quick_play: Option<QuickPlay>) 
     // pair has to live inside each branch. The install phase is serialized through
     // a global lock so two instances can't provision the shared Java runtime at
     // the same time (which would corrupt it); launch itself stays concurrent.
-    let mut child = match to_lyceris_loader(&instance.loader) {
+    let mut child = match to_lyceris_loader(&instance.loader, &instance.mc_version) {
         None => {
             let config = builder.build();
             {
@@ -420,7 +423,7 @@ pub async fn repair_instance(app: AppHandle, id: String) -> Result<(), String> {
         .runtime_dir(paths::runtimes_dir());
     let emitter = build_emitter(&app, &id).await;
 
-    let result = match to_lyceris_loader(&instance.loader) {
+    let result = match to_lyceris_loader(&instance.loader, &instance.mc_version) {
         None => install(&builder.build(), Some(&emitter)).await,
         Some(loader) => install(&builder.loader(loader).build(), Some(&emitter)).await,
     };

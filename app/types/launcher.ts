@@ -192,6 +192,31 @@ export interface LogFile {
   size: number
 }
 
+// --- instance sharing (mirrors share.rs) ---
+
+export interface SharePreview {
+  modrinth: number
+  curseforge: number
+  /** Game-dir paths of content files that match no provider. */
+  unresolved: string[]
+  unresolved_bytes: number
+}
+
+export interface ShareResult {
+  code: string
+  url: string
+  /** Unix ms when the code stops working. */
+  expires: number
+}
+
+export interface ShareImportResult {
+  instance: Instance
+  installed: number
+  failed: string[]
+  /** CurseForge items skipped because there's no CurseForge API key. */
+  needs_curseforge: number
+}
+
 // A mod in an instance's mods/ folder (mirrors ModEntry in mods.rs).
 export interface ModEntry {
   filename: string

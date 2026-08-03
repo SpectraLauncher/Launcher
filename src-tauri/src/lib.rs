@@ -25,12 +25,49 @@ pub struct AppState {
     /// Serializes the install/verify phase so two instances can't provision the
     /// same shared Java runtime concurrently (which would corrupt it).
     pub install_lock: tokio::sync::Mutex<()>,
+    /// Share code from a `spectra://` link that arrived before the UI was ready.
+    /// The frontend drains it on mount (see `take_pending_share`).
+    pub pending_share: Mutex<Option<String>>,
+}
+
+/// Routes an incoming `spectra://` URL to the UI. Stashes the code for the
+/// frontend to drain on mount (cold start) *and* emits it (app already running).
+#[cfg(desktop)]
+fn handle_share_url(app: &tauri::AppHandle, url: &str) {
+    use tauri::{Emitter, Manager};
+
+    let Some(code) = commands::share::code_from_url(url) else { return };
+    if let Some(state) = app.try_state::<AppState>() {
+        if let Ok(mut pending) = state.pending_share.lock() {
+            *pending = Some(code.clone());
+        }
+    }
+    let _ = app.emit("share://open", &code);
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+
+    // Must be the very first plugin: it hands a second launch's arguments (i.e.
+    // the clicked `spectra://` link) to the instance that's already running.
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+        use tauri::Manager;
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.unminimize();
+            let _ = window.set_focus();
+        }
+    }));
+
+    builder
         .manage(AppState::default())
+        // Registered before `setup`, which reaches for `app.deep_link()`.
+        .plugin(tauri_plugin_deep_link::init())
         .setup(|app| {
             // Create the data layout up front so every command can assume it exists.
             if let Err(e) = paths::ensure_base_dirs() {
@@ -53,6 +90,36 @@ pub fn run() {
             #[cfg(desktop)]
             {
                 let _ = app.handle().plugin(tauri_plugin_updater::Builder::new().build());
+            }
+
+            // `spectra://share/<code>` links from the website.
+            #[cfg(desktop)]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                // Needed in dev and on Linux; a no-op once the installer has
+                // registered the scheme for real.
+                let _ = app.deep_link().register_all();
+
+                // The plugin names the scheme after the bundle identifier, so
+                // browsers ask to open "pl.makoto.spectra-launcher". Use the
+                // product name instead — this is the string the user reads.
+                #[cfg(windows)]
+                if let Ok(key) = windows_registry::CURRENT_USER.create("Software\\Classes\\spectra") {
+                    let _ = key.set_string("", "URL:Spectra Launcher protocol");
+                }
+
+                let handle = app.handle().clone();
+                app.deep_link().on_open_url(move |event| {
+                    for url in event.urls() {
+                        handle_share_url(&handle, url.as_str());
+                    }
+                });
+                // Cold start: the launcher was *opened by* the link.
+                if let Ok(Some(urls)) = app.deep_link().get_current() {
+                    for url in urls {
+                        handle_share_url(app.handle(), url.as_str());
+                    }
+                }
             }
             Ok(())
         })
@@ -163,6 +230,11 @@ pub fn run() {
             commands::import::export_instance,
             commands::import::import_dropped,
             commands::import::write_text_file,
+            // Instance sharing (short codes)
+            commands::share::share_preview,
+            commands::share::share_instance,
+            commands::share::import_share,
+            commands::share::take_pending_share,
             // Mod management
             commands::mods::list_mods,
             commands::mods::set_mod_enabled,

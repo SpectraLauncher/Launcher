@@ -52,7 +52,10 @@
       "fromLauncher": "Aus anderem Launcher",
       "fromLauncherDesc": "Erkannte Instanzen aus Prism, CurseForge und der Modrinth-App.",
       "none": "Keine Instanzen in anderen Launchern gefunden.",
-      "importBtn": "Importieren"
+      "importBtn": "Importieren",
+      "fromCode": "Per Code",
+      "fromCodeDesc": "Füge den Code (oder Link) ein, den du bekommen hast.",
+      "useCode": "Code verwenden"
     }
   },
   "library": {
@@ -583,5 +586,20 @@
     "requiredJava": "Minecraft {version} benötigt Java {major}. Der Launcher wählt es automatisch.",
     "javaDetected": "Auf deinem System erkannt: {label}",
     "javaWillDownload": "Kein passendes Java erkannt — der Launcher lädt es herunter."
+  },
+  "share": {
+    "menu": "Instanz teilen",
+    "title": "„{name}“ teilen",
+    "intro": "Erstellt einen kurzen Code, mit dem jeder diese Instanz klonen kann. Mods werden als Links zu Modrinth/CurseForge übertragen, nicht als Dateien.",
+    "codeLabel": "Code",
+    "copyCode": "Code kopieren",
+    "copyLink": "Link kopieren",
+    "createBtn": "Code erstellen",
+    "expires": "Der Code gilt noch {days} Tage.",
+    "includeUnresolved": "{n} unbekannte Dateien einschließen",
+    "includeUnresolvedDesc": "Lokale oder private JARs, die niemand herunterladen kann — vergrößert das Paket um {size}.",
+    "privacyNote": "Welten, Screenshots und Absturzberichte werden nie geteilt.",
+    "needsCurseforge": "{n} Mods brauchen einen CurseForge-API-Schlüssel — in den Einstellungen hinterlegen und erneut versuchen.",
+    "someFailed": "{n} Mods konnten nicht heruntergeladen werden."
   }
 }

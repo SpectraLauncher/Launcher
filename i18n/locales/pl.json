@@ -52,7 +52,10 @@
       "fromLauncher": "Z innego launchera",
       "fromLauncherDesc": "Wykryte instancje z Prism, CurseForge i aplikacji Modrinth.",
       "none": "Nie znaleziono instancji w innych launcherach.",
-      "importBtn": "Importuj"
+      "importBtn": "Importuj",
+      "fromCode": "Z kodu",
+      "fromCodeDesc": "Wklej kod (lub link), który dostałeś od znajomego.",
+      "useCode": "Użyj kodu"
     }
   },
   "library": {
@@ -583,5 +586,20 @@
     "requiredJava": "Minecraft {version} wymaga Javy {major}. Launcher dobiera ją automatycznie.",
     "javaDetected": "Wykryto u Ciebie: {label}",
     "javaWillDownload": "Nie wykryto pasującej Javy — launcher pobierze ją sam."
+  },
+  "share": {
+    "menu": "Udostępnij instancję",
+    "title": "Udostępnij „{name}”",
+    "intro": "Tworzy krótki kod, którym każdy sklonuje tę instancję. Mody lecą jako linki do Modrinth/CurseForge, nie jako pliki.",
+    "codeLabel": "Kod",
+    "copyCode": "Kopiuj kod",
+    "copyLink": "Kopiuj link",
+    "createBtn": "Utwórz kod",
+    "expires": "Kod działa jeszcze {days} dni.",
+    "includeUnresolved": "Dołącz {n} nierozpoznanych plików",
+    "includeUnresolvedDesc": "Lokalne lub prywatne jary, których nikt nie pobierze — powiększy paczkę o {size}.",
+    "privacyNote": "Światy, zrzuty ekranu i raporty awarii nigdy nie są udostępniane.",
+    "needsCurseforge": "{n} modów wymaga klucza API CurseForge — dodaj go w Ustawieniach i spróbuj ponownie.",
+    "someFailed": "Nie udało się pobrać {n} modów."
   }
 }

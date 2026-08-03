@@ -97,6 +97,28 @@
 
       <!-- ===== Step: import ===== -->
       <div v-else-if="step === 'import'" class="space-y-5">
+        <!-- from a share code -->
+        <div>
+          <p class="text-sm font-medium">{{ $t('create.import.fromCode') }}</p>
+          <p class="mb-2 text-xs text-muted">{{ $t('create.import.fromCodeDesc') }}</p>
+          <div class="flex gap-2">
+            <UInput
+              v-model="shareCode"
+              placeholder="ABC123"
+              maxlength="40"
+              class="flex-1 font-mono tracking-widest uppercase"
+              @keydown.enter="redeemCode"
+            />
+            <UButton
+              icon="i-lucide-share-2"
+              :label="$t('create.import.useCode')"
+              :loading="redeeming"
+              :disabled="shareCode.trim().length < 6"
+              @click="redeemCode"
+            />
+          </div>
+        </div>
+
         <!-- from a modpack file -->
         <div>
           <p class="text-sm font-medium">{{ $t('create.import.fromFile') }}</p>
@@ -180,10 +202,11 @@
 <script setup lang="ts">
 import { open } from '@tauri-apps/plugin-dialog'
 import { invoke } from '@tauri-apps/api/core'
-import type { Loader, LoaderType, ExternalInstance, Instance } from '~/types/launcher'
+import type { Loader, LoaderType, ExternalInstance, Instance, ShareImportResult } from '~/types/launcher'
 import type { LoaderVersionMode } from '~/composables/useMinecraftMeta'
 
-const { isOpen, close } = useCreateInstanceModal()
+const { isOpen, pendingCode, close } = useCreateInstanceModal()
+const toast = useToast()
 const instances = useInstancesStore()
 const meta = useMinecraftMeta()
 const browser = useModrinthBrowser()
@@ -241,6 +264,39 @@ async function importFile() {
     }
   } catch (e) {
     error.value = String(e)
+  }
+}
+
+// --- share codes ---
+const shareCode = ref('')
+const redeeming = ref(false)
+
+async function redeemCode() {
+  const code = shareCode.value.trim()
+  if (code.length < 6 || redeeming.value) return
+  redeeming.value = true
+  error.value = null
+  const tid = activity.startTask(t('activity.importingModpack'))
+  try {
+    const res = await invoke<ShareImportResult>('import_share', { code })
+    await instances.load()
+    close()
+    router.push(`/instance/${res.instance.id}`)
+
+    if (res.needs_curseforge) {
+      toast.add({ title: t('share.needsCurseforge', { n: res.needs_curseforge }), color: 'warning' })
+    }
+    if (res.failed.length) {
+      toast.add({ title: t('share.someFailed', { n: res.failed.length }), description: res.failed.join(', '), color: 'warning' })
+    }
+    // A CurseForge pack may include mods blocked from auto-download.
+    const blocked = await curseforge.getBlocked(res.instance.id)
+    if (blocked.length) blockedModal.open(res.instance.id)
+  } catch (e) {
+    error.value = String(e)
+  } finally {
+    activity.endTask(tid)
+    redeeming.value = false
   }
 }
 
@@ -406,21 +462,31 @@ watch(
 )
 
 watch(isOpen, (open) => {
-  if (!open) {
-    step.value = 'choice'
-    form.name = ''
-    form.iconPath = null
-    form.iconPreview = null
-    form.loader = 'vanilla'
-    form.mcVersion = ''
-    form.loaderMode = 'stable'
-    form.loaderExplicit = ''
-    includeSnapshots.value = false
-    error.value = null
-    external.value = []
-    importingFile.value = false
-    importingPath.value = null
+  if (open) {
+    // Opened by a share link — land on the import step with the code ready.
+    if (pendingCode.value) {
+      shareCode.value = pendingCode.value
+      pendingCode.value = null
+      step.value = 'import'
+    }
+    return
   }
+
+  step.value = 'choice'
+  shareCode.value = ''
+  redeeming.value = false
+  form.name = ''
+  form.iconPath = null
+  form.iconPreview = null
+  form.loader = 'vanilla'
+  form.mcVersion = ''
+  form.loaderMode = 'stable'
+  form.loaderExplicit = ''
+  includeSnapshots.value = false
+  error.value = null
+  external.value = []
+  importingFile.value = false
+  importingPath.value = null
 })
 
 async function submit() {

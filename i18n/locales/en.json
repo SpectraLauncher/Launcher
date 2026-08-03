@@ -52,7 +52,10 @@
       "fromLauncher": "From another launcher",
       "fromLauncherDesc": "Detected instances from Prism, CurseForge and the Modrinth App.",
       "none": "No instances found in other launchers.",
-      "importBtn": "Import"
+      "importBtn": "Import",
+      "fromCode": "From a share code",
+      "fromCodeDesc": "Paste the code (or link) a friend sent you.",
+      "useCode": "Use code"
     }
   },
   "library": {
@@ -583,5 +586,20 @@
     "requiredJava": "Minecraft {version} requires Java {major}. The launcher selects it automatically.",
     "javaDetected": "Detected on your system: {label}",
     "javaWillDownload": "No matching Java detected — the launcher will download it."
+  },
+  "share": {
+    "menu": "Share instance",
+    "title": "Share “{name}”",
+    "intro": "Creates a short code anyone can use to clone this instance. Mods travel as links to Modrinth/CurseForge, not as files.",
+    "codeLabel": "Share code",
+    "copyCode": "Copy code",
+    "copyLink": "Copy link",
+    "createBtn": "Create code",
+    "expires": "The code works for {days} more days.",
+    "includeUnresolved": "Include {n} unrecognised files",
+    "includeUnresolvedDesc": "Local or private jars nobody can download — adds {size} to the share.",
+    "privacyNote": "Worlds, screenshots and crash reports are never shared.",
+    "needsCurseforge": "{n} mods need a CurseForge API key — add one in Settings and retry.",
+    "someFailed": "{n} mods could not be downloaded."
   }
 }

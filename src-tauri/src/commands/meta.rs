@@ -213,8 +213,9 @@ async fn fetch_forge(client: &reqwest::Client, mc: &str) -> Result<Vec<LoaderVer
         .await
         .map_err(|e| e.to_string())?;
 
-    // Forge maven versions look like "1.21.4-54.1.0"; that whole string is what
-    // `Forge(..)` expects. Pull them out of the XML without an XML crate.
+    // Forge maven versions look like "1.21.4-54.1.0"; we keep the whole string
+    // for display and strip the "{mc}-" prefix at launch (Lyceris re-adds it).
+    // Pull them out of the XML without an XML crate.
     let prefix = format!("{mc}-");
     let mut list: Vec<LoaderVersion> = xml
         .split("<version>")

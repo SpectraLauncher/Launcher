@@ -52,6 +52,10 @@
 </template>
 
 <script setup lang="ts">
+import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
+import type { UnlistenFn } from '@tauri-apps/api/event'
+
 // Theme is applied in plugins/theme.client.ts; here we just expose the reactive
 // background class to the shell.
 const theme = useThemeStore()
@@ -66,6 +70,22 @@ const activity = useActivityCenter()
 const instances = useInstancesStore()
 const updater = useAutoUpdate()
 const telemetry = useTelemetry()
+const createModal = useCreateInstanceModal()
+
+// `spectra://share/<code>` links. The backend both emits the code (launcher
+// already running) and parks it (link launched the app before the UI existed).
+let unlistenShare: UnlistenFn | null = null
+onMounted(async () => {
+  unlistenShare = await listen<string>('share://open', async (e) => {
+    // Drain the parked copy of this same code so it can't reopen on next start.
+    await invoke('take_pending_share').catch(() => {})
+    createModal.openWithCode(e.payload)
+  })
+  const pending = await invoke<string | null>('take_pending_share')
+  if (pending) createModal.openWithCode(pending)
+})
+onBeforeUnmount(() => unlistenShare?.())
+
 onMounted(() => {
   activity.attach()
   // Needed so the indicator can resolve instance names.

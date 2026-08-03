@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.4.6"
+version = "0.5.0"
 description = "A modern launcher for Minecraft that allows you to easily manage multiple installations of Minecraft at once"
 authors = ["MakotoPD"]
 license = "MIT"
@@ -33,6 +33,9 @@ tauri-plugin-os = "2"
 
 # Background auto-update (Discord-style: silent download + install + relaunch)
 tauri-plugin-process = "2"
+
+# `spectra://share/<code>` links from the website open the launcher directly
+tauri-plugin-deep-link = "2"
 
 # Minecraft engine: install/launch, Microsoft auth, Fabric/Quilt/Forge/NeoForge,
 # automatic Java provisioning. https://github.com/BatuhanAksoyy/lyceris
@@ -68,7 +71,15 @@ sha1 = "0.10"
 # Background auto-update — desktop only
 [target."cfg(any(target_os = \"macos\", windows, target_os = \"linux\"))".dependencies]
 tauri-plugin-updater = "2"
+# Windows/Linux deliver deep links by launching a second process; single-instance
+# forwards the URL to the running launcher instead (must be registered first).
+tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 
 # libc — used for getpgid() to kill the whole JVM process group on Unix
 [target.'cfg(not(windows))'.dependencies]
 libc = "0.2"
+
+# Renames the `spectra://` handler shown in browser prompts (the deep-link plugin
+# registers it under the raw bundle identifier). Already in the tree via that plugin.
+[target.'cfg(windows)'.dependencies]
+windows-registry = "0.5"
