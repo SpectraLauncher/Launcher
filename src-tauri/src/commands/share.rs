@@ -260,6 +260,16 @@ fn extract_message(body: &str) -> Option<String> {
 /// overrides, then downloads every recorded project from **its own** provider.
 #[tauri::command]
 pub async fn import_share(app: AppHandle, code: String) -> Result<ShareImportResult, String> {
+    // CurseForge profile codes look nothing like ours (8 mixed-case chars) and are
+    // resolved by an account-gated service only their own app can talk to. Say so
+    // instead of mangling the input into a lookup that always fails.
+    if code.to_lowercase().contains("curseforge.com") {
+        return Err("That's a CurseForge profile link. Spectra can't redeem those — \
+                    ask the sender to use the CurseForge app's \"Export profile\" \
+                    and import the .zip instead."
+            .into());
+    }
+
     let code: String = code
         .trim()
         .to_uppercase()

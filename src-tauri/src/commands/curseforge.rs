@@ -698,6 +698,19 @@ fn install_rec<'a>(
         }
         let file = fetch_file(project_id, file_id).await?;
         let m = fetch_mod(project_id).await?;
+        // …and skip one the user already has from Modrinth, rather than
+        // downloading a second copy and taking over its index entry.
+        if is_dependency
+            && crate::commands::modrinth::installed_by_other_provider(
+                index,
+                &m.name,
+                &file.file_name,
+                "curseforge",
+            )
+        {
+            visited.insert(project_id.to_string());
+            return Ok(());
+        }
         let (kind, folder) = kind_and_folder(&m);
 
         let dir = paths::instance_game_dir(instance_id).join(folder);

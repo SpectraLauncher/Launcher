@@ -1,3 +1,10 @@
+## Changes (v0.5.1)
+
+### 🐛 Bug Fixes
+- **No more duplicate mods across platforms**: installing a CurseForge mod whose dependency you already had from Modrinth (or the other way round) downloaded a second copy of that dependency and quietly re-labelled the mod as coming from the other platform — breaking its update checks. Dependencies you already have are now recognised across both platforms, by project name and by jar filename, and left exactly as they are.
+- **CurseForge share links explained**: pasting a `curseforge.com/.../share/...` link into the share-code field now says what it is and points you to the CurseForge app's "Export profile" `.zip` instead of failing with "code does not exist".
+- **The launcher names itself in browser prompts**: opening a `spectra://` link asked to launch "pl.makoto.spectra-launcher"; it now says **Spectra Launcher**.
+
 ## Changes (v0.5.0)
 
 ### ✨ Features & Improvements

@@ -533,6 +533,31 @@ pub fn write_content_index(instance_id: &str, index: &ContentIndex) -> Result<()
     store::write_json(&paths::instance_content_index(instance_id), index)
 }
 
+/// True when a *different* provider already supplies this project.
+///
+/// Project ids don't cross platforms — CurseForge says `238222` where Modrinth
+/// says `u6dRKJwZ` — so the `visited` set can't tell that a CurseForge dependency
+/// is the mod you already have from Modrinth. Two things do line up across both
+/// platforms: the project name and the jar filename (same build, same file), and
+/// either one is enough to stop a dependency from downloading a second copy and
+/// hijacking the index entry. Matching both covers projects listed under
+/// different names ("JEI" vs "Just Enough Items") and jars renamed per platform.
+/// Used by both providers' `install_rec`.
+pub fn installed_by_other_provider(
+    index: &ContentIndex,
+    name: &str,
+    filename: &str,
+    provider: &str,
+) -> bool {
+    let key = |s: &str| s.trim().to_lowercase();
+    let (name, filename) = (key(name), key(filename));
+    index.items.iter().any(|i| {
+        i.provider != provider
+            && ((!name.is_empty() && key(&i.name) == name)
+                || (!filename.is_empty() && key(&i.filename) == filename))
+    })
+}
+
 /// The content currently recorded as installed in an instance.
 #[tauri::command]
 pub fn get_installed_content(instance_id: String) -> Result<Vec<InstalledItem>, String> {
@@ -856,6 +881,15 @@ fn install_rec<'a>(
         let Some(file) = version.files.iter().find(|f| f.primary).or_else(|| version.files.first()) else {
             return Ok(());
         };
+
+        // …and skip one the user already has from CurseForge, rather than
+        // downloading a second copy and taking over its index entry.
+        if is_dependency
+            && installed_by_other_provider(index, &project.title, &file.filename, "modrinth")
+        {
+            visited.insert(version.project_id.clone());
+            return Ok(());
+        }
 
         let dir = paths::instance_game_dir(instance_id).join(folder);
         std::fs::create_dir_all(&dir).map_err(|e| format!("create {folder}: {e}"))?;
@@ -1697,6 +1731,51 @@ fn safe_name(name: &str) -> String {
 }
 
 /// Joins a relative archive path onto `base`, rejecting traversal outside it.
+#[cfg(test)]
+mod tests {
+    use super::{installed_by_other_provider, ContentIndex, InstalledItem};
+
+    fn item(name: &str, provider: &str) -> InstalledItem {
+        InstalledItem {
+            project_id: format!("{provider}-{name}"),
+            version_id: "v".into(),
+            kind: "mod".into(),
+            name: name.into(),
+            filename: format!("{name}.jar"),
+            version_number: "1.0".into(),
+            icon_url: None,
+            game_versions: vec![],
+            loaders: vec![],
+            dependency: false,
+            dependencies: vec![],
+            installed_at: String::new(),
+            provider: provider.into(),
+        }
+    }
+
+    #[test]
+    fn cross_provider_duplicates_are_detected() {
+        let index = ContentIndex { items: vec![item("Just Enough Items", "modrinth")] };
+        let hit = |name: &str, file: &str, provider: &str| {
+            installed_by_other_provider(&index, name, file, provider)
+        };
+
+        // A CurseForge dependency for a mod already installed from Modrinth.
+        assert!(hit("just enough items ", "Just Enough Items.jar", "curseforge"));
+        // Listed under a different name on the other platform — the jar still matches.
+        assert!(hit("JEI", "just enough items.jar", "curseforge"));
+        // Same jar renamed per platform — the project name still matches.
+        assert!(hit("Just Enough Items", "jei-neoforge-19.21.0.jar", "curseforge"));
+        // Same provider is not a cross-provider duplicate — that path already
+        // works via `visited`, and blocking it would break version changes.
+        assert!(!hit("Just Enough Items", "Just Enough Items.jar", "modrinth"));
+        // Unrelated mod.
+        assert!(!hit("Sodium", "sodium-0.6.jar", "curseforge"));
+        // Empty fields must never match everything.
+        assert!(!hit("", "", "curseforge"));
+    }
+}
+
 fn join_safe(base: &Path, rel: &str) -> Result<PathBuf, String> {
     let mut out = base.to_path_buf();
     for comp in Path::new(rel).components() {
