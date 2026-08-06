@@ -1,4 +1,4 @@
-import { open } from '@tauri-apps/plugin-shell'
+import { openExternal } from '~/utils/openExternal'
 
 export default defineNuxtPlugin(() => {
   if (import.meta.client) {
@@ -13,7 +13,7 @@ export default defineNuxtPlugin(() => {
           !anchor.href.startsWith(window.location.origin)
         ) {
           e.preventDefault()
-          open(anchor.href).catch(() => {})
+          openExternal(anchor.href).catch(() => {})
         }
       }
     })

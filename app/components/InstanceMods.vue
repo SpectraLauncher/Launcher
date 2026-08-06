@@ -303,7 +303,7 @@
 
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core'
-import { open as openUrl } from '@tauri-apps/plugin-shell'
+import { openExternal as openUrl } from '~/utils/openExternal'
 import type { ModEntry, Instance } from '~/types/launcher'
 import type { ModUpdate, ModrinthVersion } from '~/types/modrinth'
 

@@ -306,7 +306,7 @@
 <script setup lang="ts">
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
-import { open as openUrl } from '@tauri-apps/plugin-shell'
+import { openExternal as openUrl } from '~/utils/openExternal'
 import { marked } from 'marked'
 import type { ModrinthHit, ModrinthVersion, ModrinthCategory, ModrinthSortIndex, ModrinthGalleryItem, ModrinthProjectType, InstalledItem } from '~/types/modrinth'
 import type { LoaderType } from '~/types/launcher'

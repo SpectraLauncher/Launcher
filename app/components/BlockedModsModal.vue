@@ -64,7 +64,7 @@
 
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core'
-import { open as openUrl } from '@tauri-apps/plugin-shell'
+import { openExternal as openUrl } from '~/utils/openExternal'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import type { BlockedMod } from '~/types/launcher'
 

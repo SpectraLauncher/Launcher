@@ -211,11 +211,8 @@ pub fn reveal_in_explorer(path: String) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
     #[cfg(target_os = "linux")]
     {
-        let dir = p.parent().unwrap_or(p);
-        std::process::Command::new("xdg-open")
-            .arg(dir)
-            .spawn()
-            .map_err(|e| e.to_string())?;
+        // No "select the file" equivalent that every file manager honours.
+        desktop_open(p.parent().unwrap_or(p).as_os_str())?;
     }
     Ok(())
 }
@@ -243,10 +240,84 @@ fn open_in_file_manager(path: &std::path::Path) -> Result<(), String> {
         .spawn()
         .map_err(|e| e.to_string())?;
     #[cfg(target_os = "linux")]
-    std::process::Command::new("xdg-open")
-        .arg(path)
-        .spawn()
-        .map_err(|e| e.to_string())?;
+    desktop_open(path.as_os_str())?;
+    Ok(())
+}
+
+/// Builds a command for a helper that must run against the *system*, not against
+/// this AppImage.
+///
+/// The AppImage runtime repoints LD_LIBRARY_PATH, GIO_MODULE_DIR, XDG_DATA_DIRS …
+/// into the mounted image so the bundled GTK/WebKit load. Children inherit those,
+/// so xdg-open — and the browser or file manager it goes on to launch — starts
+/// against the image's libraries and dies without a word: the button appears to
+/// do nothing. Strip the overrides, keeping whatever the user set themselves.
+#[cfg(target_os = "linux")]
+fn system_command(program: &str) -> std::process::Command {
+    let mut cmd = std::process::Command::new(program);
+    let Ok(appdir) = std::env::var("APPDIR") else { return cmd };
+
+    for var in [
+        "GDK_PIXBUF_MODULE_FILE", "GIO_MODULE_DIR", "GSETTINGS_SCHEMA_DIR",
+        "GST_PLUGIN_SYSTEM_PATH", "GST_PLUGIN_SYSTEM_PATH_1_0", "GTK_DATA_PREFIX",
+        "GTK_EXE_PREFIX", "GTK_IM_MODULE_FILE", "GTK_PATH", "LD_PRELOAD", "PERLLIB",
+        "PYTHONHOME", "PYTHONPATH", "QT_PLUGIN_PATH",
+    ] {
+        cmd.env_remove(var);
+    }
+    // These carry real system entries too — drop only what points into the image.
+    for var in ["LD_LIBRARY_PATH", "XDG_DATA_DIRS", "XDG_CONFIG_DIRS", "PATH"] {
+        let Ok(value) = std::env::var(var) else { continue };
+        let kept: Vec<&str> = value.split(':').filter(|e| !e.starts_with(&appdir)).collect();
+        if kept.is_empty() {
+            cmd.env_remove(var);
+        } else {
+            cmd.env(var, kept.join(":"));
+        }
+    }
+    cmd
+}
+
+/// Hands a path or URL to the desktop's opener, falling back to `gio` on systems
+/// without xdg-utils.
+#[cfg(target_os = "linux")]
+fn desktop_open(target: &std::ffi::OsStr) -> Result<(), String> {
+    match system_command("xdg-open").arg(target).spawn() {
+        Ok(_) => Ok(()),
+        Err(e) => system_command("gio")
+            .arg("open")
+            .arg(target)
+            .spawn()
+            .map(|_| ())
+            .map_err(|_| format!("could not open it — is xdg-utils installed? ({e})")),
+    }
+}
+
+/// Opens a link in the user's browser.
+///
+/// Deliberately not `@tauri-apps/plugin-shell`: inside an AppImage its helper
+/// inherits the image's library paths and fails silently (see `system_command`).
+/// Keeps the plugin's scheme check, because links come from mod descriptions.
+#[tauri::command]
+pub fn open_external(url: String) -> Result<(), String> {
+    let url = url.trim();
+    if !["http://", "https://", "mailto:", "tel:"].iter().any(|s| url.starts_with(s)) {
+        return Err(format!("refusing to open {url}"));
+    }
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        std::process::Command::new("explorer")
+            .arg(url)
+            .creation_flags(CREATE_NO_WINDOW)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(target_os = "macos")]
+    std::process::Command::new("open").arg(url).spawn().map_err(|e| e.to_string())?;
+    #[cfg(target_os = "linux")]
+    desktop_open(std::ffi::OsStr::new(url))?;
     Ok(())
 }
 

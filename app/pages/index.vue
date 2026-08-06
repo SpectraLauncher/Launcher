@@ -231,7 +231,7 @@ function onSponsorClick(s: ReturnType<typeof useSponsor>['sponsors'][number]) {
     })
   } else {
     // For servers, hosting, and modpacks without a Modrinth slug — open in browser.
-    import('@tauri-apps/plugin-shell').then(({ open }) => open(s.url)).catch(() => {})
+    openExternal(s.url).catch(() => {})
   }
 }
 

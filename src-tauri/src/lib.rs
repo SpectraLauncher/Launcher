@@ -148,6 +148,7 @@ pub fn run() {
             commands::instances::open_instance_folder,
             commands::instances::open_instance_game_folder,
             commands::instances::reveal_in_explorer,
+            commands::instances::open_external,
             commands::instances::copy_file,
             commands::instances::duplicate_instance,
             // Instance content (tabs)

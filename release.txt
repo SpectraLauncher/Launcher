@@ -1,3 +1,8 @@
+## Changes (v0.5.2)
+
+### 🐛 Bug Fixes
+- **Linux/AppImage: buttons that leave the app now work**: "Game Folder", "Reveal in file manager", mod pages and every other external link did nothing when running the AppImage. The AppImage points the library paths at its own bundled copies, and the file manager or browser inherited them and died on startup — those overrides are now stripped from anything the launcher opens, with a fallback for systems without xdg-utils.
+
 ## Changes (v0.5.1)
 
 ### 🐛 Bug Fixes

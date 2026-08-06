@@ -53,7 +53,7 @@
 
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core'
-import { open as openUrl } from '@tauri-apps/plugin-shell'
+import { openExternal as openUrl } from '~/utils/openExternal'
 import type { LogFile } from '~/types/launcher'
 
 const props = defineProps<{ instanceId: string; initialRel?: string | null }>()
