@@ -320,7 +320,7 @@
       "theme": "主题",
       "themeDark": "深色",
       "themeOled": "OLED（纯黑）",
-      "themeZebatkowo": "Zębatkowo（扁平 / 金色）",
+      "themeSquared": "直角（无圆角）",
       "accent": "强调色",
       "themeDesc": "选择界面的暗度。",
       "accentDesc": "整个启动器使用的强调色。",

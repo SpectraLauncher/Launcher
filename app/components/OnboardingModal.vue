@@ -170,7 +170,7 @@ const privacyOptions: { key: PrivacyKey; wip?: boolean }[] = [
 const themeOptions = computed<{ value: ThemeMode, label: string, preview: string }[]>(() => [
   { value: 'dark', label: t('settings.appearance.themeDark'), preview: '#0a0a0b' },
   { value: 'oled', label: t('settings.appearance.themeOled'), preview: '#000000' },
-  { value: 'zebatkowo', label: 'Zębatkowo', preview: 'linear-gradient(135deg,#f59e0b,#b45309)' },
+  { value: 'squared', label: t('settings.appearance.themeSquared'), preview: 'linear-gradient(135deg,#0a0a0b 50%,#52525b 50%)' },
 ])
 const accentHex: Record<string, string> = {
   sky: '#0ea5e9', blue: '#3b82f6', indigo: '#6366f1', violet: '#8b5cf6',

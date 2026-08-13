@@ -46,13 +46,13 @@ html.oled {
 	--ui-bg-elevated: #0a0a0a;
 }
 
-/* "Zębatkowo" theme: a flat, sharp-cornered look in warm gold/orange. Toggled by
-   the `zebatkowo` class on <html> (see useThemeStore). The accent is forced to
-   amber in the store; here we just kill every rounded corner app-wide. */
-html.zebatkowo,
-html.zebatkowo *,
-html.zebatkowo *::before,
-html.zebatkowo *::after {
+/* "Squared" theme: the same palette with every corner squared off. Toggled by
+   the `squared` class on <html> (see useThemeStore). Corners only — colours and
+   the chosen accent are left untouched. */
+html.squared,
+html.squared *,
+html.squared *::before,
+html.squared *::after {
 	border-radius: 0 !important;
 }
 

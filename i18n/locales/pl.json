@@ -320,7 +320,7 @@
       "theme": "Motyw",
       "themeDark": "Ciemny",
       "themeOled": "OLED (czysta czerń)",
-      "themeZebatkowo": "Zębatkowo (płaski / złoty)",
+      "themeSquared": "Kanciasty (bez zaokrągleń)",
       "accent": "Kolor akcentu",
       "themeDesc": "Wybierz jasność interfejsu.",
       "accentDesc": "Kolor akcentu używany w całym launcherze.",

@@ -320,7 +320,7 @@
       "theme": "Thème",
       "themeDark": "Sombre",
       "themeOled": "OLED (noir pur)",
-      "themeZebatkowo": "Zębatkowo (plat / or)",
+      "themeSquared": "Anguleux (sans coins arrondis)",
       "accent": "Couleur d'accent",
       "themeDesc": "Choisis l'obscurité de l'interface.",
       "accentDesc": "Couleur d'accent utilisée dans tout le launcher.",

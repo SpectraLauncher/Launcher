@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 
-export type ThemeMode = 'dark' | 'oled' | 'zebatkowo'
+export type ThemeMode = 'dark' | 'oled' | 'squared'
 
 /** Accent colors offered in settings — these are @nuxt/ui color aliases. */
 export const ACCENT_COLORS = [
@@ -35,7 +35,10 @@ function loadPersisted(): PersistedTheme {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return fallback
-    return { ...fallback, ...JSON.parse(raw) }
+    const saved = { ...fallback, ...JSON.parse(raw) }
+    // The old gold "Zębatkowo" theme became the accent-agnostic "Squared".
+    if ((saved.mode as string) === 'zebatkowo') saved.mode = 'squared'
+    return saved
   } catch {
     return fallback
   }
@@ -47,7 +50,6 @@ export const useThemeStore = defineStore('theme', {
     /** Root background class for the app shell (matches the Spectra design). */
     bgClass(state): string {
       if (state.mode === 'oled') return 'bg-black'
-      if (state.mode === 'zebatkowo') return 'bg-amber-950/10'
       return 'bg-primary-950/5'
     },
   },
@@ -73,17 +75,15 @@ export const useThemeStore = defineStore('theme', {
       }
 
       document.documentElement.classList.toggle('oled', this.mode === 'oled')
-      // "Zębatkowo": flat (no rounded corners) — the look is driven by CSS
-      // scoped to this class (see main.css).
-      document.documentElement.classList.toggle('zebatkowo', this.mode === 'zebatkowo')
+      // "Squared": same palette, no rounded corners — driven entirely by CSS
+      // scoped to this class (see main.css), so the accent still applies.
+      document.documentElement.classList.toggle('squared', this.mode === 'squared')
 
-      // Live accent change via @nuxt/ui app config. The Zębatkowo theme locks
-      // the accent to a gold/orange regardless of the saved accent.
-      const accent = this.mode === 'zebatkowo' ? 'amber' : this.accent
+      // Live accent change via @nuxt/ui app config.
       try {
         const appConfig = useAppConfig()
         // @ts-expect-error – ui.colors is augmented by @nuxt/ui
-        appConfig.ui.colors.primary = accent
+        appConfig.ui.colors.primary = this.accent
       } catch {
         // app config not ready yet; will be applied on next call
       }
