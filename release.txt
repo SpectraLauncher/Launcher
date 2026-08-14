@@ -1,3 +1,20 @@
+## Changes (v0.6.0)
+
+### ✨ Features & Improvements
+- **Spectra accounts**: sign in from the button next to the activity indicator and the launcher gets a friends list. Create the account with an e-mail and password or with Discord, Google, GitHub or Microsoft, protect it with two-factor codes, and pick a username and avatar — all on the website; the launcher just opens your browser and takes it from there.
+- **Friends, by name instead of by code**: add someone by their username or e-mail, accept the requests that come back, and everyone you have added shows up in the panel on the right. Collapsed, that panel is gone completely — it takes no room from the page underneath.
+- **Send a modpack straight to a friend**: instances now have a **Share** tab in place of the entry in the ⋯ menu. Share the instance once, then invite friends from the list — the pack lands in their launcher as a notification with an **Install** button, no code to read out loud. Codes still work for everyone else.
+- **Push an update to everyone who has it**: changed something after sharing? **Push update** re-uploads the instance and tells every friend who installed it. Their **Update** button applies the changes *to the copy they already have* — mods the author added arrive, mods the author removed go away, and anything they installed themselves is left alone.
+- **See who is on what**: the Share tab lists everyone you sent the pack to and whether they are up to date, out of date or have not installed it yet.
+- **Codes last a week, and you decide when they end**: in the last 48 hours an **Extend by a week** button appears, and **Expire the code** kills it on the spot. Whatever friends already installed stays on their disk either way — they simply stop getting updates.
+- **Pick exactly which extra files travel**: mods and packs that match no Modrinth or CurseForge project can only be sent as raw files. Instead of one all-or-nothing switch, you now get a tree of them with sizes, ticked one by one, so a 200 MB local jar only goes if you want it to.
+- **You can watch it work**: sharing shows what it is doing — checking the instance, packing, uploading — with a progress bar for the current step and a second one for the whole job.
+
+### 🐛 Bug Fixes
+- **Shares are small again**: a share was quietly packing every cache your mods leave behind — Distant Horizons terrain, map caches, replay recordings. One real instance came to 1.4 GB. A share now carries only mods, resource packs, shaders, datapacks, configs and the instance icon, which took that same instance down to about 30 MB. It also means a share no longer carries a record of which servers you play on.
+- **Shared instances arrive with their icon**: a pack you receive now looks like the one that was shared instead of a blank tile.
+- **Big packs actually upload**: packs go straight to storage now rather than through the website, so the old 25 MB ceiling is gone — up to 1 GB, streamed from disk rather than held in memory.
+
 ## Changes (v0.5.2)
 
 ### 🐛 Bug Fixes
