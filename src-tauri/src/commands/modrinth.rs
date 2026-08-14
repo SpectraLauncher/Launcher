@@ -489,7 +489,7 @@ pub async fn modrinth_categories(project_type: String) -> Result<Vec<Category>, 
 
 // ===== Installed-content index (instances/<id>/content.json) =====
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct InstalledItem {
     pub project_id: String,
     pub version_id: String,
@@ -1247,7 +1247,7 @@ pub async fn export_mrpack(
     zip.write_all(&json).map_err(|e| e.to_string())?;
 
     // Everything not in the manifest (and within the selection) → overrides.
-    add_overrides(&mut zip, &game_dir, "", &filter, &matched, optional_disabled, opts)?;
+    add_overrides(&mut zip, &game_dir, "", &filter, &matched, optional_disabled, opts, &mut |_| {})?;
 
     zip.finish().map_err(|e| e.to_string())?;
     Ok(())
@@ -1264,6 +1264,9 @@ pub fn add_overrides(
     matched: &std::collections::HashSet<String>,
     optional_disabled: bool,
     opts: zip::write::SimpleFileOptions,
+    // Called with each file's size once it is in the archive, so a caller can
+    // report progress. `&mut dyn` rather than a generic: this recurses.
+    on_file: &mut dyn FnMut(u64),
 ) -> Result<(), String> {
     let dir = if rel.is_empty() { base.to_path_buf() } else { base.join(rel) };
     let Ok(entries) = std::fs::read_dir(&dir) else { return Ok(()) };
@@ -1276,7 +1279,7 @@ pub fn add_overrides(
         let path = e.path();
         if path.is_dir() {
             if filter.should_descend(&child_rel) {
-                add_overrides(zip, base, &child_rel, filter, matched, optional_disabled, opts)?;
+                add_overrides(zip, base, &child_rel, filter, matched, optional_disabled, opts, on_file)?;
             }
             continue;
         }
@@ -1287,10 +1290,32 @@ pub fn add_overrides(
             continue;
         }
         let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
-        zip.start_file(format!("overrides/{child_rel}"), opts).map_err(|e| e.to_string())?;
+        zip.start_file(format!("overrides/{child_rel}"), entry_opts(&child_rel, opts))
+            .map_err(|e| e.to_string())?;
         zip.write_all(&bytes).map_err(|e| e.to_string())?;
+        on_file(bytes.len() as u64);
     }
     Ok(())
+}
+
+/// Deflating a jar, a zip or a png buys about one percent and costs seconds per
+/// hundred megabytes — they are already compressed. Store those and spend the
+/// CPU on the configs, where it actually shrinks something.
+fn entry_opts(
+    rel: &str,
+    opts: zip::write::SimpleFileOptions,
+) -> zip::write::SimpleFileOptions {
+    const ALREADY_COMPRESSED: &[&str] = &[
+        ".jar", ".zip", ".png", ".jpg", ".jpeg", ".webp", ".ogg", ".mp3", ".gz", ".xz", ".7z",
+    ];
+    let name = rel.rsplit('/').next().unwrap_or(rel).to_lowercase();
+    // A disabled mod is still a jar underneath.
+    let name = name.strip_suffix(".disabled").unwrap_or(&name);
+    if ALREADY_COMPRESSED.iter().any(|ext| name.ends_with(ext)) {
+        opts.compression_method(zip::CompressionMethod::Stored)
+    } else {
+        opts
+    }
 }
 
 /// Junk that shouldn't ship in a shareable pack (OS cruft, packwiz metadata).

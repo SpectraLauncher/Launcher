@@ -55,7 +55,6 @@
     <CreateInstanceModal />
     <ModrinthBrowser />
     <ExportInstanceModal />
-    <ShareInstanceModal />
     <ExportModListModal />
     <LinkModsModal />
     <BlockedModsModal />

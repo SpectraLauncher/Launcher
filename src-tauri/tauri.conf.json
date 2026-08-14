@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Spectra Launcher",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "identifier": "pl.makoto.spectra-launcher",
   "build": {
     "frontendDist": "../.output/public",
@@ -13,8 +13,8 @@
     "windows": [
       {
         "title": "Spectra Launcher",
-        "width": 1370,
-        "height": 760,
+        "width": 1470,
+        "height": 860,
         "resizable": true,
         "fullscreen": false,
         "minWidth": 1100,

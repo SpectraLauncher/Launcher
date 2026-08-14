@@ -30,11 +30,26 @@ pub struct AppState {
     pub pending_share: Mutex<Option<String>>,
 }
 
-/// Routes an incoming `spectra://` URL to the UI. Stashes the code for the
-/// frontend to drain on mount (cold start) *and* emits it (app already running).
+/// Routes an incoming `spectra://` URL to the UI. Two kinds arrive: a share
+/// code to open, and a one-time token from signing in on the website.
+///
+/// A share code is stashed for the frontend to drain on mount (cold start)
+/// *and* emitted (app already running).
 #[cfg(desktop)]
-fn handle_share_url(app: &tauri::AppHandle, url: &str) {
+fn handle_deep_link(app: &tauri::AppHandle, url: &str) {
     use tauri::{Emitter, Manager};
+
+    if let Some(token) = commands::spectra::login_token_from_url(url) {
+        let handle = app.clone();
+        tauri::async_runtime::spawn(async move {
+            commands::spectra::redeem_login(handle, token).await;
+        });
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.unminimize();
+            let _ = window.set_focus();
+        }
+        return;
+    }
 
     let Some(code) = commands::share::code_from_url(url) else { return };
     if let Some(state) = app.try_state::<AppState>() {
@@ -111,13 +126,13 @@ pub fn run() {
                 let handle = app.handle().clone();
                 app.deep_link().on_open_url(move |event| {
                     for url in event.urls() {
-                        handle_share_url(&handle, url.as_str());
+                        handle_deep_link(&handle, url.as_str());
                     }
                 });
                 // Cold start: the launcher was *opened by* the link.
                 if let Ok(Some(urls)) = app.deep_link().get_current() {
                     for url in urls {
-                        handle_share_url(app.handle(), url.as_str());
+                        handle_deep_link(app.handle(), url.as_str());
                     }
                 }
             }
@@ -235,7 +250,12 @@ pub fn run() {
             commands::share::share_preview,
             commands::share::share_instance,
             commands::share::import_share,
+            commands::share::sync_share,
             commands::share::take_pending_share,
+            commands::spectra::spectra_login_url,
+            commands::spectra::spectra_session,
+            commands::spectra::spectra_logout,
+            commands::spectra::spectra_api,
             // Mod management
             commands::mods::list_mods,
             commands::mods::set_mod_enabled,

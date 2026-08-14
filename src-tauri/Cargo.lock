@@ -88,7 +88,7 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
 name = "app"
-version = "0.5.2"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -97,6 +97,7 @@ dependencies = [
  "discord-rich-presence",
  "fastnbt",
  "flate2",
+ "futures-util",
  "libc",
  "log",
  "lyceris",
@@ -119,6 +120,7 @@ dependencies = [
  "tauri-plugin-updater",
  "thiserror 2.0.18",
  "tokio",
+ "tokio-util",
  "toml 0.8.2",
  "uuid 1.23.3",
  "windows-registry",

@@ -14,3 +14,4 @@ pub mod ping;
 pub mod settings;
 pub mod share;
 pub mod skins;
+pub mod spectra;

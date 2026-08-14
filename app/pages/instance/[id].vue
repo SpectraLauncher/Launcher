@@ -154,6 +154,12 @@
         <InstanceMods v-else-if="activeTab === 'mods'" :instance-id="id" />
 
         <!-- instance settings -->
+        <InstanceShare
+          v-else-if="activeTab === 'share'"
+          :instance-id="id"
+          :instance-name="instance?.name ?? ''"
+        />
+
         <InstanceSettings v-else-if="activeTab === 'settings'" :instance-id="id" />
 
         <!-- placeholder for not-yet-built sections (servers) -->
@@ -204,7 +210,6 @@ const sysMem = useSystemMemory()
 const toast = useToast()
 const { t } = useI18n()
 const exportModal = useExportModal()
-const shareModal = useShareModal()
 const changeLoaderModal = useChangeLoaderModal()
 
 const id = computed(() => String(route.params.id))
@@ -316,7 +321,7 @@ async function stopInstance(force: boolean) {
 }
 
 // --- tabs ---
-type TabKey = 'mods' | 'shaders' | 'datapacks' | 'resourcepacks' | 'worlds' | 'screenshots' | 'servers' | 'logs' | 'settings'
+type TabKey = 'mods' | 'shaders' | 'datapacks' | 'resourcepacks' | 'worlds' | 'screenshots' | 'servers' | 'logs' | 'share' | 'settings'
 const tabs: { key: TabKey; label: string; icon: string }[] = [
   { key: 'mods', label: 'instance.tabs.mods', icon: 'i-lucide-blocks' },
   { key: 'shaders', label: 'instance.tabs.shaders', icon: 'i-lucide-sparkles' },
@@ -326,6 +331,7 @@ const tabs: { key: TabKey; label: string; icon: string }[] = [
   { key: 'screenshots', label: 'instance.tabs.screenshots', icon: 'i-lucide-camera' },
   { key: 'servers', label: 'instance.tabs.servers', icon: 'i-lucide-server' },
   { key: 'logs', label: 'instance.tabs.logs', icon: 'i-lucide-scroll-text' },
+  { key: 'share', label: 'instance.tabs.share', icon: 'i-lucide-share-2' },
   { key: 'settings', label: 'instance.tabs.settings', icon: 'i-lucide-settings' },
 ]
 const activeTab = ref<TabKey>('mods')
@@ -361,11 +367,6 @@ const menuItems = computed(() => [[
     label: t('instance.export'),
     icon: 'i-lucide-package',
     onSelect: () => { if (instance.value) exportModal.open(id.value, instance.value.name) },
-  },
-  {
-    label: t('share.menu'),
-    icon: 'i-lucide-share-2',
-    onSelect: () => { if (instance.value) shareModal.open(id.value, instance.value.name) },
   },
   {
     label: t('changeLoader.menu'),

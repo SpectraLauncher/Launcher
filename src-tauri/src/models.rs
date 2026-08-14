@@ -30,6 +30,17 @@ impl Default for Loader {
     }
 }
 
+/// Where a shared instance came from, and what it contained last time it was
+/// synced. The id list is what makes "the author removed a mod" different from
+/// "the player added one" — only the first kind is taken away again.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ShareOrigin {
+    pub code: String,
+    pub revision: u32,
+    #[serde(default)]
+    pub item_ids: Vec<String>,
+}
+
 /// One Minecraft instance/profile. Persisted as `<instance>/instance.json`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Instance {
@@ -57,6 +68,10 @@ pub struct Instance {
     /// Total accumulated playtime in seconds.
     #[serde(default)]
     pub playtime_seconds: u64,
+    /// Set when this instance came from someone else's share code, so a later
+    /// revision can be applied on top instead of landing as a second instance.
+    #[serde(default)]
+    pub share_origin: Option<ShareOrigin>,
 
     // --- per-instance launch overrides (each `override_*` flag means "use these
     //     instead of the global defaults") ---

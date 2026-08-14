@@ -12,8 +12,9 @@
           <img src="/logo-transparent.png" alt="Spectra Launcher Icon" class="h-5 object-contain" />
           <span>Spectra Launcher</span>
         </div>
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-3">
           <TitlebarActivity />
+          <AccountButton />
         </div>
       </template>
       <template v-else>
@@ -21,8 +22,9 @@
           <img src="/logo-transparent.png" alt="Spectra Launcher Icon" class="h-5 object-contain" />
           <span>Spectra Launcher</span>
         </div>
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-3">
           <TitlebarActivity />
+          <AccountButton />
           <WindowControls />
         </div>
       </template>
@@ -43,6 +45,10 @@
         <NuxtLayout>
           <NuxtPage />
         </NuxtLayout>
+
+        <!-- Right-hand account panel. Collapsed it renders nothing, so the
+             pages underneath keep the full width. -->
+        <AccountSidebar />
       </div>
     </div>
 
@@ -71,10 +77,13 @@ const instances = useInstancesStore()
 const updater = useAutoUpdate()
 const telemetry = useTelemetry()
 const createModal = useCreateInstanceModal()
+const spectra = useSpectraAccount()
+const spectraNotifications = useSpectraNotifications()
 
 // `spectra://share/<code>` links. The backend both emits the code (launcher
 // already running) and parks it (link launched the app before the UI existed).
 let unlistenShare: UnlistenFn | null = null
+let unlistenAccount: UnlistenFn | null = null
 onMounted(async () => {
   unlistenShare = await listen<string>('share://open', async (e) => {
     // Drain the parked copy of this same code so it can't reopen on next start.
@@ -83,8 +92,18 @@ onMounted(async () => {
   })
   const pending = await invoke<string | null>('take_pending_share')
   if (pending) createModal.openWithCode(pending)
+
+  // Signing in happens in the browser and comes back as `spectra://auth/...`;
+  // the backend swaps it for a session and tells us it is done.
+  unlistenAccount = await listen('spectra://account', async () => {
+    await spectra.refresh()
+    spectraNotifications.start()
+  })
 })
-onBeforeUnmount(() => unlistenShare?.())
+onBeforeUnmount(() => {
+  unlistenShare?.()
+  unlistenAccount?.()
+})
 
 onMounted(() => {
   activity.attach()
@@ -94,6 +113,14 @@ onMounted(() => {
   updater.checkForUpdates(true)
   // Anonymous usage stats (no-op unless opted in via Settings → Privacy).
   telemetry.init()
+  // Spectra account (friends, shared instances) — starts polling once there is
+  // a session; a signed-out launcher does nothing here.
+  spectra.refresh().then(() => {
+    if (spectra.isSignedIn.value) spectraNotifications.start()
+  })
 })
-onBeforeUnmount(() => activity.detach())
+onBeforeUnmount(() => {
+  activity.detach()
+  spectraNotifications.stop()
+})
 </script>

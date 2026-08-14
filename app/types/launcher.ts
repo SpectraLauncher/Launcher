@@ -22,6 +22,8 @@ export interface Instance {
   created_at: string
   last_played?: string | null
   playtime_seconds: number
+  /// Present when the instance came from a share code that belongs to someone.
+  share_origin?: { code: string, revision: number, item_ids: string[] } | null
 
   // per-instance launch overrides
   override_memory: boolean
@@ -194,11 +196,17 @@ export interface LogFile {
 
 // --- instance sharing (mirrors share.rs) ---
 
+/** A content file with no provider behind it — shareable only as raw bytes. */
+export interface UnresolvedFile {
+  path: string
+  size: number
+}
+
 export interface SharePreview {
   modrinth: number
   curseforge: number
-  /** Game-dir paths of content files that match no provider. */
-  unresolved: string[]
+  /** Content files that match no provider, each pickable on its own. */
+  unresolved: UnresolvedFile[]
   unresolved_bytes: number
 }
 

@@ -48,6 +48,12 @@ pub fn accounts_file() -> PathBuf {
     data_root().join("accounts.json")
 }
 
+/// Session token for the Spectra account (friends, shared instances). Separate
+/// from `launcher.json`, which is handed to the frontend in one piece.
+pub fn spectra_account_file() -> PathBuf {
+    data_root().join("spectra-account.json")
+}
+
 pub fn instances_dir() -> PathBuf {
     data_root().join("instances")
 }
