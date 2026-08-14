@@ -256,6 +256,7 @@ pub fn run() {
             commands::spectra::spectra_session,
             commands::spectra::spectra_logout,
             commands::spectra::spectra_api,
+            commands::spectra::spectra_link_minecraft,
             // Mod management
             commands::mods::list_mods,
             commands::mods::set_mod_enabled,

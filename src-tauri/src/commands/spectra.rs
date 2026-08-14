@@ -129,6 +129,37 @@ pub async fn spectra_api(method: String, path: String, body: Option<Value>) -> R
     call(&method, &path, body).await
 }
 
+/// Tells the site which Minecraft profile this account plays as.
+///
+/// The launcher is the only client that can prove it: it holds a Minecraft
+/// access token from the Xbox chain, and the site asks Mojang whose token it is
+/// rather than believing a name typed by the client. The token is sent once and
+/// never stored anywhere but the account file it already lives in.
+///
+/// Quietly does nothing when there is no Spectra session, no Minecraft account,
+/// or the active one is offline — none of those are errors worth a dialog.
+#[tauri::command]
+pub async fn spectra_link_minecraft() -> Result<Option<Value>, String> {
+    if stored_token().is_none() {
+        return Ok(None);
+    }
+    let account = match crate::commands::auth::refresh_active_account().await {
+        Ok(account) => account,
+        Err(_) => return Ok(None), // nobody signed in to the game
+    };
+    if account.kind == crate::models::AccountKind::Offline || account.access_token.is_empty() {
+        return Ok(None);
+    }
+
+    call(
+        "POST",
+        "/api/me/minecraft",
+        Some(serde_json::json!({ "token": account.access_token })),
+    )
+    .await
+    .map(Some)
+}
+
 /// Turns the one-time token from `spectra://auth/<token>` into a session.
 pub async fn redeem_login(app: AppHandle, token: String) {
     let result = call(

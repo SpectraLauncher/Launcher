@@ -49,9 +49,58 @@ async function loadFriends() {
   }
 }
 
-const addFriend = () => run('add', async () => {
-  await account.api('POST', '/api/friends', { query: query.value.trim() })
+// --- who am I actually inviting? -------------------------------------------
+// A Minecraft name and a Spectra name are often different, so typing one and
+// hoping is how a request ends up with a stranger. These are the people it
+// could be, with faces and both names, and you pick one.
+type Candidate = SpectraFriend & { relation: 'friend' | 'pending' | null }
+const results = ref<Candidate[]>([])
+const searching = ref(false)
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(query, (value) => {
+  if (searchTimer) clearTimeout(searchTimer)
+  const q = value.trim()
+  if (q.length < 2) {
+    results.value = []
+    return
+  }
+  // Debounced: this would fire on every keystroke otherwise.
+  searchTimer = setTimeout(async () => {
+    searching.value = true
+    try {
+      const res = await account.api<{ users: Candidate[] }>('GET', `/api/users?q=${encodeURIComponent(q)}`)
+      results.value = res.users
+    } catch {
+      results.value = []
+    } finally {
+      searching.value = false
+    }
+  }, 250)
+})
+
+const invite = (candidate: Candidate) => run(`add-${candidate.id}`, async () => {
+  // By id, not by name — whoever is on that row is who gets the request.
+  await account.api('POST', '/api/friends', { userId: candidate.id })
   query.value = ''
+  results.value = []
+  notice.value = t('spectra.requestSent')
+  await loadFriends()
+})
+
+/**
+ * Enter sends. If the list narrowed to one person, that is who it means;
+ * otherwise the text is taken as an exact name or e-mail address — the server
+ * matches all three, and says so when it matches nothing.
+ */
+const addFriend = () => run('add', async () => {
+  const q = query.value.trim()
+  if (!q) return
+  if (results.value.length === 1) return invite(results.value[0]!)
+
+  await account.api('POST', '/api/friends', { query: q })
+  query.value = ''
+  results.value = []
   notice.value = t('spectra.requestSent')
   await loadFriends()
 })
@@ -63,6 +112,14 @@ const answer = (id: number, action: 'accept' | 'reject') => run(`req-${id}`, asy
 
 const removeFriend = (friendshipId: number) => run(`rm-${friendshipId}`, async () => {
   await account.api('DELETE', `/api/friends/${friendshipId}`)
+  await loadFriends()
+})
+
+/** Same endpoint — either side of a friendship row may drop it. */
+const cancelRequest = (id: number) => run(`rm-${id}`, async () => {
+  await account.api('DELETE', `/api/friends/${id}`)
+  // The candidate list should offer them again straight away.
+  results.value = []
   await loadFriends()
 })
 
@@ -165,7 +222,9 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
           >{{ spectraInitial(account.displayName.value).letter }}</span>
           <div class="min-w-0 flex-1">
             <p class="truncate text-sm font-medium text-neutral-100">{{ account.displayName.value }}</p>
-            <p class="truncate text-[11px] text-neutral-500">{{ account.user.value?.email }}</p>
+            <p class="truncate text-[11px] text-neutral-500">
+              {{ account.user.value?.mcUsername || account.user.value?.email }}
+            </p>
           </div>
           <button
             type="button"
@@ -272,9 +331,53 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
                 :disabled="!query.trim() || busy === 'add'"
                 :title="$t('spectra.add')"
               >
-                <UIcon name="i-lucide-user-plus" class="size-4" />
+                <UIcon
+                  :name="searching ? 'i-lucide-loader-circle' : 'i-lucide-user-plus'"
+                  class="size-4"
+                  :class="searching && 'animate-spin'"
+                />
               </button>
             </form>
+
+            <!-- who matches what is being typed -->
+            <div v-if="query.trim().length >= 2" class="mt-1.5">
+              <ul v-if="results.length" class="space-y-1">
+                <li
+                  v-for="c in results"
+                  :key="c.id"
+                  class="flex items-center gap-2.5 rounded-lg border border-white/8 bg-white/4 px-2.5 py-1.5"
+                >
+                  <img v-if="c.image" :src="c.image" alt="" class="size-7 shrink-0 rounded-full object-cover">
+                  <span
+                    v-else
+                    class="flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white/90"
+                    :style="`background:hsl(${spectraInitial(label(c)).hue} 55% 30%)`"
+                  >{{ spectraInitial(label(c)).letter }}</span>
+                  <span class="min-w-0 flex-1">
+                    <span class="block truncate text-xs text-neutral-200">{{ label(c) }}</span>
+                    <span v-if="c.mcUsername" class="block truncate text-[10px] text-neutral-500">
+                      {{ $t('spectra.inGame', { name: c.mcUsername }) }}
+                    </span>
+                  </span>
+                  <span v-if="c.relation === 'friend'" class="shrink-0 text-[10px] text-neutral-500">
+                    {{ $t('spectra.alreadyFriends') }}
+                  </span>
+                  <span v-else-if="c.relation === 'pending'" class="shrink-0 text-[10px] text-neutral-500">
+                    {{ $t('spectra.pendingShort') }}
+                  </span>
+                  <button
+                    v-else
+                    type="button"
+                    class="shrink-0 rounded-md bg-primary-500 px-2 py-1 text-[11px] font-semibold text-[#04121f] transition hover:bg-primary-400 disabled:opacity-50"
+                    :disabled="busy === `add-${c.id}`"
+                    @click="invite(c)"
+                  >{{ $t('spectra.add') }}</button>
+                </li>
+              </ul>
+              <p v-else-if="!searching" class="px-1 py-1.5 text-[11px] text-neutral-600">
+                {{ $t('spectra.noMatches') }}
+              </p>
+            </div>
 
             <ul class="mt-2 space-y-1">
               <li
@@ -288,7 +391,12 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
                   class="flex size-7 items-center justify-center rounded-full text-[11px] font-bold text-white/90"
                   :style="`background:hsl(${spectraInitial(label(f)).hue} 55% 30%)`"
                 >{{ spectraInitial(label(f)).letter }}</span>
-                <span class="flex-1 truncate text-xs text-neutral-200">{{ label(f) }}</span>
+                <span class="min-w-0 flex-1">
+                  <span class="block truncate text-xs text-neutral-200">{{ label(f) }}</span>
+                  <span v-if="f.mcUsername" class="block truncate text-[10px] text-neutral-500">
+                    {{ f.mcUsername }}
+                  </span>
+                </span>
                 <button
                   type="button"
                   class="rounded-md p-1 text-neutral-600 opacity-0 transition group-hover:opacity-100 hover:bg-white/5 hover:text-red-400 flex items-center justify-center"
@@ -304,9 +412,42 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
               {{ $t('spectra.noFriends') }}
             </p>
 
-            <p v-if="outgoing.length" class="mt-3 text-[11px] text-neutral-600">
-              {{ $t('spectra.outgoing', { n: outgoing.length }) }}
-            </p>
+            <!-- requests you sent, and the way to take one back -->
+            <div v-if="outgoing.length" class="mt-4">
+              <p class="text-[10px] font-semibold tracking-[0.14em] text-neutral-500 uppercase">
+                {{ $t('spectra.outgoing', { n: outgoing.length }) }}
+              </p>
+              <ul class="mt-2 space-y-1">
+                <li
+                  v-for="r in outgoing"
+                  :key="r.id"
+                  class="group flex items-center gap-2.5 rounded-lg bg-white/4 px-2.5 py-1.5"
+                >
+                  <img v-if="r.user.image" :src="r.user.image" alt="" class="size-7 shrink-0 rounded-full object-cover">
+                  <span
+                    v-else
+                    class="flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white/90"
+                    :style="`background:hsl(${spectraInitial(label(r.user)).hue} 55% 30%)`"
+                  >{{ spectraInitial(label(r.user)).letter }}</span>
+                  <span class="min-w-0 flex-1">
+                    <span class="block truncate text-xs text-neutral-200">{{ label(r.user) }}</span>
+                    <span v-if="r.user.mcUsername" class="block truncate text-[10px] text-neutral-500">
+                      {{ $t('spectra.inGame', { name: r.user.mcUsername }) }}
+                    </span>
+                  </span>
+                  <span class="shrink-0 text-[10px] text-neutral-600">{{ $t('spectra.pendingShort') }}</span>
+                  <button
+                    type="button"
+                    class="flex shrink-0 items-center justify-center rounded-md p-1 text-neutral-600 transition hover:bg-white/5 hover:text-red-400"
+                    :title="$t('spectra.cancelRequest')"
+                    :disabled="busy === `rm-${r.id}`"
+                    @click="cancelRequest(r.id)"
+                  >
+                    <UIcon name="i-lucide-x" class="size-3.5" />
+                  </button>
+                </li>
+              </ul>
+            </div>
           </section>
         </div>
       </template>

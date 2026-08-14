@@ -646,14 +646,14 @@
     "requests": "Заявки в друзья",
     "friends": "Друзья",
     "add": "Отправить заявку",
-    "addPlaceholder": "Имя пользователя или e-mail",
+    "addPlaceholder": "Имя, e-mail или ник в Minecraft",
     "requestSent": "Заявка отправлена.",
     "accept": "Принять",
     "reject": "Отклонить",
     "install": "Установить",
     "removeFriend": "Удалить из друзей",
     "noFriends": "Друзей пока нет. Добавьте кого-нибудь по имени пользователя, чтобы делиться сборками.",
-    "outgoing": "Заявок в ожидании: {n}",
+    "outgoing": "Отправлено ({n})",
     "note": {
       "friend_request": "{who} хочет добавить вас в друзья",
       "friend_accepted": "{who} принял вашу заявку",
@@ -661,6 +661,11 @@
       "instance_update": "{who} выложил обновление сборки \"{name}\""
     },
     "update": "Обновить",
-    "updating": "Обновление {name}…"
+    "updating": "Обновление {name}…",
+    "inGame": "в игре: {name}",
+    "alreadyFriends": "уже друзья",
+    "pendingShort": "приглашён",
+    "noMatches": "Никого с таким именем. Полный e-mail тоже подойдёт.",
+    "cancelRequest": "Отменить заявку"
   }
 }

@@ -646,14 +646,14 @@
     "requests": "Solicitudes de amistad",
     "friends": "Amigos",
     "add": "Enviar solicitud",
-    "addPlaceholder": "Usuario o correo",
+    "addPlaceholder": "Usuario, correo o nick de Minecraft",
     "requestSent": "Solicitud enviada.",
     "accept": "Aceptar",
     "reject": "Rechazar",
     "install": "Instalar",
     "removeFriend": "Eliminar amigo",
     "noFriends": "Aún no tienes amigos. Añade a alguien por su usuario para compartir paquetes.",
-    "outgoing": "Solicitudes pendientes: {n}",
+    "outgoing": "Enviadas ({n})",
     "note": {
       "friend_request": "{who} quiere ser tu amigo",
       "friend_accepted": "{who} aceptó tu solicitud",
@@ -661,6 +661,11 @@
       "instance_update": "{who} ha publicado una actualización de «{name}»"
     },
     "update": "Actualizar",
-    "updating": "Actualizando {name}…"
+    "updating": "Actualizando {name}…",
+    "inGame": "en el juego: {name}",
+    "alreadyFriends": "ya sois amigos",
+    "pendingShort": "invitado",
+    "noMatches": "Nadie con ese nombre. Un correo completo también sirve.",
+    "cancelRequest": "Cancelar la solicitud"
   }
 }

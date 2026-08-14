@@ -646,14 +646,14 @@
     "requests": "Freundschaftsanfragen",
     "friends": "Freunde",
     "add": "Anfrage senden",
-    "addPlaceholder": "Benutzername oder E-Mail",
+    "addPlaceholder": "Benutzername, E-Mail oder Minecraft-Name",
     "requestSent": "Anfrage gesendet.",
     "accept": "Annehmen",
     "reject": "Ablehnen",
     "install": "Installieren",
     "removeFriend": "Freund entfernen",
     "noFriends": "Noch keine Freunde. Füge jemanden über den Benutzernamen hinzu, um Modpacks zu teilen.",
-    "outgoing": "Ausstehende Anfragen: {n}",
+    "outgoing": "Gesendet ({n})",
     "note": {
       "friend_request": "{who} möchte mit dir befreundet sein",
       "friend_accepted": "{who} hat deine Freundschaftsanfrage angenommen",
@@ -661,6 +661,11 @@
       "instance_update": "{who} hat ein Update für „{name}“ veröffentlicht"
     },
     "update": "Aktualisieren",
-    "updating": "{name} wird aktualisiert…"
+    "updating": "{name} wird aktualisiert…",
+    "inGame": "im Spiel: {name}",
+    "alreadyFriends": "schon befreundet",
+    "pendingShort": "eingeladen",
+    "noMatches": "Niemanden gefunden. Eine vollständige E-Mail geht auch.",
+    "cancelRequest": "Anfrage zurückziehen"
   }
 }

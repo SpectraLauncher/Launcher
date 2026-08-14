@@ -98,6 +98,7 @@ onMounted(async () => {
   unlistenAccount = await listen('spectra://account', async () => {
     await spectra.refresh()
     spectraNotifications.start()
+    spectra.linkMinecraft()
   })
 })
 onBeforeUnmount(() => {
@@ -116,7 +117,10 @@ onMounted(() => {
   // Spectra account (friends, shared instances) — starts polling once there is
   // a session; a signed-out launcher does nothing here.
   spectra.refresh().then(() => {
-    if (spectra.isSignedIn.value) spectraNotifications.start()
+    if (!spectra.isSignedIn.value) return
+    spectraNotifications.start()
+    // Names change, so this runs every start rather than only on sign-in.
+    spectra.linkMinecraft()
   })
 })
 onBeforeUnmount(() => {

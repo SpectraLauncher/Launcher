@@ -646,14 +646,14 @@
     "requests": "Zaproszenia do znajomych",
     "friends": "Znajomi",
     "add": "Wyślij zaproszenie",
-    "addPlaceholder": "Nazwa użytkownika lub e-mail",
+    "addPlaceholder": "Nazwa, e-mail lub nick z Minecrafta",
     "requestSent": "Zaproszenie wysłane.",
     "accept": "Akceptuj",
     "reject": "Odrzuć",
     "install": "Zainstaluj",
     "removeFriend": "Usuń ze znajomych",
     "noFriends": "Brak znajomych. Dodaj kogoś po nazwie, żeby dzielić się paczkami.",
-    "outgoing": "Zaproszenia czekające na odpowiedź: {n}",
+    "outgoing": "Wysłane ({n})",
     "note": {
       "friend_request": "{who} chce dodać Cię do znajomych",
       "friend_accepted": "{who} przyjął Twoje zaproszenie",
@@ -661,6 +661,11 @@
       "instance_update": "{who} wypchnął aktualizację paczki „{name}”"
     },
     "update": "Aktualizuj",
-    "updating": "Aktualizowanie {name}…"
+    "updating": "Aktualizowanie {name}…",
+    "inGame": "w grze: {name}",
+    "alreadyFriends": "już znajomi",
+    "pendingShort": "zaproszony",
+    "noMatches": "Nikt taki. Pełny adres e-mail też zadziała.",
+    "cancelRequest": "Anuluj zaproszenie"
   }
 }

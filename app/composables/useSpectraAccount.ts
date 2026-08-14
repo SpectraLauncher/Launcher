@@ -7,6 +7,9 @@ export interface SpectraUser {
   username: string | null
   image: string | null
   email?: string
+  /** The Minecraft profile linked to this account, once verified. */
+  mcUsername?: string | null
+  mcUuid?: string | null
 }
 
 export interface SpectraFriend {
@@ -14,6 +17,7 @@ export interface SpectraFriend {
   name: string | null
   username: string | null
   image: string | null
+  mcUsername?: string | null
   friendshipId: number
 }
 
@@ -53,6 +57,17 @@ export const useSpectraAccount = () => {
     }
   }
 
+  /**
+   * Tells the site which Minecraft profile this account plays as, so friends can
+   * be found by their in-game name. The token never passes through here — Rust
+   * reads it from the account file and posts it straight to the site.
+   */
+  async function linkMinecraft() {
+    const linked = await invoke<{ username: string } | null>('spectra_link_minecraft').catch(() => null)
+    if (linked && user.value) user.value = { ...user.value, mcUsername: linked.username }
+    return linked
+  }
+
   /** Opens the browser; the session arrives back through the deep link. */
   async function login() {
     error.value = null
@@ -67,7 +82,7 @@ export const useSpectraAccount = () => {
 
   const displayName = computed(() => user.value?.username || user.value?.name || '')
 
-  return { user, loading, error, isSignedIn, displayName, api, refresh, login, logout }
+  return { user, loading, error, isSignedIn, displayName, api, refresh, login, logout, linkMinecraft }
 }
 
 /** Colour + letter for someone without a picture, stable per name. */

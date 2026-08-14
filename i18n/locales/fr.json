@@ -646,14 +646,14 @@
     "requests": "Demandes d’amis",
     "friends": "Amis",
     "add": "Envoyer la demande",
-    "addPlaceholder": "Pseudo ou e-mail",
+    "addPlaceholder": "Pseudo, e-mail ou pseudo Minecraft",
     "requestSent": "Demande envoyée.",
     "accept": "Accepter",
     "reject": "Refuser",
     "install": "Installer",
     "removeFriend": "Retirer des amis",
     "noFriends": "Pas encore d’amis. Ajoute quelqu’un par son pseudo pour partager des packs.",
-    "outgoing": "Demandes en attente : {n}",
+    "outgoing": "Envoyées ({n})",
     "note": {
       "friend_request": "{who} veut devenir ton ami",
       "friend_accepted": "{who} a accepté ta demande",
@@ -661,6 +661,11 @@
       "instance_update": "{who} a publié une mise à jour de « {name} »"
     },
     "update": "Mettre à jour",
-    "updating": "Mise à jour de {name}…"
+    "updating": "Mise à jour de {name}…",
+    "inGame": "en jeu : {name}",
+    "alreadyFriends": "déjà amis",
+    "pendingShort": "invité",
+    "noMatches": "Personne à ce nom. Une adresse e-mail complète marche aussi.",
+    "cancelRequest": "Annuler la demande"
   }
 }

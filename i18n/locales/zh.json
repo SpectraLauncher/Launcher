@@ -646,14 +646,14 @@
     "requests": "好友请求",
     "friends": "好友",
     "add": "发送请求",
-    "addPlaceholder": "用户名或邮箱",
+    "addPlaceholder": "用户名、邮箱或 Minecraft 昵称",
     "requestSent": "请求已发送。",
     "accept": "接受",
     "reject": "拒绝",
     "install": "安装",
     "removeFriend": "删除好友",
     "noFriends": "还没有好友。用用户名添加一个人，就能和他分享整合包。",
-    "outgoing": "等待回应的请求：{n}",
+    "outgoing": "已发送（{n}）",
     "note": {
       "friend_request": "{who} 想添加你为好友",
       "friend_accepted": "{who} 接受了你的好友请求",
@@ -661,6 +661,11 @@
       "instance_update": "{who} 为「{name}」推送了更新"
     },
     "update": "更新",
-    "updating": "正在更新 {name}…"
+    "updating": "正在更新 {name}…",
+    "inGame": "游戏中：{name}",
+    "alreadyFriends": "已是好友",
+    "pendingShort": "已邀请",
+    "noMatches": "没有这个名字。也可以输入完整邮箱。",
+    "cancelRequest": "取消请求"
   }
 }

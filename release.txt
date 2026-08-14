@@ -1,3 +1,13 @@
+## Changes (v0.6.1)
+
+### ✨ Features & Improvements
+- **Your Minecraft name, on your Spectra account**: sign in to both and the launcher links the profile you play as, so friends can find you by the name they actually know you by. It comes from Mojang rather than from whatever the launcher claims, so nobody can take a name that is not theirs — and offline accounts stay unlinked.
+- **See who you are inviting**: typing in the friend box now shows matching players with their avatar, their Spectra name and their in-game name underneath, and you pick one. A Minecraft nick is rarely the same as a Spectra username, and sending a request into the dark was a good way to end up friends with a stranger. The list also tells you when you are already friends or have already asked.
+- **Sent requests are a list**: everyone you have invited is shown with a button to take the invitation back, instead of a line saying how many are waiting.
+
+### 🐛 Bug Fixes
+- **Adding by e-mail or by exact name works again**: pressing Enter in the friend box did nothing at all unless the text was an e-mail address or the suggestions had narrowed to exactly one person. It now sends either way, and says so when nothing matches.
+
 ## Changes (v0.6.0)
 
 ### ✨ Features & Improvements
