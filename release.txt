@@ -1,3 +1,10 @@
+## Changes (v0.6.2)
+
+### 🐛 Bug Fixes
+- **Missing icons on macOS**: the "+" on **New instance** and a number of other icons simply were not there. Icons were being fetched from the internet each time the launcher ran, and on macOS that request never came back. They are part of the app now, so they show up on every system — and with no connection at all.
+- **Notifications go away once you have dealt with them**: accepting a friend request left its notification sitting in the list, and so did an invitation to a modpack after installing it. Answering a request now clears it, and an invitation disappears once the pack has actually downloaded — cancel the install and it stays, waiting for you.
+- **Dismiss a notification**: every entry has an ✕ for the ones you simply do not want to act on.
+
 ## Changes (v0.6.1)
 
 ### ✨ Features & Improvements

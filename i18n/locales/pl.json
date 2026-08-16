@@ -666,6 +666,7 @@
     "alreadyFriends": "już znajomi",
     "pendingShort": "zaproszony",
     "noMatches": "Nikt taki. Pełny adres e-mail też zadziała.",
-    "cancelRequest": "Anuluj zaproszenie"
+    "cancelRequest": "Anuluj zaproszenie",
+    "dismiss": "Usuń powiadomienie"
   }
 }

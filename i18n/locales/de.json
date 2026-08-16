@@ -666,6 +666,7 @@
     "alreadyFriends": "schon befreundet",
     "pendingShort": "eingeladen",
     "noMatches": "Niemanden gefunden. Eine vollständige E-Mail geht auch.",
-    "cancelRequest": "Anfrage zurückziehen"
+    "cancelRequest": "Anfrage zurückziehen",
+    "dismiss": "Ausblenden"
   }
 }

@@ -666,6 +666,7 @@
     "alreadyFriends": "已是好友",
     "pendingShort": "已邀请",
     "noMatches": "没有这个名字。也可以输入完整邮箱。",
-    "cancelRequest": "取消请求"
+    "cancelRequest": "取消请求",
+    "dismiss": "忽略"
   }
 }

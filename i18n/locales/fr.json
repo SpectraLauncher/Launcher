@@ -666,6 +666,7 @@
     "alreadyFriends": "déjà amis",
     "pendingShort": "invité",
     "noMatches": "Personne à ce nom. Une adresse e-mail complète marche aussi.",
-    "cancelRequest": "Annuler la demande"
+    "cancelRequest": "Annuler la demande",
+    "dismiss": "Masquer"
   }
 }

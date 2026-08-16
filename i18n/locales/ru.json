@@ -666,6 +666,7 @@
     "alreadyFriends": "уже друзья",
     "pendingShort": "приглашён",
     "noMatches": "Никого с таким именем. Полный e-mail тоже подойдёт.",
-    "cancelRequest": "Отменить заявку"
+    "cancelRequest": "Отменить заявку",
+    "dismiss": "Убрать"
   }
 }

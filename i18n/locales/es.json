@@ -666,6 +666,7 @@
     "alreadyFriends": "ya sois amigos",
     "pendingShort": "invitado",
     "noMatches": "Nadie con ese nombre. Un correo completo también sirve.",
-    "cancelRequest": "Cancelar la solicitud"
+    "cancelRequest": "Cancelar la solicitud",
+    "dismiss": "Descartar"
   }
 }

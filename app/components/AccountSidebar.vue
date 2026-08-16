@@ -107,6 +107,8 @@ const addFriend = () => run('add', async () => {
 
 const answer = (id: number, action: 'accept' | 'reject') => run(`req-${id}`, async () => {
   await account.api('PATCH', `/api/friends/${id}`, { action })
+  // The server drops the matching notification, so a re-poll is what makes it
+  // disappear here too.
   await Promise.all([loadFriends(), notifications.poll()])
 })
 
@@ -146,8 +148,9 @@ const update = (n: SpectraNotification) => run(`upd-${n.id}`, async () => {
   await activity.withTask(t('spectra.updating', { name: target.name }), () =>
     invoke('sync_share', { id: target.id, code: n.shareCode }))
   await instances.load()
-  notifications.markRead([n.id])
+  // Downloading the pack is what clears it on the server; this just catches up.
   notifications.dismiss(n.id)
+  await notifications.poll()
 })
 
 const label = (u: { username: string | null, name: string | null } | null) =>
@@ -263,6 +266,14 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
                     :style="`background:hsl(${spectraInitial(label(n.actor)).hue} 55% 30%)`"
                   >{{ spectraInitial(label(n.actor)).letter }}</span>
                   <p class="flex-1 text-xs leading-relaxed text-neutral-300">{{ notificationText(n) }}</p>
+                  <button
+                    type="button"
+                    class="flex shrink-0 items-center justify-center rounded-md p-1 text-neutral-600 transition hover:bg-white/5 hover:text-neutral-200"
+                    :title="$t('spectra.dismiss')"
+                    @click="notifications.remove(n.id)"
+                  >
+                    <UIcon name="i-lucide-x" class="size-3.5" />
+                  </button>
                 </div>
 
                 <div v-if="n.kind === 'instance_invite'" class="mt-2 flex justify-end">

@@ -64,8 +64,19 @@ export const useSpectraNotifications = () => {
 
   /** Drops a notification from the list once it has been acted on. */
   function dismiss(id: number) {
+    const gone = items.value.find(n => n.id === id)
     items.value = items.value.filter(n => n.id !== id)
+    if (gone && !gone.read) unread.value = Math.max(0, unread.value - 1)
   }
 
-  return { items, unread, poll, start, stop, markRead, dismiss }
+  /**
+   * Throws one away for good. Local-only removal would not last: the next poll
+   * fetches it again, because the server is what decides the list.
+   */
+  async function remove(id: number) {
+    dismiss(id)
+    await account.api('DELETE', `/api/notifications/${id}`).catch(() => {})
+  }
+
+  return { items, unread, poll, start, stop, markRead, dismiss, remove }
 }
