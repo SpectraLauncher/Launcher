@@ -244,10 +244,16 @@ pub async fn refresh_active_account() -> Result<Account, String> {
     }
 
     let client = Client::new();
-    let refreshed: Account = microsoft::refresh(current.refresh_token.clone(), &client)
-        .await
-        .map_err(|e| format!("token refresh failed: {e}"))?
-        .into();
+
+    // One retry: a refresh that fails because the network blinked is worth
+    // trying again before telling somebody to sign in, and it costs a second.
+    let mut attempt = microsoft::refresh(current.refresh_token.clone(), &client).await;
+    if matches!(&attempt, Err(e) if is_transient(e)) {
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        attempt = microsoft::refresh(current.refresh_token.clone(), &client).await;
+    }
+
+    let refreshed: Account = attempt.map_err(|e| explain_refresh_failure(&current, e))?.into();
 
     upsert_account(&mut file, refreshed.clone());
     save_accounts(&file)?;
@@ -257,4 +263,42 @@ pub async fn refresh_active_account() -> Result<Account, String> {
 #[tauri::command]
 pub async fn auth_refresh_active() -> Result<Account, String> {
     refresh_active_account().await
+}
+
+/// Whether a failed refresh is worth retrying — the connection dropped or the
+/// request timed out, rather than Microsoft saying no.
+fn is_transient(e: &lyceris::error::Error) -> bool {
+    match e {
+        lyceris::error::Error::Reqwest(re) => re.is_connect() || re.is_timeout(),
+        lyceris::error::Error::Timeout(_) => true,
+        _ => false,
+    }
+}
+
+/// Turns a refresh failure into something a player can act on.
+///
+/// `lyceris` deserializes Microsoft's reply without looking at the status code,
+/// so a rejected refresh token — expired after a long break, or invalidated by
+/// a password change — surfaces as reqwest's "error decoding response body".
+/// That tells nobody anything; what it means, in practice, is that the saved
+/// session is dead and the account has to sign in again.
+fn explain_refresh_failure(account: &Account, e: lyceris::error::Error) -> String {
+    let who = &account.username;
+    match &e {
+        lyceris::error::Error::Reqwest(re) if re.is_connect() || re.is_timeout() => {
+            format!("Could not reach Microsoft to renew the session for {who}. Check your connection and try again.")
+        }
+        lyceris::error::Error::Reqwest(re) if re.is_decode() || re.is_status() => {
+            format!(
+                "Microsoft would not renew the session for {who} — usually because it \
+has been too long since the last sign-in, or the password changed. \
+Remove the account and add it again."
+            )
+        }
+        // XSTS says things like "this account has no Xbox profile" in plain words.
+        lyceris::error::Error::Authentication(msg) => {
+            format!("Microsoft refused the session for {who}: {msg}")
+        }
+        other => format!("Could not renew the session for {who}: {other}"),
+    }
 }
