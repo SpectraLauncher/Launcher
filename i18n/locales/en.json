@@ -120,7 +120,8 @@
       "servers": "Servers",
       "logs": "Logs",
       "settings": "Settings",
-      "share": "Share"
+      "share": "Share",
+      "snapshots": "Restore points"
     },
     "modsHint": "Mod management is coming soon — for now you can add mods from Modrinth.",
     "playtime": "Playtime",
@@ -682,5 +683,24 @@
       "hidden": "Hidden",
       "hiddenHint": "Everyone sees you as offline, whatever you are doing"
     }
+  },
+  "snapshots": {
+    "title": "Restore points",
+    "intro": "A restore point remembers this instance’s mods, configs and content list — not your worlds. Put one back and the instance goes to exactly that state.",
+    "create": "Take one now",
+    "restore": "Restore",
+    "confirmRestore": "Click again to restore",
+    "restoreWarning": "Restoring replaces the mods and configs installed right now. A point is taken first, so this can be undone.",
+    "restored": "Restored: {installed} installed, {removed} removed",
+    "manual": "Taken by hand",
+    "autoBadge": "auto",
+    "items": "{n} projects",
+    "empty": "No restore points yet. One is taken automatically before an update.",
+    "taking": "Taking a restore point of {name}",
+    "restoring": "Restoring {name}",
+    "autoLabel": "Take one before updates",
+    "autoHint": "A pushed pack update or a modpack update can delete mods; this is what undoes it.",
+    "keepLabel": "Keep",
+    "keepHint": "automatic ones per instance — the ones you take by hand are never deleted"
   }
 }

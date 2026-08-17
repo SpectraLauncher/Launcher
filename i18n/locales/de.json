@@ -120,7 +120,8 @@
       "servers": "Server",
       "logs": "Logs",
       "settings": "Einstellungen",
-      "share": "Teilen"
+      "share": "Teilen",
+      "snapshots": "Wiederherstellungspunkte"
     },
     "modsHint": "Mod-Verwaltung kommt bald — vorerst kannst du Mods von Modrinth hinzufügen.",
     "playtime": "Spielzeit",
@@ -682,5 +683,24 @@
       "hidden": "Versteckt",
       "hiddenHint": "Alle sehen dich als offline, egal was du gerade tust"
     }
+  },
+  "snapshots": {
+    "title": "Wiederherstellungspunkte",
+    "intro": "Ein Wiederherstellungspunkt merkt sich Mods, Configs und die Inhaltsliste dieser Instanz — keine Welten. Beim Zurücksetzen ist die Instanz genau in diesem Zustand.",
+    "create": "Jetzt erstellen",
+    "restore": "Zurücksetzen",
+    "confirmRestore": "Zum Zurücksetzen erneut klicken",
+    "restoreWarning": "Zurücksetzen ersetzt die jetzt installierten Mods und Configs. Vorher wird ein Punkt erstellt, das lässt sich also rückgängig machen.",
+    "restored": "Zurückgesetzt: {installed} installiert, {removed} entfernt",
+    "manual": "Selbst erstellt",
+    "autoBadge": "auto",
+    "items": "{n} Projekte",
+    "empty": "Noch keine Punkte. Vor einem Update wird automatisch einer erstellt.",
+    "taking": "Erstelle einen Punkt für {name}",
+    "restoring": "Setze {name} zurück",
+    "autoLabel": "Vor Updates erstellen",
+    "autoHint": "Ein Pack- oder Modpack-Update kann Mods löschen; das hier macht es rückgängig.",
+    "keepLabel": "Behalte",
+    "keepHint": "automatische pro Instanz — selbst erstellte werden nie gelöscht"
   }
 }

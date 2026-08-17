@@ -184,6 +184,16 @@ pub struct Settings {
     #[serde(default)]
     pub default_post_exit: Option<String>,
 
+    /// Take a restore point before anything that rewrites an instance's content
+    /// (a pushed share update, a modpack update). On by default: the operations
+    /// it guards can delete mods, and nothing else undoes that.
+    #[serde(default = "default_true")]
+    pub snapshot_before_updates: bool,
+    /// How many *automatic* restore points to keep per instance. Ones taken by
+    /// hand are never pruned.
+    #[serde(default = "default_snapshot_keep")]
+    pub snapshot_keep: u32,
+
     // --- privacy ---
     /// Accumulate per-instance playtime.
     #[serde(default = "default_true")]
@@ -201,6 +211,10 @@ pub struct Settings {
 
 fn default_true() -> bool {
     true
+}
+
+fn default_snapshot_keep() -> u32 {
+    5
 }
 
 fn default_theme() -> String {
@@ -222,6 +236,8 @@ impl Default for Settings {
             default_pre_launch: None,
             default_wrapper: None,
             default_post_exit: None,
+            snapshot_before_updates: true,
+            snapshot_keep: default_snapshot_keep(),
             track_playtime: true,
             discord_rpc: false,
             crash_reports: false,

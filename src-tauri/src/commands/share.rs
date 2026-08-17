@@ -29,12 +29,12 @@ const SHARE_API: &str = "https://spectra.makoto.com.pl/api/share";
 /// Soft anti-spam key — must match `SPECTRA_INGEST_KEY` on the server. Not a secret.
 const INGEST_KEY: &str = "uaH8U5Gh1ecZdQQCRsvkGo2ARFByk641CYYy7YAYw";
 
-const MANIFEST: &str = "spectra-share.json";
-const FORMAT: &str = "spectra-share";
+pub(crate) const MANIFEST: &str = "spectra-share.json";
+pub(crate) const FORMAT: &str = "spectra-share";
 
 /// Overrides that are never overwritten when *updating* an instance someone
 /// else shared. They are the player's own settings, not the author's content.
-const KEEP_ON_SYNC: &[&str] = &["options.txt", "servers.dat", "servers.dat_old"];
+pub(crate) const KEEP_ON_SYNC: &[&str] = &["options.txt", "servers.dat", "servers.dat_old"];
 
 /// Folders scanned for content that could be recorded as a project instead of
 /// being shipped byte-for-byte.
@@ -48,21 +48,21 @@ const SHARED_DIRS: &[&str] = &["mods", "resourcepacks", "shaderpacks", "datapack
 
 /// The instance icon travels beside the manifest, so a shared pack arrives
 /// looking like the original instead of a blank tile.
-const ICON: &str = "icon.png";
+pub(crate) const ICON: &str = "icon.png";
 
 #[derive(Serialize, Deserialize)]
-struct ShareManifest {
-    format: String,
-    version: u32,
-    name: String,
-    mc_version: String,
-    loader: Loader,
+pub(crate) struct ShareManifest {
+    pub(crate) format: String,
+    pub(crate) version: u32,
+    pub(crate) name: String,
+    pub(crate) mc_version: String,
+    pub(crate) loader: Loader,
     /// One entry per installed project, each keeping its own `provider`.
-    items: Vec<InstalledItem>,
+    pub(crate) items: Vec<InstalledItem>,
     /// Files that matched no provider, by game-dir path (for display only —
     /// their bytes are in `overrides/` if the sharer opted in).
     #[serde(default)]
-    unresolved: Vec<String>,
+    pub(crate) unresolved: Vec<String>,
 }
 
 /// A content file that matches no provider — it can only travel as raw bytes,
@@ -117,7 +117,7 @@ pub struct ShareImportResult {
     pub needs_curseforge: usize,
 }
 
-fn folder_for_kind(kind: &str) -> &'static str {
+pub(crate) fn folder_for_kind(kind: &str) -> &'static str {
     match kind {
         "resourcepack" => "resourcepacks",
         "shader" => "shaderpacks",
@@ -126,7 +126,7 @@ fn folder_for_kind(kind: &str) -> &'static str {
     }
 }
 
-fn loader_str(loader: &Loader) -> Option<String> {
+pub(crate) fn loader_str(loader: &Loader) -> Option<String> {
     match loader {
         Loader::Vanilla => None,
         Loader::Fabric(_) => Some("fabric".into()),
@@ -146,7 +146,7 @@ async fn link_local_files(id: &str) {
 }
 
 /// Content files that aren't in the index, with their combined size.
-fn scan_unresolved(id: &str, items: &[InstalledItem]) -> (Vec<UnresolvedFile>, u64) {
+pub(crate) fn scan_unresolved(id: &str, items: &[InstalledItem]) -> (Vec<UnresolvedFile>, u64) {
     let known: HashSet<&str> = items.iter().map(|i| i.filename.as_str()).collect();
     let game_dir = paths::instance_game_dir(id);
     let mut out = Vec::new();
@@ -443,7 +443,7 @@ fn handled_files(
 /// describe. Content files already recorded as projects, and the unresolved
 /// ones the sharer left unticked, are marked as handled so they never reach
 /// `overrides/`.
-fn write_pack(
+pub(crate) fn write_pack(
     dest: &std::path::Path,
     manifest: &ShareManifest,
     id: &str,
@@ -736,11 +736,11 @@ async fn fetch_pack(code: &str) -> Result<(ShareManifest, Vec<u8>), String> {
 }
 
 /// What a sync has to change, worked out before anything is touched on disk.
-struct SyncPlan<'a> {
+pub(crate) struct SyncPlan<'a> {
     /// Missing entirely, or installed at a different version.
-    install: Vec<&'a InstalledItem>,
+    pub(crate) install: Vec<&'a InstalledItem>,
     /// Dropped by the author — and originally came from them.
-    remove: Vec<&'a InstalledItem>,
+    pub(crate) remove: Vec<&'a InstalledItem>,
 }
 
 /// The three-way comparison at the heart of an update: what the author ships
@@ -749,7 +749,7 @@ struct SyncPlan<'a> {
 /// Anything the player installed themselves appears in none of the share lists,
 /// so it is never removed — that is the whole reason the previous item ids are
 /// stored alongside the instance.
-fn plan_sync<'a>(
+pub(crate) fn plan_sync<'a>(
     wanted: &'a [InstalledItem],
     installed: &'a [InstalledItem],
     from_share: &HashSet<String>,
@@ -790,15 +790,18 @@ pub async fn sync_share(app: AppHandle, id: String, code: String) -> Result<Shar
 
     let (manifest, bytes) = fetch_pack(&code).await?;
 
-    let installed_now = modrinth::read_content_index(&id).items;
-    let previously_from_share: HashSet<String> = instance
+    // The author's update can delete mods; this is the only thing that undoes it.
+    crate::commands::snapshots::snapshot_before(&app, &id, "before update").await;
+
+    // Only what the share itself installed may be taken away again.
+    let owned: HashSet<String> = instance
         .share_origin
         .as_ref()
         .map(|o| o.item_ids.iter().cloned().collect())
         .unwrap_or_default();
 
-    let SyncPlan { install: todo, remove } =
-        plan_sync(&manifest.items, &installed_now, &previously_from_share);
+    let installed_now = modrinth::read_content_index(&id).items;
+    let SyncPlan { install: todo, remove } = plan_sync(&manifest.items, &installed_now, &owned);
 
     let mut removed = 0usize;
     for item in remove {

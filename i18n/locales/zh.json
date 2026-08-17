@@ -120,7 +120,8 @@
       "servers": "服务器",
       "logs": "日志",
       "settings": "设置",
-      "share": "分享"
+      "share": "分享",
+      "snapshots": "还原点"
     },
     "modsHint": "模组管理即将推出 — 目前你可以从 Modrinth 添加模组。",
     "playtime": "游玩时长",
@@ -682,5 +683,24 @@
       "hidden": "隐身",
       "hiddenHint": "无论你在做什么，所有人都看到你离线"
     }
+  },
+  "snapshots": {
+    "title": "还原点",
+    "intro": "还原点会记住这个实例的模组、配置和内容清单——不包含存档。还原后实例会回到那个状态。",
+    "create": "立即创建",
+    "restore": "还原",
+    "confirmRestore": "再点一次以还原",
+    "restoreWarning": "还原会替换当前安装的模组和配置。系统会先创建一个还原点，所以可以撤销。",
+    "restored": "已还原：安装 {installed} 个，移除 {removed} 个",
+    "manual": "手动创建",
+    "autoBadge": "自动",
+    "items": "{n} 个项目",
+    "empty": "还没有还原点。更新前会自动创建一个。",
+    "taking": "正在为 {name} 创建还原点",
+    "restoring": "正在还原 {name}",
+    "autoLabel": "更新前自动创建",
+    "autoHint": "整合包推送或模组包更新可能删除模组；这就是用来撤销的。",
+    "keepLabel": "保留",
+    "keepHint": "每个实例的自动还原点数量——手动创建的永不删除"
   }
 }

@@ -1461,6 +1461,9 @@ pub async fn check_modpack_update(instance_id: String) -> Result<Option<ModpackU
 /// files, downloads + applies the new `.mrpack`, and records the new version id.
 #[tauri::command]
 pub async fn update_modpack(app: AppHandle, instance_id: String) -> Result<(), String> {
+    // A pack update rewrites mods and configs wholesale.
+    crate::commands::snapshots::snapshot_before(&app, &instance_id, "before modpack update").await;
+
     let mut instance: Instance =
         store::read_json(&paths::instance_config_file(&instance_id))?.ok_or("instance not found")?;
     let pid = instance.modpack_project_id.clone().ok_or("not a modpack instance")?;

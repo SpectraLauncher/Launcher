@@ -120,7 +120,8 @@
       "servers": "Serwery",
       "logs": "Logi",
       "settings": "Ustawienia",
-      "share": "Udostępnij"
+      "share": "Udostępnij",
+      "snapshots": "Punkty przywracania"
     },
     "modsHint": "Zarządzanie modami wkrótce — na razie możesz dodawać mody z Modrinth.",
     "playtime": "Czas gry",
@@ -682,5 +683,24 @@
       "hidden": "Ukryty",
       "hiddenHint": "Wszyscy widzą Cię jako offline, cokolwiek robisz"
     }
+  },
+  "snapshots": {
+    "title": "Punkty przywracania",
+    "intro": "Punkt przywracania pamięta mody, configi i listę zawartości tej instancji — nie zapisuje światów. Przywrócenie ustawia instancję dokładnie w tym stanie.",
+    "create": "Utwórz teraz",
+    "restore": "Przywróć",
+    "confirmRestore": "Kliknij ponownie, aby przywrócić",
+    "restoreWarning": "Przywracanie zastąpi obecnie zainstalowane mody i configi. Najpierw powstaje punkt, więc da się to cofnąć.",
+    "restored": "Przywrócono: {installed} zainstalowanych, {removed} usuniętych",
+    "manual": "Utworzony ręcznie",
+    "autoBadge": "auto",
+    "items": "projektów: {n}",
+    "empty": "Brak punktów przywracania. Jeden powstaje automatycznie przed aktualizacją.",
+    "taking": "Tworzę punkt przywracania {name}",
+    "restoring": "Przywracam {name}",
+    "autoLabel": "Twórz przed aktualizacjami",
+    "autoHint": "Wypchnięta aktualizacja paczki albo aktualizacja modpacka może usunąć mody; to jest to, co je cofa.",
+    "keepLabel": "Zachowuj",
+    "keepHint": "automatycznych na instancję — utworzonych ręcznie nigdy nie usuwamy"
   }
 }

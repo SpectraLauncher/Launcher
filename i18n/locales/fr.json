@@ -120,7 +120,8 @@
       "servers": "Serveurs",
       "logs": "Journaux",
       "settings": "Paramètres",
-      "share": "Partager"
+      "share": "Partager",
+      "snapshots": "Points de restauration"
     },
     "modsHint": "La gestion des mods arrive bientôt — pour l'instant tu peux ajouter des mods depuis Modrinth.",
     "playtime": "Temps de jeu",
@@ -682,5 +683,24 @@
       "hidden": "Masqué",
       "hiddenHint": "Tout le monde te voit hors ligne, quoi que tu fasses"
     }
+  },
+  "snapshots": {
+    "title": "Points de restauration",
+    "intro": "Un point de restauration retient les mods, les configs et la liste de contenu de cette instance — pas tes mondes. En le restaurant, l’instance revient exactement à cet état.",
+    "create": "En créer un",
+    "restore": "Restaurer",
+    "confirmRestore": "Clique encore pour restaurer",
+    "restoreWarning": "Restaurer remplace les mods et configs installés actuellement. Un point est pris avant, donc c’est réversible.",
+    "restored": "Restauré : {installed} installés, {removed} retirés",
+    "manual": "Créé à la main",
+    "autoBadge": "auto",
+    "items": "{n} projets",
+    "empty": "Aucun point pour l’instant. Un est créé automatiquement avant une mise à jour.",
+    "taking": "Création d’un point pour {name}",
+    "restoring": "Restauration de {name}",
+    "autoLabel": "Créer avant les mises à jour",
+    "autoHint": "Une mise à jour de pack ou de modpack peut supprimer des mods ; c’est ce qui l’annule.",
+    "keepLabel": "Garder",
+    "keepHint": "automatiques par instance — ceux créés à la main ne sont jamais supprimés"
   }
 }

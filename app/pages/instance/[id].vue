@@ -160,6 +160,12 @@
           :instance-name="instance?.name ?? ''"
         />
 
+        <InstanceSnapshots
+          v-else-if="activeTab === 'snapshots'"
+          :instance-id="id"
+          :instance-name="instance?.name ?? ''"
+        />
+
         <InstanceSettings v-else-if="activeTab === 'settings'" :instance-id="id" />
 
         <!-- placeholder for not-yet-built sections (servers) -->
@@ -321,7 +327,7 @@ async function stopInstance(force: boolean) {
 }
 
 // --- tabs ---
-type TabKey = 'mods' | 'shaders' | 'datapacks' | 'resourcepacks' | 'worlds' | 'screenshots' | 'servers' | 'logs' | 'share' | 'settings'
+type TabKey = 'mods' | 'shaders' | 'datapacks' | 'resourcepacks' | 'worlds' | 'screenshots' | 'servers' | 'logs' | 'share' | 'snapshots' | 'settings'
 const tabs: { key: TabKey; label: string; icon: string }[] = [
   { key: 'mods', label: 'instance.tabs.mods', icon: 'i-lucide-blocks' },
   { key: 'shaders', label: 'instance.tabs.shaders', icon: 'i-lucide-sparkles' },
@@ -332,6 +338,7 @@ const tabs: { key: TabKey; label: string; icon: string }[] = [
   { key: 'servers', label: 'instance.tabs.servers', icon: 'i-lucide-server' },
   { key: 'logs', label: 'instance.tabs.logs', icon: 'i-lucide-scroll-text' },
   { key: 'share', label: 'instance.tabs.share', icon: 'i-lucide-share-2' },
+  { key: 'snapshots', label: 'instance.tabs.snapshots', icon: 'i-lucide-history' },
   { key: 'settings', label: 'instance.tabs.settings', icon: 'i-lucide-settings' },
 ]
 const activeTab = ref<TabKey>('mods')

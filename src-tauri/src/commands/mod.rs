@@ -14,4 +14,5 @@ pub mod ping;
 pub mod settings;
 pub mod share;
 pub mod skins;
+pub mod snapshots;
 pub mod spectra;

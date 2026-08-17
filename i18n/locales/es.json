@@ -120,7 +120,8 @@
       "servers": "Servidores",
       "logs": "Registros",
       "settings": "Ajustes",
-      "share": "Compartir"
+      "share": "Compartir",
+      "snapshots": "Puntos de restauración"
     },
     "modsHint": "La gestión de mods llegará pronto; por ahora puedes añadir mods desde Modrinth.",
     "playtime": "Tiempo de juego",
@@ -682,5 +683,24 @@
       "hidden": "Oculto",
       "hiddenHint": "Todos te ven desconectado, hagas lo que hagas"
     }
+  },
+  "snapshots": {
+    "title": "Puntos de restauración",
+    "intro": "Un punto de restauración recuerda los mods, la configuración y la lista de contenido de esta instancia, no tus mundos. Al restaurarlo, la instancia vuelve exactamente a ese estado.",
+    "create": "Crear ahora",
+    "restore": "Restaurar",
+    "confirmRestore": "Haz clic otra vez para restaurar",
+    "restoreWarning": "Restaurar sustituye los mods y la configuración instalados ahora. Antes se crea un punto, así que se puede deshacer.",
+    "restored": "Restaurado: {installed} instalados, {removed} eliminados",
+    "manual": "Creado a mano",
+    "autoBadge": "auto",
+    "items": "{n} proyectos",
+    "empty": "Aún no hay puntos. Se crea uno automáticamente antes de una actualización.",
+    "taking": "Creando un punto de {name}",
+    "restoring": "Restaurando {name}",
+    "autoLabel": "Crear antes de actualizar",
+    "autoHint": "Una actualización de paquete o de modpack puede borrar mods; esto es lo que lo deshace.",
+    "keepLabel": "Conservar",
+    "keepHint": "automáticos por instancia; los que creas a mano no se borran nunca"
   }
 }

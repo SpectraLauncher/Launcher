@@ -82,6 +82,10 @@ export interface Settings {
   discord_rpc: boolean
   crash_reports: boolean
   anonymous_stats: boolean
+  /** Take a restore point before anything that rewrites an instance's content. */
+  snapshot_before_updates: boolean
+  /** How many automatic restore points to keep per instance. */
+  snapshot_keep: number
 }
 
 export interface SavedSkin {
