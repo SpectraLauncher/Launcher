@@ -667,6 +667,20 @@
     "pendingShort": "zaproszony",
     "noMatches": "Nikt taki. Pełny adres e-mail też zadziała.",
     "cancelRequest": "Anuluj zaproszenie",
-    "dismiss": "Usuń powiadomienie"
+    "dismiss": "Usuń powiadomienie",
+    "status": {
+      "online": "Dostępny",
+      "in_game": "W grze",
+      "dnd": "Nie przeszkadzać",
+      "offline": "Offline"
+    },
+    "mode": {
+      "visible": "Widoczny",
+      "visibleHint": "Znajomi widzą, kiedy jesteś dostępny i w grze",
+      "dnd": "Zajęty",
+      "dndHint": "Znajomi widzą czerwoną kropkę — jesteś, ale wolisz nie być zaczepiany",
+      "hidden": "Ukryty",
+      "hiddenHint": "Wszyscy widzą Cię jako offline, cokolwiek robisz"
+    }
   }
 }

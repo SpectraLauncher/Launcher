@@ -667,6 +667,20 @@
     "pendingShort": "invited",
     "noMatches": "Nobody with that name. A full e-mail address works too.",
     "cancelRequest": "Cancel the request",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "status": {
+      "online": "Online",
+      "in_game": "In game",
+      "dnd": "Do not disturb",
+      "offline": "Offline"
+    },
+    "mode": {
+      "visible": "Visible",
+      "visibleHint": "Friends see when you are online and in game",
+      "dnd": "Busy",
+      "dndHint": "Friends see a red dot — you are around but would rather not be pulled in",
+      "hidden": "Hidden",
+      "hiddenHint": "Everyone sees you as offline, whatever you are doing"
+    }
   }
 }

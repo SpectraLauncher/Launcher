@@ -31,8 +31,12 @@ export const useSpectraNotifications = () => {
   async function poll() {
     if (!account.isSignedIn.value) return
     try {
+      // The same request doubles as the presence heartbeat — friends see this
+      // account as online, and as in game while an instance is running.
+      const playing = Object.values(useActivityCenter().activities.value)
+        .some(a => a.kind === 'running')
       const res = await account.api<{ unread: number, notifications: SpectraNotification[] }>(
-        'GET', '/api/notifications',
+        'GET', `/api/notifications?playing=${playing ? 1 : 0}`,
       )
       items.value = res.notifications
       unread.value = res.unread

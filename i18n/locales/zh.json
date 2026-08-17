@@ -667,6 +667,20 @@
     "pendingShort": "已邀请",
     "noMatches": "没有这个名字。也可以输入完整邮箱。",
     "cancelRequest": "取消请求",
-    "dismiss": "忽略"
+    "dismiss": "忽略",
+    "status": {
+      "online": "在线",
+      "in_game": "游戏中",
+      "dnd": "请勿打扰",
+      "offline": "离线"
+    },
+    "mode": {
+      "visible": "可见",
+      "visibleHint": "好友能看到你在线以及正在游戏",
+      "dnd": "忙碌",
+      "dndHint": "好友会看到红点——你在，但不想被打扰",
+      "hidden": "隐身",
+      "hiddenHint": "无论你在做什么，所有人都看到你离线"
+    }
   }
 }

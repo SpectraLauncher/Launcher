@@ -12,6 +12,10 @@ export interface SpectraUser {
   mcUuid?: string | null
 }
 
+/** What a friend is allowed to see. 'hidden' never reaches anyone as itself. */
+export type FriendStatus = 'online' | 'in_game' | 'dnd' | 'offline'
+export type PresenceMode = 'visible' | 'dnd' | 'hidden'
+
 export interface SpectraFriend {
   id: string
   name: string | null
@@ -19,6 +23,7 @@ export interface SpectraFriend {
   image: string | null
   mcUsername?: string | null
   friendshipId: number
+  status: FriendStatus
 }
 
 export interface FriendRequest {

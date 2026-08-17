@@ -667,6 +667,20 @@
     "pendingShort": "eingeladen",
     "noMatches": "Niemanden gefunden. Eine vollständige E-Mail geht auch.",
     "cancelRequest": "Anfrage zurückziehen",
-    "dismiss": "Ausblenden"
+    "dismiss": "Ausblenden",
+    "status": {
+      "online": "Online",
+      "in_game": "Im Spiel",
+      "dnd": "Nicht stören",
+      "offline": "Offline"
+    },
+    "mode": {
+      "visible": "Sichtbar",
+      "visibleHint": "Freunde sehen, wenn du online und im Spiel bist",
+      "dnd": "Beschäftigt",
+      "dndHint": "Freunde sehen einen roten Punkt — du bist da, willst aber deine Ruhe",
+      "hidden": "Versteckt",
+      "hiddenHint": "Alle sehen dich als offline, egal was du gerade tust"
+    }
   }
 }

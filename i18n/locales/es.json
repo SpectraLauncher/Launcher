@@ -667,6 +667,20 @@
     "pendingShort": "invitado",
     "noMatches": "Nadie con ese nombre. Un correo completo también sirve.",
     "cancelRequest": "Cancelar la solicitud",
-    "dismiss": "Descartar"
+    "dismiss": "Descartar",
+    "status": {
+      "online": "En línea",
+      "in_game": "Jugando",
+      "dnd": "No molestar",
+      "offline": "Desconectado"
+    },
+    "mode": {
+      "visible": "Visible",
+      "visibleHint": "Tus amigos ven cuándo estás en línea y jugando",
+      "dnd": "Ocupado",
+      "dndHint": "Tus amigos ven un punto rojo: estás, pero prefieres que no te molesten",
+      "hidden": "Oculto",
+      "hiddenHint": "Todos te ven desconectado, hagas lo que hagas"
+    }
   }
 }

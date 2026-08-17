@@ -667,6 +667,20 @@
     "pendingShort": "invité",
     "noMatches": "Personne à ce nom. Une adresse e-mail complète marche aussi.",
     "cancelRequest": "Annuler la demande",
-    "dismiss": "Masquer"
+    "dismiss": "Masquer",
+    "status": {
+      "online": "En ligne",
+      "in_game": "En jeu",
+      "dnd": "Ne pas déranger",
+      "offline": "Hors ligne"
+    },
+    "mode": {
+      "visible": "Visible",
+      "visibleHint": "Tes amis voient quand tu es en ligne et en jeu",
+      "dnd": "Occupé",
+      "dndHint": "Tes amis voient un point rouge : tu es là, mais tu préfères qu’on te laisse",
+      "hidden": "Masqué",
+      "hiddenHint": "Tout le monde te voit hors ligne, quoi que tu fasses"
+    }
   }
 }

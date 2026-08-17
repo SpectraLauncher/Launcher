@@ -3,7 +3,7 @@
 // them. Collapsed it is gone entirely — no rail, no sliver, no reserved width.
 
 import { invoke } from '@tauri-apps/api/core'
-import type { SpectraFriend, FriendRequest } from '~/composables/useSpectraAccount'
+import type { SpectraFriend, FriendRequest, PresenceMode } from '~/composables/useSpectraAccount'
 import type { SpectraNotification } from '~/composables/useSpectraNotifications'
 
 const { t } = useI18n()
@@ -15,6 +15,23 @@ const instances = useInstancesStore()
 const activity = useActivityCenter()
 
 const friends = ref<SpectraFriend[]>([])
+// What this account shows to others. 'hidden' looks exactly like a closed
+// launcher to everyone else — that is the point of it.
+const presence = ref<PresenceMode>('visible')
+
+const STATUS_COLOUR: Record<string, string> = {
+  online: '#3fb877',
+  in_game: '#38bdf8',
+  dnd: '#f87171',
+  offline: '#525252',
+}
+const MODES: PresenceMode[] = ['visible', 'dnd', 'hidden']
+
+const setPresence = (mode: PresenceMode) => run('presence', async () => {
+  presence.value = mode
+  await account.api('POST', '/api/presence', { mode })
+  await loadFriends()
+})
 const incoming = ref<FriendRequest[]>([])
 const outgoing = ref<FriendRequest[]>([])
 const query = ref('')
@@ -38,12 +55,20 @@ async function run(key: string, fn: () => Promise<unknown>) {
 async function loadFriends() {
   if (!account.isSignedIn.value) return
   try {
-    const res = await account.api<{ friends: SpectraFriend[], incoming: FriendRequest[], outgoing: FriendRequest[] }>(
-      'GET', '/api/friends',
-    )
-    friends.value = res.friends
+    const res = await account.api<{
+      friends: SpectraFriend[]
+      incoming: FriendRequest[]
+      outgoing: FriendRequest[]
+      presence: PresenceMode
+    }>('GET', '/api/friends')
+    // Whoever is around comes first — an offline list is not what you open this for.
+    const rank = { in_game: 0, online: 1, dnd: 2, offline: 3 } as Record<string, number>
+    friends.value = [...res.friends].sort((x, y) =>
+      (rank[x.status] ?? 9) - (rank[y.status] ?? 9)
+      || label(x).localeCompare(label(y)))
     incoming.value = res.incoming
     outgoing.value = res.outgoing
+    presence.value = res.presence ?? 'visible'
   } catch (e) {
     error.value = String(e)
   }
@@ -239,6 +264,27 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
           </button>
         </div>
 
+        <!-- what everyone else sees -->
+        <div class="flex gap-1 border-b border-white/8 px-4 py-2">
+          <button
+            v-for="m in MODES"
+            :key="m"
+            type="button"
+            class="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-[11px] transition"
+            :class="presence === m
+              ? 'bg-white/8 text-neutral-100'
+              : 'text-neutral-500 hover:bg-white/4 hover:text-neutral-300'"
+            :title="$t(`spectra.mode.${m}Hint`)"
+            @click="setPresence(m)"
+          >
+            <span
+              class="size-2 rounded-full"
+              :style="`background:${m === 'visible' ? STATUS_COLOUR.online : m === 'dnd' ? STATUS_COLOUR.dnd : STATUS_COLOUR.offline}`"
+            />
+            {{ $t(`spectra.mode.${m}`) }}
+          </button>
+        </div>
+
         <div class="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4">
           <p v-if="error" class="rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-xs text-red-300">
             {{ error }}
@@ -396,12 +442,19 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
                 :key="f.id"
                 class="group flex items-center gap-2.5 rounded-lg px-2 py-1.5 transition hover:bg-white/4"
               >
-                <img v-if="f.image" :src="f.image" alt="" class="size-7 rounded-full object-cover">
-                <span
-                  v-else
-                  class="flex size-7 items-center justify-center rounded-full text-[11px] font-bold text-white/90"
-                  :style="`background:hsl(${spectraInitial(label(f)).hue} 55% 30%)`"
-                >{{ spectraInitial(label(f)).letter }}</span>
+                <span class="relative shrink-0">
+                  <img v-if="f.image" :src="f.image" alt="" class="size-7 rounded-full object-cover">
+                  <span
+                    v-else
+                    class="flex size-7 items-center justify-center rounded-full text-[11px] font-bold text-white/90"
+                    :style="`background:hsl(${spectraInitial(label(f)).hue} 55% 30%)`"
+                  >{{ spectraInitial(label(f)).letter }}</span>
+                  <span
+                    class="absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full border-2 border-[#0b0e14]"
+                    :style="`background:${STATUS_COLOUR[f.status] ?? STATUS_COLOUR.offline}`"
+                    :title="$t(`spectra.status.${f.status}`)"
+                  />
+                </span>
                 <span class="min-w-0 flex-1">
                   <span class="block truncate text-xs text-neutral-200">{{ label(f) }}</span>
                   <span v-if="f.mcUsername" class="block truncate text-[10px] text-neutral-500">
