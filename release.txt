@@ -1,3 +1,12 @@
+## Changes (v0.6.3)
+
+### ✨ Features & Improvements
+- **Restore points for an instance**: a new **Restore points** tab takes a snapshot of an instance — its mods, configs and content list — and puts it back with one click. One is taken automatically before anything that rewrites content, so a pushed pack update or a modpack update that removes mods is no longer a one-way trip. The panel shows what each point holds, and settings control the automation and how many are kept. Your worlds are never part of a restore point, and never touched by one.
+- **See who is around**: friends now carry a status dot — green online, blue in game, red busy, grey offline — and the list puts whoever is around at the top. Under your own name you choose what everyone else sees: **Visible**, **Busy**, or **Hidden**, which makes you look exactly like a closed launcher.
+
+### 🐛 Bug Fixes
+- **A failed sign-in renewal says what happened**: launching an instance sometimes failed with `token refresh failed: error decoding response body`, which told nobody anything. It now names the account and the reason — usually that too long has passed since the last sign-in, or the password changed, so the account needs adding again — and tells that apart from a dropped connection, which it simply retries.
+
 ## Changes (v0.6.2)
 
 ### 🐛 Bug Fixes
