@@ -28,10 +28,14 @@ pub struct AppState {
     /// Share code from a `spectra://` link that arrived before the UI was ready.
     /// The frontend drains it on mount (see `take_pending_share`).
     pub pending_share: Mutex<Option<String>>,
+    /// Instance a desktop shortcut asked to launch, when the click is what
+    /// started the launcher. Drained on mount (see `take_pending_launch`).
+    pub pending_launch: Mutex<Option<String>>,
 }
 
-/// Routes an incoming `spectra://` URL to the UI. Two kinds arrive: a share
-/// code to open, and a one-time token from signing in on the website.
+/// Routes an incoming `spectra://` URL to the UI. Three kinds arrive: a share
+/// code to open, a one-time token from signing in on the website, and an
+/// instance to launch (desktop shortcuts).
 ///
 /// A share code is stashed for the frontend to drain on mount (cold start)
 /// *and* emitted (app already running).
@@ -44,6 +48,22 @@ fn handle_deep_link(app: &tauri::AppHandle, url: &str) {
         tauri::async_runtime::spawn(async move {
             commands::spectra::redeem_login(handle, token).await;
         });
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.unminimize();
+            let _ = window.set_focus();
+        }
+        return;
+    }
+
+    if let Some(id) = commands::launch::instance_id_from_url(url) {
+        // Parked as well as emitted: clicking the shortcut is usually what
+        // started the launcher, so no listener exists yet.
+        if let Some(state) = app.try_state::<AppState>() {
+            if let Ok(mut pending) = state.pending_launch.lock() {
+                *pending = Some(id.clone());
+            }
+        }
+        let _ = app.emit("launch://open", &id);
         if let Some(window) = app.get_webview_window("main") {
             let _ = window.unminimize();
             let _ = window.set_focus();
@@ -156,6 +176,12 @@ pub fn run() {
             commands::instances::create_instance,
             commands::instances::update_instance,
             commands::instances::set_instance_icon,
+            commands::instances::set_instance_icon_data,
+            commands::instances::list_custom_symbols,
+            commands::instances::add_custom_symbol,
+            commands::instances::delete_custom_symbol,
+            commands::instances::create_desktop_shortcut,
+            commands::launch::take_pending_launch,
             commands::instances::delete_instance,
             commands::instances::read_image_data_url,
             commands::instances::get_instance_icon_path,
@@ -263,6 +289,7 @@ pub fn run() {
             commands::spectra::spectra_link_minecraft,
             // Mod management
             commands::mods::list_mods,
+            commands::mods::list_content,
             commands::mods::set_mod_enabled,
             commands::mods::delete_mod,
             // Skins

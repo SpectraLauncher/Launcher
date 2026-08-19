@@ -102,6 +102,12 @@ pub fn cache_dir() -> PathBuf {
     data_root().join("cache")
 }
 
+/// Images the user added in the icon editor, alongside the ones shipped in the
+/// app. Kept out of `cache` on purpose — nothing here can be re-downloaded.
+pub fn symbols_dir() -> PathBuf {
+    data_root().join("symbols")
+}
+
 pub fn logs_dir() -> PathBuf {
     data_root().join("logs")
 }
@@ -114,6 +120,7 @@ pub fn ensure_base_dirs() -> std::io::Result<()> {
         instances_dir(),
         runtimes_dir(),
         skins_dir(),
+        symbols_dir(),
         cache_dir(),
         logs_dir(),
     ] {

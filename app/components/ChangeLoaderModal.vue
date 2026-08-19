@@ -31,7 +31,17 @@
             :loading="loadingVersions"
             :placeholder="$t('create.custom.pickLoaderVersion')"
             class="w-full"
-          />
+          >
+            <template #item-trailing="{ item }">
+              <UBadge
+                v-if="item === currentVersion"
+                color="neutral"
+                variant="subtle"
+                size="xs"
+                :label="$t('changeLoader.current')"
+              />
+            </template>
+          </USelectMenu>
         </div>
 
         <p v-if="error" class="text-sm text-error">{{ error }}</p>
@@ -80,6 +90,13 @@ const loaderModeItems = computed(() => [
   { label: t('create.custom.other'), value: 'other' },
 ])
 
+/** The loader version the instance runs now — only while the type is unchanged;
+ *  a Fabric version means nothing in the Forge list. */
+const currentVersion = computed(() => {
+  const l = instance.value?.loader
+  return l && l.type === loader.value && 'version' in l ? l.version : null
+})
+
 const canApply = computed(() => {
   if (loader.value !== 'vanilla' && loaderMode.value === 'other' && !loaderExplicit.value) return false
   return true
@@ -105,6 +122,10 @@ async function loadVersions() {
   try {
     const list = await meta.getLoaderVersions(loader.value, instance.value.mc_version)
     loaderVersions.value = list.map(v => v.version)
+    // Open on the version already in use, so the list starts on a known-good pick.
+    if (currentVersion.value && loaderVersions.value.includes(currentVersion.value)) {
+      loaderExplicit.value = currentVersion.value
+    }
   } catch (e) {
     loaderVersions.value = []
     error.value = String(e)

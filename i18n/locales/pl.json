@@ -70,6 +70,7 @@
     "createGroupTitle": "Nowa grupa",
     "groupName": "Nazwa grupy",
     "groupNamePlaceholder": "np. Modowane",
+    "groupHint": "Grupy porządkują bibliotekę na tym komputerze. Na dysku nic się nie przenosi.",
     "deleteGroup": "Usuń grupę",
     "copied": "Skopiowano ścieżkę",
     "comingSoon": "Wkrótce",
@@ -106,11 +107,10 @@
     "installed": "Zainstalowano",
     "created": "Utworzono",
     "loaderVersion": "Wersja loadera",
-    "soon": "Wkrótce",
-    "emptyTab": "Ta sekcja będzie dostępna wkrótce.",
     "console": "Konsola",
     "noLogs": "Brak logów. Uruchom instancję, aby zobaczyć konsolę.",
     "tabs": {
+      "content": "Zawartość",
       "mods": "Mody",
       "shaders": "Shadery",
       "datapacks": "Datapacki",
@@ -130,6 +130,8 @@
     "updateNow": "Aktualizuj",
     "updated": "Modpack zaktualizowany",
     "export": "Eksportuj / Backup",
+    "createShortcut": "Utwórz skrót",
+    "shortcutCreated": "Skrót dodany na pulpicie",
     "exported": "Instancja wyeksportowana",
     "changeIcon": "Zmień ikonę",
     "iconChanged": "Ikona zmieniona"
@@ -226,6 +228,7 @@
     "plain": "Zwykły tekst",
     "custom": "Własny",
     "count": "{n} modów",
+    "customHint": "Znaczniki:",
     "save": "Zapisz",
     "saved": "Lista modów zapisana"
   },
@@ -234,6 +237,7 @@
     "title": "Zmień mod loader",
     "desc": "Wybierz loader dla Minecraft {mc}. Istniejące mody mogą wymagać aktualizacji.",
     "change": "Zmień",
+    "current": "Obecna",
     "apply": "Zastosuj",
     "done": "Loader zmieniony",
     "settingsHint": "Przełączaj między Fabric, Forge, NeoForge, Quilt lub Vanilla."
@@ -403,7 +407,9 @@
     "uninstallingMod": "Usuwanie {name}"
   },
   "content": {
+    "all": "Wszystko",
     "count": "{n} elementów",
+    "searchPlaceholder": "Szukaj zawartości...",
     "refresh": "Odśwież",
     "empty": "Nic tu jeszcze nie ma",
     "format": "format",
@@ -505,6 +511,7 @@
     "updateAll": "Aktualizuj wszystkie ({n})",
     "updateTo": "Aktualizuj do {v}",
     "pickVersion": "Wybierz wersję",
+    "versionHint": "Instaluje wybraną wersję razem z zależnościami i usuwa plik, który masz teraz.",
     "useVersion": "Użyj",
     "installed": "Zainstalowana",
     "openPage": "Otwórz stronę moda",
@@ -587,7 +594,19 @@
     "customHooksDesc": "Uruchamiaj własne komendy systemowe wokół startu gry.",
     "requiredJava": "Minecraft {version} wymaga Javy {major}. Launcher dobiera ją automatycznie.",
     "javaDetected": "Wykryto u Ciebie: {label}",
-    "javaWillDownload": "Nie wykryto pasującej Javy — launcher pobierze ją sam."
+    "javaWillDownload": "Nie wykryto pasującej Javy — launcher pobierze ją sam.",
+    "icon": "Ikona"
+  },
+  "iconEditor": {
+    "title": "Edytor ikony",
+    "background": "Tło",
+    "symbol": "Symbol",
+    "addSymbol": "Dodaj własny",
+    "randomize": "Losuj",
+    "save": "Zapisz ikonę",
+    "hint": "Zapis jako PNG 512x512; zaokrąglenie rogów dokłada launcher przy wyświetlaniu.",
+    "create": "Stwórz ikonę",
+    "upload": "Wgraj ikonę"
   },
   "share": {
     "title": "Udostępnij „{name}”",

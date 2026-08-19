@@ -760,6 +760,8 @@ fn install_rec<'a>(
             dependencies: dep_project_ids,
             installed_at: chrono::Utc::now().to_rfc3339(),
             provider: "curseforge".to_string(),
+            author: None,
+            env: None,
         };
         index.items.retain(|i| i.project_id != item.project_id);
         index.items.push(item.clone());
@@ -1096,6 +1098,8 @@ pub async fn curseforge_match_local(instance_id: String) -> Result<usize, String
             dependencies: Vec::new(),
             installed_at: chrono::Utc::now().to_rfc3339(),
             provider: "curseforge".to_string(),
+            author: None,
+            env: None,
         };
         index.items.retain(|i| i.project_id != item.project_id && i.filename != item.filename);
         index.items.push(item);
@@ -1151,6 +1155,8 @@ pub async fn curseforge_match_file(instance_id: String, filename: String) -> Res
         dependencies: Vec::new(),
         installed_at: chrono::Utc::now().to_rfc3339(),
         provider: "curseforge".to_string(),
+        author: None,
+        env: None,
     };
     index.items.retain(|i| i.project_id != item.project_id && i.filename != item.filename);
     index.items.push(item);
@@ -1354,6 +1360,8 @@ pub(crate) async fn install_modpack_bytes(
             dependencies: Vec::new(),
             installed_at: chrono::Utc::now().to_rfc3339(),
             provider: "curseforge".to_string(),
+            author: None,
+            env: None,
         };
         jobs.push(Job { url, dest, item });
     }
@@ -1492,6 +1500,8 @@ pub fn resolve_blocked_mods(instance_id: String, dir: Option<String>) -> Result<
                 dependencies: Vec::new(),
                 installed_at: chrono::Utc::now().to_rfc3339(),
                 provider: "curseforge".to_string(),
+                author: None,
+                env: None,
             });
             resolved += 1;
         }

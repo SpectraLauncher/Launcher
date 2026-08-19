@@ -155,7 +155,31 @@ pub struct ModEntry {
 
 #[tauri::command]
 pub fn list_mods(instance_id: String) -> Result<Vec<ModEntry>, String> {
-    let dir = paths::instance_game_dir(&instance_id).join("mods");
+    // COMPAT(drop after 0.7): kept so the old mods-only tab keeps working while
+    // the merged content tab lands. `list_content` is the real one now.
+    list_content(instance_id, "mod".into())
+}
+
+/// The folder and file extension a content kind lives in.
+fn kind_layout(kind: &str) -> (&'static str, &'static str) {
+    match kind {
+        "resourcepack" => ("resourcepacks", ".zip"),
+        "shader" => ("shaderpacks", ".zip"),
+        "datapack" => ("datapacks", ".zip"),
+        _ => ("mods", ".jar"),
+    }
+}
+
+/// Everything of one kind installed in an instance: the files on disk, married
+/// to what the content index knows about them.
+///
+/// One listing for mods, resource packs, shaders and datapacks, so the content
+/// tab can show them side by side with the same toggles and update checks —
+/// they only differ by folder and extension.
+#[tauri::command]
+pub fn list_content(instance_id: String, kind: String) -> Result<Vec<ModEntry>, String> {
+    let (folder, ext) = kind_layout(&kind);
+    let dir = paths::instance_game_dir(&instance_id).join(folder);
     let index = modrinth::installed_items(&instance_id);
     let by_file: HashMap<&str, &InstalledItem> = index.iter().map(|i| (i.filename.as_str(), i)).collect();
 
@@ -166,7 +190,8 @@ pub fn list_mods(instance_id: String) -> Result<Vec<ModEntry>, String> {
     };
     for entry in entries.flatten() {
         let path = entry.path();
-        if !path.is_file() {
+        let is_dir = path.is_dir();
+        if !is_dir && !path.is_file() {
             continue;
         }
         let raw = entry.file_name().to_string_lossy().into_owned();
@@ -174,7 +199,12 @@ pub fn list_mods(instance_id: String) -> Result<Vec<ModEntry>, String> {
             Some(base) => (base.to_string(), false),
             None => (raw.clone(), true),
         };
-        if !filename.ends_with(".jar") {
+        // Packs may be unzipped folders; a folder inside mods/ is never a mod.
+        if is_dir {
+            if ext == ".jar" {
+                continue;
+            }
+        } else if !filename.ends_with(ext) {
             continue;
         }
         let meta = by_file.get(filename.as_str());
@@ -186,8 +216,13 @@ pub fn list_mods(instance_id: String) -> Result<Vec<ModEntry>, String> {
             .map(|d| d.as_millis() as u64)
             .unwrap_or(0);
 
-        // For local mods (no Modrinth record), read name/version/icon from the jar.
-        let local = if meta.is_none() { read_local_mod_meta(&path) } else { JarMeta::default() };
+        // For local mods (no provider record), read name/version/icon out of the
+        // jar. Only mods carry that metadata; a resource pack is just a zip.
+        let local = if meta.is_none() && !is_dir && ext == ".jar" {
+            read_local_mod_meta(&path)
+        } else {
+            JarMeta::default()
+        };
 
         out.push(ModEntry {
             name: meta.map(|m| m.name.clone()).or(local.name),
@@ -213,6 +248,8 @@ pub fn list_mods(instance_id: String) -> Result<Vec<ModEntry>, String> {
 /// enabled (suffix-free) jar name.
 #[tauri::command]
 pub fn set_mod_enabled(instance_id: String, filename: String, enabled: bool) -> Result<(), String> {
+    // Toggling is the same rename whatever the folder, and `content.rs` already
+    // does it with name validation — the content tab can call that directly.
     let dir = paths::instance_game_dir(&instance_id).join("mods");
     let on = dir.join(&filename);
     let off = dir.join(format!("{filename}.disabled"));

@@ -28,6 +28,7 @@
             <UIcon v-else name="i-lucide-box" class="size-7 text-neutral-400" />
           </div>
           <div class="flex flex-col gap-2">
+            <UButton variant="soft" icon="i-lucide-palette" :label="$t('iconEditor.create')" @click="iconEditorOpen = true" />
             <UButton variant="soft" icon="i-lucide-upload" :label="$t('create.custom.chooseIcon')" @click="chooseIcon" />
             <UButton
               variant="ghost"
@@ -38,6 +39,10 @@
               @click="clearIcon"
             />
           </div>
+
+          <!-- No instance yet, so the editor hands back the image and it is
+               applied once the instance has an id. -->
+          <IconEditorModal v-model:open="iconEditorOpen" @saved="useDrawnIcon" />
         </div>
 
         <!-- name -->
@@ -353,6 +358,7 @@ const choices = [
 const form = reactive({
   name: '',
   iconPath: null as string | null, // source file, copied to icon.png on create
+  iconData: null as string | null, // PNG drawn in the editor, saved after create
   iconPreview: null as string | null, // transient data URL just for the preview
   loader: 'vanilla' as LoaderType,
   mcVersion: '',
@@ -394,6 +400,15 @@ const canSubmit = computed(() => {
   return true
 })
 
+const iconEditorOpen = ref(false)
+
+/** Keeps the drawn PNG until there is an instance to hang it on. */
+function useDrawnIcon(dataUrl: string) {
+  form.iconData = dataUrl
+  form.iconPreview = dataUrl
+  form.iconPath = null
+}
+
 async function chooseIcon() {
   try {
     const selected = await open({
@@ -412,6 +427,7 @@ async function chooseIcon() {
 
 function clearIcon() {
   form.iconPath = null
+  form.iconData = null
   form.iconPreview = null
 }
 
@@ -477,6 +493,7 @@ watch(isOpen, (open) => {
   redeeming.value = false
   form.name = ''
   form.iconPath = null
+  form.iconData = null
   form.iconPreview = null
   form.loader = 'vanilla'
   form.mcVersion = ''
@@ -506,12 +523,18 @@ async function submit() {
       )
       loader = { type: form.loader, version } as Loader
     }
-    await instances.create({
+    const created = await instances.create({
       name: form.name.trim() || namePlaceholder.value,
       mcVersion: form.mcVersion,
       loader,
       iconSourcePath: form.iconPath,
     })
+    // A drawn icon has no source file, so it goes in once the id exists.
+    if (form.iconData) {
+      await invoke('set_instance_icon_data', { id: created.id, dataUrl: form.iconData })
+      created.icon = 'icon.png'
+      invalidateInstanceIcon(created.id)
+    }
     close()
   } catch (e) {
     error.value = String(e)

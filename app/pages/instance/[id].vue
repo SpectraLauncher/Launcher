@@ -12,17 +12,9 @@
       <!-- hero -->
       <div class="relative overflow-hidden rounded-2xl border border-default bg-linear-[135deg] from-primary-500/12 to-transparent p-6">
         <div class="flex flex-wrap items-center gap-5">
-          <button
-            type="button"
-            class="group/icon relative size-20 shrink-0 overflow-hidden rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.4)]"
-            :title="$t('instance.changeIcon')"
-            @click="changeIcon"
-          >
+          <div class="size-20 shrink-0 overflow-hidden rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.4)]">
             <InstanceIcon :key="iconKey" :instance="instance" class="size-full rounded-2xl text-3xl" />
-            <span class="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition group-hover/icon:opacity-100">
-              <UIcon name="i-lucide-pencil" class="size-5 text-white" />
-            </span>
-          </button>
+          </div>
           <div class="min-w-0 flex-1">
             <h1 class="truncate text-2xl font-bold tracking-tight">{{ instance.name }}</h1>
             <div class="mt-2 flex flex-wrap items-center gap-2">
@@ -50,6 +42,14 @@
               variant="soft"
               :label="$t('instance.openGameFolder')"
               @click="openGameFolder"
+            />
+            <UButton
+              icon="i-lucide-settings"
+              color="neutral"
+              variant="soft"
+              square
+              :title="$t('instance.tabs.settings')"
+              @click="settingsOpen = true"
             />
             <UDropdownMenu :items="menuItems">
               <UButton icon="i-lucide-ellipsis-vertical" color="neutral" variant="soft" square />
@@ -125,6 +125,26 @@
         </div>
       </div>
 
+      <!-- settings: a modal off the gear, not a tab — it is a place you visit,
+           not part of browsing the instance -->
+      <UModal
+        v-model:open="settingsOpen"
+        :title="$t('instance.tabs.settings')"
+        :ui="{ content: 'max-w-3xl h-[min(38rem,85vh)]', body: 'flex-1 min-h-0 overflow-hidden p-0' }"
+      >
+        <template #body>
+          <InstanceSettings :instance-id="id" @icon-changed="iconKey++" />
+        </template>
+      </UModal>
+
+      <!-- Opened from the settings modal above (and from the ⋯ menu). Nuxt UI
+           overlays have no z-index — they stack in the order their portals
+           mount, which is component mount order — so this has to come after the
+           settings modal, and cannot live in the layout with the other global
+           modals. Giving it a z-index instead would push its own dropdowns
+           underneath it. -->
+      <ChangeLoaderModal />
+
       <!-- tabs -->
       <div class="flex flex-wrap gap-1.5 border-b border-default pb-3">
         <button
@@ -147,11 +167,11 @@
         <!-- logs: saved logs (latest.log, *.log.gz, crash-reports) -->
         <InstanceLogs v-if="activeTab === 'logs'" :instance-id="id" :initial-rel="initialCrashRel" />
 
-        <!-- auto-detected content sections -->
-        <InstanceContent v-else-if="isContentTab" :instance-id="id" :tab="activeTab as ContentTab" @quick-play="handleQuickPlay" />
+        <!-- mods, resource packs, shaders and datapacks in one list -->
+        <InstanceContent v-else-if="activeTab === 'content'" :instance-id="id" :initial-kind="initialKind" />
 
-        <!-- mods: install + manage (enable/disable/delete) -->
-        <InstanceMods v-else-if="activeTab === 'mods'" :instance-id="id" />
+        <!-- worlds, screenshots and servers, read off disk -->
+        <InstanceGameFiles v-else-if="isGameFileTab" :instance-id="id" :tab="activeTab as GameFileTab" @quick-play="handleQuickPlay" />
 
         <!-- instance settings -->
         <InstanceShare
@@ -165,16 +185,6 @@
           :instance-id="id"
           :instance-name="instance?.name ?? ''"
         />
-
-        <InstanceSettings v-else-if="activeTab === 'settings'" :instance-id="id" />
-
-        <!-- placeholder for not-yet-built sections (servers) -->
-        <div v-else class="flex flex-col items-center justify-center gap-3 py-20 text-center">
-          <UIcon :name="activeTabMeta.icon" class="size-10 text-neutral-600" />
-          <div class="text-sm font-medium text-neutral-300">{{ $t(activeTabMeta.label) }}</div>
-          <p class="max-w-sm text-sm text-muted">{{ $t('instance.emptyTab') }}</p>
-          <UBadge color="neutral" variant="subtle" size="sm" :label="$t('instance.soon')" />
-        </div>
       </div>
     </div>
   </div>
@@ -204,7 +214,6 @@
 
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core'
-import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import type { ModpackUpdate } from '~/types/modrinth'
 import type { QuickPlay } from '~/types/launcher'
 
@@ -327,29 +336,39 @@ async function stopInstance(force: boolean) {
 }
 
 // --- tabs ---
-type TabKey = 'mods' | 'shaders' | 'datapacks' | 'resourcepacks' | 'worlds' | 'screenshots' | 'servers' | 'logs' | 'share' | 'snapshots' | 'settings'
+type TabKey = 'content' | 'worlds' | 'screenshots' | 'servers' | 'logs' | 'share' | 'snapshots'
 const tabs: { key: TabKey; label: string; icon: string }[] = [
-  { key: 'mods', label: 'instance.tabs.mods', icon: 'i-lucide-blocks' },
-  { key: 'shaders', label: 'instance.tabs.shaders', icon: 'i-lucide-sparkles' },
-  { key: 'datapacks', label: 'instance.tabs.datapacks', icon: 'i-lucide-package' },
-  { key: 'resourcepacks', label: 'instance.tabs.resourcepacks', icon: 'i-lucide-image' },
+  { key: 'content', label: 'instance.tabs.content', icon: 'i-lucide-blocks' },
   { key: 'worlds', label: 'instance.tabs.worlds', icon: 'i-lucide-globe' },
   { key: 'screenshots', label: 'instance.tabs.screenshots', icon: 'i-lucide-camera' },
   { key: 'servers', label: 'instance.tabs.servers', icon: 'i-lucide-server' },
   { key: 'logs', label: 'instance.tabs.logs', icon: 'i-lucide-scroll-text' },
   { key: 'share', label: 'instance.tabs.share', icon: 'i-lucide-share-2' },
   { key: 'snapshots', label: 'instance.tabs.snapshots', icon: 'i-lucide-history' },
-  { key: 'settings', label: 'instance.tabs.settings', icon: 'i-lucide-settings' },
 ]
-const activeTab = ref<TabKey>('mods')
-const activeTabMeta = computed(() => tabs.find(t => t.key === activeTab.value) ?? tabs[0]!)
+const activeTab = ref<TabKey>('content')
+const settingsOpen = ref(false)
+
+// COMPAT(drop after 0.7): the mods/resourcepacks/shaders/datapacks tabs merged
+// into Content, so old links land there with the right kind selected.
+type ContentTabKind = 'mod' | 'resourcepack' | 'shader' | 'datapack'
+const MERGED_TABS: Record<string, ContentTabKind> = {
+  mods: 'mod',
+  resourcepacks: 'resourcepack',
+  shaders: 'shader',
+  datapacks: 'datapack',
+}
 
 // Deep-link from the crash modal: ?tab=logs&crashRel=crash-reports%2F...
 const initialCrashRel = ref<string | null>(null)
+const initialKind = ref<ContentTabKind | undefined>()
 onMounted(() => {
   const tabParam = route.query.tab as string | undefined
   if (tabParam && tabs.some(t => t.key === tabParam)) {
     activeTab.value = tabParam as TabKey
+  } else if (tabParam && MERGED_TABS[tabParam]) {
+    activeTab.value = 'content'
+    initialKind.value = MERGED_TABS[tabParam]
   }
   const crashRelParam = route.query.crashRel as string | undefined
   if (crashRelParam) {
@@ -359,10 +378,10 @@ onMounted(() => {
   }
 })
 
-// Tabs whose content is read from disk by <InstanceContent>.
-type ContentTab = 'screenshots' | 'worlds' | 'resourcepacks' | 'datapacks' | 'shaders' | 'servers'
-const CONTENT_TABS: ContentTab[] = ['screenshots', 'worlds', 'resourcepacks', 'datapacks', 'shaders', 'servers']
-const isContentTab = computed(() => (CONTENT_TABS as string[]).includes(activeTab.value))
+// Tabs whose content is read off disk by <InstanceGameFiles>.
+type GameFileTab = 'screenshots' | 'worlds' | 'servers'
+const GAME_FILE_TABS: GameFileTab[] = ['screenshots', 'worlds', 'servers']
+const isGameFileTab = computed(() => (GAME_FILE_TABS as string[]).includes(activeTab.value))
 
 const menuItems = computed(() => [[
   {
@@ -379,6 +398,11 @@ const menuItems = computed(() => [[
     label: t('changeLoader.menu'),
     icon: 'i-lucide-layers',
     onSelect: () => changeLoaderModal.open(id.value),
+  },
+  {
+    label: t('instance.createShortcut'),
+    icon: 'i-lucide-app-window',
+    onSelect: createShortcut,
   },
 ], [
   {
@@ -446,6 +470,16 @@ function confirmLaunch() {
 const play = () => launchWith()
 const handleQuickPlay = (qp: QuickPlay) => launchWith(qp)
 
+/** Drops a desktop shortcut that opens `spectra://launch/<id>`. */
+async function createShortcut() {
+  try {
+    await invoke<string>('create_desktop_shortcut', { id: id.value })
+    toast.add({ title: t('instance.shortcutCreated'), color: 'success' })
+  } catch (e) {
+    toast.add({ title: String(e), color: 'error' })
+  }
+}
+
 async function openGameFolder() {
   try {
     await invoke('open_instance_game_folder', { id: id.value })
@@ -454,24 +488,7 @@ async function openGameFolder() {
   }
 }
 
-// --- change icon (click the hero icon) ---
+// The icon is edited in the settings modal; this only forces a redraw.
 const iconKey = ref(0)
-async function changeIcon() {
-  try {
-    const picked = await openDialog({
-      multiple: false,
-      directory: false,
-      filters: [{ name: 'Image', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'] }],
-    })
-    if (typeof picked !== 'string') return
-    await invoke('set_instance_icon', { id: id.value, sourcePath: picked })
-    invalidateInstanceIcon(id.value)
-    iconKey.value++
-    await instances.load()
-    toast.add({ title: t('instance.iconChanged'), color: 'success' })
-  } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
-  }
-}
 
 </script>

@@ -147,6 +147,7 @@
             :disabled="filtering"
             :force-fallback="true"
             :fallback-on-body="true"
+            :fallback-tolerance="6"
             ghost-class="mk-card-ghost"
             class="grid min-h-16 gap-3.5"
             style="grid-template-columns:repeat(auto-fill,minmax(248px,1fr))"
@@ -162,7 +163,26 @@
               @click="enter(item.id)"
             >
               <div class="flex items-center gap-3">
-                <InstanceIcon :instance="item" class="size-13 rounded-[13px] text-[22px] shadow-[0_4px_14px_rgba(0,0,0,0.35)]" />
+                <!-- hover the card, launch from the icon -->
+                <div class="relative size-13 shrink-0">
+                  <InstanceIcon
+                    :instance="item"
+                    class="size-full rounded-[13px] text-[22px] shadow-[0_4px_14px_rgba(0,0,0,0.35)] transition duration-150 group-hover:brightness-[0.35]"
+                  />
+                  <button
+                    type="button"
+                    class="absolute inset-0 flex cursor-pointer items-center justify-center rounded-[13px] opacity-0 transition duration-150 group-hover:opacity-100 focus-visible:opacity-100"
+                    :aria-label="$t('ctx.play')"
+                    :title="$t('ctx.play')"
+                    @click.stop="quickPlay(item)"
+                  >
+                    <UIcon
+                      :name="busy(item.id) ? 'i-lucide-loader-circle' : 'i-lucide-play'"
+                      class="size-6 text-primary-400 drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
+                      :class="{ 'animate-spin': busy(item.id) }"
+                    />
+                  </button>
+                </div>
                 <div class="min-w-0 flex-1">
                   <div class="truncate font-semibold">{{ item.name }}</div>
                   <div class="mt-1.5 flex flex-wrap items-center gap-2">
@@ -193,9 +213,12 @@
       </UFormField>
     </template>
     <template #footer>
-      <div class="flex w-full justify-end gap-2">
-        <UButton variant="ghost" color="neutral" :label="$t('common.cancel')" @click="createGroupOpen = false" />
-        <UButton :label="$t('common.add')" :disabled="!newGroupName.trim()" @click="confirmCreateGroup" />
+      <div class="flex w-full items-center gap-3">
+        <ModalHint>{{ $t('library.groupHint') }}</ModalHint>
+        <div class="ml-auto flex shrink-0 gap-2">
+          <UButton variant="ghost" color="neutral" :label="$t('common.cancel')" @click="createGroupOpen = false" />
+          <UButton :label="$t('common.add')" :disabled="!newGroupName.trim()" @click="confirmCreateGroup" />
+        </div>
       </div>
     </template>
   </UModal>
@@ -210,6 +233,7 @@ import type { DisplayGroup } from '~/composables/useLibraryLayout'
 const instances = useInstancesStore()
 const layout = useLibraryLayout()
 const mc = useMinecraftLaunch()
+const activity = useActivityCenter()
 const router = useRouter()
 const toast = useToast()
 const { t } = useI18n()
@@ -270,11 +294,24 @@ const totalVisible = computed(() => layout.groups.value.reduce((n, g) => n + vis
 
 // --- navigation / actions ---
 // A drag releases on the same card it grabbed, which fires a `click`. Guard
-// against that so dragging an instance never accidentally opens it.
+// against that so dragging an instance never accidentally opens it. The card
+// only becomes a drag past `fallback-tolerance` pixels, so the shaky hand that
+// moves 1-2px while clicking still opens the instance.
 let suppressClickUntil = 0
+const dragJustEnded = () => Date.now() < suppressClickUntil
+
 const enter = (id: string) => {
-  if (Date.now() < suppressClickUntil) return
+  if (dragJustEnded()) return
   router.push(`/instance/${id}`)
+}
+
+/** Installing or already running — a second launch would be refused anyway. */
+const busy = (id: string) => activity.list.value.some(a => a.instanceId === id)
+
+/** Launches straight from the library; progress shows in the titlebar. */
+const quickPlay = (item: Instance) => {
+  if (dragJustEnded() || busy(item.id)) return
+  mc.launch(item.id).catch(() => { /* surfaced by the activity centre */ })
 }
 
 const onInstanceDragStart = () => {
@@ -289,6 +326,16 @@ const onInstanceDragEnd = () => {
 async function play(item: Instance) {
   await router.push(`/instance/${item.id}`)
   mc.launch(item.id).catch(() => {})
+}
+
+/** Drops a desktop shortcut that opens `spectra://launch/<id>`. */
+async function createShortcut(item: Instance) {
+  try {
+    await invoke('create_desktop_shortcut', { id: item.id })
+    toast.add({ title: t('instance.shortcutCreated'), color: 'success' })
+  } catch (e) {
+    toast.add({ title: String(e), color: 'error' })
+  }
 }
 
 async function duplicate(item: Instance) {
@@ -340,6 +387,7 @@ function instanceMenu(item: Instance) {
       { label: t('ctx.duplicate'), icon: 'i-lucide-copy', onSelect: () => duplicate(item) },
     ],
     [
+      { label: t('instance.createShortcut'), icon: 'i-lucide-app-window', onSelect: () => createShortcut(item) },
       { label: t('ctx.openFolder'), icon: 'i-lucide-folder', onSelect: () => openFolder(item) },
       { label: t('ctx.copyPath'), icon: 'i-lucide-clipboard', onSelect: () => copyPath(item) },
     ],

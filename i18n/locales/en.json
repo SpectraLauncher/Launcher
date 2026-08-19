@@ -70,6 +70,7 @@
     "createGroupTitle": "New group",
     "groupName": "Group name",
     "groupNamePlaceholder": "e.g. Modded",
+    "groupHint": "Groups arrange the library on this computer. Nothing moves on disk.",
     "deleteGroup": "Delete group",
     "copied": "Path copied to clipboard",
     "comingSoon": "Coming soon",
@@ -106,11 +107,10 @@
     "installed": "Installed",
     "created": "Created",
     "loaderVersion": "Loader version",
-    "soon": "Soon",
-    "emptyTab": "This section will be available soon.",
     "console": "Console",
     "noLogs": "No logs yet. Launch the instance to see the console.",
     "tabs": {
+      "content": "Content",
       "mods": "Mods",
       "shaders": "Shaders",
       "datapacks": "Datapacks",
@@ -130,6 +130,8 @@
     "updateNow": "Update",
     "updated": "Modpack updated",
     "export": "Export / Backup",
+    "createShortcut": "Create shortcut",
+    "shortcutCreated": "Shortcut added to the desktop",
     "exported": "Instance exported",
     "changeIcon": "Change icon",
     "iconChanged": "Icon changed"
@@ -226,6 +228,7 @@
     "plain": "Plain text",
     "custom": "Custom",
     "count": "{n} mods",
+    "customHint": "Placeholders:",
     "save": "Save",
     "saved": "Mod list saved"
   },
@@ -234,6 +237,7 @@
     "title": "Change mod loader",
     "desc": "Pick a loader for Minecraft {mc}. Existing mods may need updating.",
     "change": "Change",
+    "current": "Current",
     "apply": "Apply",
     "done": "Loader changed",
     "settingsHint": "Switch between Fabric, Forge, NeoForge, Quilt or Vanilla."
@@ -403,7 +407,9 @@
     "uninstallingMod": "Removing {name}"
   },
   "content": {
+    "all": "All",
     "count": "{n} items",
+    "searchPlaceholder": "Search content...",
     "refresh": "Refresh",
     "empty": "Nothing here yet",
     "format": "format",
@@ -505,6 +511,7 @@
     "updateAll": "Update all ({n})",
     "updateTo": "Update to {v}",
     "pickVersion": "Choose version",
+    "versionHint": "Installs the picked version with its dependencies and deletes the file you have now.",
     "useVersion": "Use",
     "installed": "Installed",
     "openPage": "Open mod page",
@@ -587,7 +594,19 @@
     "customHooksDesc": "Run custom system commands around game launch.",
     "requiredJava": "Minecraft {version} requires Java {major}. The launcher selects it automatically.",
     "javaDetected": "Detected on your system: {label}",
-    "javaWillDownload": "No matching Java detected — the launcher will download it."
+    "javaWillDownload": "No matching Java detected — the launcher will download it.",
+    "icon": "Icon"
+  },
+  "iconEditor": {
+    "title": "Icon editor",
+    "background": "Background",
+    "symbol": "Symbol",
+    "addSymbol": "Add your own",
+    "randomize": "Randomize",
+    "save": "Save icon",
+    "hint": "Saved as a 512x512 PNG; the launcher rounds the corners when it draws it.",
+    "create": "Create icon",
+    "upload": "Upload icon"
   },
   "share": {
     "title": "Share “{name}”",

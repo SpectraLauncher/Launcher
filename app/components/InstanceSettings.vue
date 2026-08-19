@@ -1,7 +1,9 @@
 <template>
-  <div v-if="form" class="grid grid-cols-1 gap-6 md:grid-cols-[200px_1fr]">
+  <!-- Full height with only the right side scrolling: the sub-nav stays put,
+       and switching section cannot change how tall the dialog is. -->
+  <div v-if="form" class="grid h-full min-h-0 grid-cols-1 gap-6 md:grid-cols-[200px_1fr]">
     <!-- sub-nav -->
-    <nav class="flex flex-col gap-1">
+    <nav class="flex flex-col gap-1 overflow-y-auto py-4 pl-4">
       <button
         v-for="s in sections"
         :key="s.key"
@@ -16,12 +18,46 @@
     </nav>
 
     <!-- sections -->
-    <div class="min-w-0 space-y-6">
+    <div class="min-w-0 space-y-6 overflow-y-auto py-4 pr-4">
       <!-- General -->
       <template v-if="section === 'general'">
-        <UFormField :label="$t('instSettings.name')" :description="$t('instSettings.nameDesc')">
-          <UInput v-model="form.name" class="w-full max-w-md" />
-        </UFormField>
+        <div class="flex flex-wrap items-start gap-6">
+          <UFormField
+            class="min-w-[220px] flex-1"
+            :label="$t('instSettings.name')"
+            :description="$t('instSettings.nameDesc')"
+          >
+            <UInput v-model="form.name" class="w-full" />
+          </UFormField>
+
+          <!-- The icon is edited here rather than on the instance page: it is a
+               setting, and the page header should not be a control. -->
+          <UFormField :label="$t('instSettings.icon')">
+            <UDropdownMenu :items="iconMenu">
+              <button
+                type="button"
+                class="group/icon relative size-24 shrink-0 cursor-pointer overflow-hidden rounded-2xl border border-default"
+                :title="$t('instance.changeIcon')"
+                :disabled="pickingIcon"
+              >
+                <InstanceIcon v-if="instance" :key="iconKey" :instance="instance" class="size-full rounded-2xl text-3xl" />
+                <span
+                  class="absolute inset-0 flex items-center justify-center bg-black/55 opacity-0 transition group-hover/icon:opacity-100"
+                >
+                  <UIcon
+                    :name="pickingIcon ? 'i-lucide-loader-circle' : 'i-lucide-pencil'"
+                    class="size-5 text-white"
+                    :class="pickingIcon && 'animate-spin'"
+                  />
+                </span>
+              </button>
+            </UDropdownMenu>
+          </UFormField>
+
+          <!-- Lives here, inside the settings modal, on purpose: its portal then
+               mounts after the modal's own and so draws on top of it. -->
+          <IconEditorModal v-model:open="iconEditorOpen" :instance-id="props.instanceId" @saved="onIconChanged" />
+        </div>
 
         <div>
           <p class="mb-1.5 text-sm font-medium">{{ $t('changeLoader.menu') }}</p>
@@ -180,7 +216,56 @@ import { open } from '@tauri-apps/plugin-dialog'
 import type { Instance } from '~/types/launcher'
 
 const props = defineProps<{ instanceId: string }>()
+// The instance page draws the same icon in its header, so it needs telling.
+const emit = defineEmits<{ (e: 'icon-changed'): void }>()
 const instances = useInstancesStore()
+/** The stored instance, for the icon preview — `form` is an unsaved copy. */
+const instance = computed(() => instances.instances.find(i => i.id === props.instanceId))
+
+const iconKey = ref(0)
+const pickingIcon = ref(false)
+const iconEditorOpen = ref(false)
+
+const iconMenu = computed(() => [[
+  {
+    label: t('iconEditor.create'),
+    icon: 'i-lucide-palette',
+    onSelect: () => { iconEditorOpen.value = true },
+  },
+  {
+    label: t('iconEditor.upload'),
+    icon: 'i-lucide-upload',
+    onSelect: changeIcon,
+  },
+]])
+
+/** Redraws the tile here and tells the instance page to redraw its header. */
+async function onIconChanged() {
+  iconKey.value++
+  await instances.load()
+  emit('icon-changed')
+}
+
+/** The picked file is copied into the instance as `icon.png` by the backend. */
+async function changeIcon() {
+  pickingIcon.value = true
+  try {
+    const picked = await open({
+      multiple: false,
+      directory: false,
+      filters: [{ name: 'Image', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'] }],
+    })
+    if (typeof picked !== 'string') return
+    await invoke('set_instance_icon', { id: props.instanceId, sourcePath: picked })
+    invalidateInstanceIcon(props.instanceId)
+    await onIconChanged()
+    toast.add({ title: t('instance.iconChanged'), color: 'success' })
+  } catch (e) {
+    toast.add({ title: String(e), color: 'error' })
+  } finally {
+    pickingIcon.value = false
+  }
+}
 const changeLoaderModal = useChangeLoaderModal()
 const router = useRouter()
 const toast = useToast()

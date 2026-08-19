@@ -1,3 +1,21 @@
+## Changes (v0.7.0)
+
+### ✨ Features & Improvements
+- **One Content tab**: mods, resource packs, shaders and datapacks each had a tab of their own. They now share a single **Content** tab with a picker above the list — All, Mods, Resource packs, Shaders, Datapacks — and everything that used to work for mods only now works for all of them: the search box, the sortable columns, **Update all**, and a count next to each kind. Packs left as a plain folder instead of a `.zip` are listed too.
+- **Instance settings behind a gear**: settings are no longer a tab you scroll past — the gear next to **Game folder** opens them, so the tabs are only the things you actually browse. The window keeps one height whichever section you are in.
+- **Build an instance icon in the launcher**: click an instance's icon in its settings and pick **Create icon**. Choose a background, choose a symbol, or press **Randomize** until something fits; the preview shows it at the sizes it will really appear in. **Add your own** takes any image and keeps it, so your own symbols sit first in the list the next time. The same editor is there when you create an instance, and **Upload icon** still takes a file straight from disk.
+- **Shortcuts on your desktop**: **Create shortcut** — in an instance's ⋯ menu and in the right-click menu in your library — puts a shortcut on the desktop carrying that instance's name and icon (on macOS, its name). Double-click it and the launcher starts if it is not already running, opens the instance and launches the game.
+- **Play straight from the library**: hover an instance card and a play button appears over its icon. One click and the game starts — no need to open the instance first. While it is installing or already running the button shows that instead.
+- **The version you are on is marked**: changing the mod loader and picking **other** now marks the loader version the instance already uses and starts on it, instead of an empty box.
+- **Dialogs say what they are about to do**: changing a mod's version tells you the file you have now is replaced, the mod-list export lists the placeholders it understands, and creating a group mentions that it only rearranges your library.
+
+### 🐛 Bug Fixes
+- **Clicking an instance opens it**: a click sometimes did nothing at all — the smallest twitch of the mouse while pressing counted as the start of a drag, and the launcher swallowed the click on purpose so dragging a card never opened it. A card now has to actually move before it becomes a drag.
+- **"Open location" opens the folder the file is in**: the button in the **Logs** tab, and the same one for screenshots, opened your home folder instead. It now opens the right folder with the file selected.
+- **The window moves while a dialog is open**: dragging the title bar did nothing whenever any dialog was open, and so did minimise and close. All three work now.
+- **Change loader is no longer hidden behind settings**: opening it from instance settings drew it *underneath* the settings window, and once that was sorted, its version list opened underneath the dialog itself.
+- **A mod conflict no longer hides your mods**: when the launcher spotted a conflict, the warning replaced the entire list instead of sitting above it.
+
 ## Changes (v0.6.3)
 
 ### ✨ Features & Improvements

@@ -3,35 +3,55 @@
     <!-- Titlebar -->
     <!-- On macOS the window controls live on the left and the launcher name is
          centered; everywhere else the name is on the left and controls right. -->
-    <div data-tauri-drag-region class="z-10 relative flex w-full justify-between items-center h-10 px-2 text-gray-100 select-none">
-      <template v-if="isMac">
-        <div class="flex items-center">
-          <WindowControls />
-        </div>
-        <div class="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
-          <img src="/logo-transparent.png" alt="Spectra Launcher Icon" class="h-5 object-contain" />
-          <span>Spectra Launcher</span>
-        </div>
-        <div class="flex items-center gap-3">
-          <TitlebarActivity />
-          <AccountButton />
-        </div>
-      </template>
-      <template v-else>
-        <div class="flex items-center gap-2 pl-2">
-          <img src="/logo-transparent.png" alt="Spectra Launcher Icon" class="h-5 object-contain" />
-          <span>Spectra Launcher</span>
-        </div>
-        <div class="flex items-center gap-3">
-          <TitlebarActivity />
-          <AccountButton />
-          <WindowControls />
-        </div>
-      </template>
-    </div>
+    <!-- Teleported to <body> on purpose: `#__nuxt` carries `isolation: isolate`,
+         so anything inside it is painted below the modals — which portal to <body>
+         — whatever its z-index. The window chrome has to leave that stacking
+         context to stay grabbable. Out here `z-[100]` beats the overlays (Nuxt UI
+         gives them no z-index at all) and `pointer-events-auto` survives the
+         `pointer-events: none` an open dialog puts on <body>, so the mousedown
+         Tauri needs for `data-tauri-drag-region` still happens. `pointerdown.self.stop`
+         keeps that press away from the dialog's document-level outside-press
+         listener, so grabbing the bar moves the window instead of closing the modal. -->
+    <Teleport to="body">
+      <div
+        data-tauri-drag-region
+        class="pointer-events-auto fixed inset-x-0 top-0 z-[100] flex justify-between items-center h-10 px-2 text-gray-100 select-none"
+        @pointerdown.self.stop
+      >
+        <template v-if="isMac">
+          <div class="flex items-center">
+            <WindowControls />
+          </div>
+          <div class="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+            <img src="/logo-transparent.png" alt="Spectra Launcher Icon" class="h-5 object-contain" />
+            <span>Spectra Launcher</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <TitlebarActivity />
+            <AccountButton />
+          </div>
+        </template>
+        <template v-else>
+          <div class="flex items-center gap-2 pl-2">
+            <img src="/logo-transparent.png" alt="Spectra Launcher Icon" class="h-5 object-contain" />
+            <span>Spectra Launcher</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <TitlebarActivity />
+            <AccountButton />
+            <WindowControls />
+          </div>
+        </template>
+      </div>
 
+      <!-- rides along so its z-index:999999 lands in the same stacking context and
+           the route-change line stays visible over the bar -->
+      <NuxtLoadingIndicator color="aqua" errorColor="red" />
+    </Teleport>
 
-    <NuxtLoadingIndicator color="aqua" errorColor="red" />
+    <!-- the bar is fixed now, so this holds the 2.5rem it used to take up -->
+    <div class="h-10" />
+
     <div :class="['relative w-screen h-[calc(100vh-2.5rem)] overflow-hidden text-[#eef1f5]', theme.bgClass]">
 
 
@@ -74,6 +94,8 @@ const isMac = computed(() => platform.value === 'macos')
 // indicator works regardless of which page is open.
 const activity = useActivityCenter()
 const instances = useInstancesStore()
+const router = useRouter()
+const mc = useMinecraftLaunch()
 const updater = useAutoUpdate()
 const telemetry = useTelemetry()
 const createModal = useCreateInstanceModal()
@@ -84,6 +106,7 @@ const spectraNotifications = useSpectraNotifications()
 // already running) and parks it (link launched the app before the UI existed).
 let unlistenShare: UnlistenFn | null = null
 let unlistenAccount: UnlistenFn | null = null
+let unlistenLaunch: UnlistenFn | null = null
 onMounted(async () => {
   unlistenShare = await listen<string>('share://open', async (e) => {
     // Drain the parked copy of this same code so it can't reopen on next start.
@@ -92,6 +115,15 @@ onMounted(async () => {
   })
   const pending = await invoke<string | null>('take_pending_share')
   if (pending) createModal.openWithCode(pending)
+
+  // Desktop shortcuts: `spectra://launch/<id>`. Usually the click is what
+  // started the launcher, so the parked copy is the one that fires.
+  unlistenLaunch = await listen<string>('launch://open', async (e) => {
+    await invoke('take_pending_launch').catch(() => {})
+    playInstance(e.payload)
+  })
+  const pendingLaunch = await invoke<string | null>('take_pending_launch')
+  if (pendingLaunch) playInstance(pendingLaunch)
 
   // Signing in happens in the browser and comes back as `spectra://auth/...`;
   // the backend swaps it for a session and tells us it is done.
@@ -104,7 +136,16 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   unlistenShare?.()
   unlistenAccount?.()
+  unlistenLaunch?.()
 })
+
+/** Opens the instance page and starts the game, for shortcut deep links. */
+async function playInstance(instanceId: string) {
+  await instances.ensureLoaded()
+  if (!instances.instances.some(i => i.id === instanceId)) return
+  await router.push(`/instance/${instanceId}`)
+  mc.launch(instanceId).catch(() => { /* surfaced on the instance page */ })
+}
 
 onMounted(() => {
   activity.attach()

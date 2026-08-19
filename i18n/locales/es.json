@@ -70,6 +70,7 @@
     "createGroupTitle": "Nuevo grupo",
     "groupName": "Nombre del grupo",
     "groupNamePlaceholder": "p. ej. Modeado",
+    "groupHint": "Los grupos ordenan la biblioteca en este equipo. En el disco no se mueve nada.",
     "deleteGroup": "Eliminar grupo",
     "copied": "Ruta copiada al portapapeles",
     "comingSoon": "Próximamente",
@@ -106,11 +107,10 @@
     "installed": "Instalado",
     "created": "Creado",
     "loaderVersion": "Versión del cargador",
-    "soon": "Pronto",
-    "emptyTab": "Esta sección estará disponible pronto.",
     "console": "Consola",
     "noLogs": "Aún no hay registros. Inicia la instancia para ver la consola.",
     "tabs": {
+      "content": "Contenido",
       "mods": "Mods",
       "shaders": "Shaders",
       "datapacks": "Paquetes de datos",
@@ -130,6 +130,8 @@
     "updateNow": "Actualizar",
     "updated": "Modpack actualizado",
     "export": "Exportar / Copia de seguridad",
+    "createShortcut": "Crear acceso directo",
+    "shortcutCreated": "Acceso directo añadido al escritorio",
     "exported": "Instancia exportada",
     "changeIcon": "Cambiar icono",
     "iconChanged": "Icono cambiado"
@@ -226,6 +228,7 @@
     "plain": "Texto plano",
     "custom": "Personalizado",
     "count": "{n} mods",
+    "customHint": "Marcadores:",
     "save": "Guardar",
     "saved": "Lista de mods guardada"
   },
@@ -234,6 +237,7 @@
     "title": "Cambiar cargador de mods",
     "desc": "Elige un cargador para Minecraft {mc}. Los mods existentes podrían necesitar actualización.",
     "change": "Cambiar",
+    "current": "Actual",
     "apply": "Aplicar",
     "done": "Cargador cambiado",
     "settingsHint": "Cambia entre Fabric, Forge, NeoForge, Quilt o Vanilla."
@@ -403,7 +407,9 @@
     "uninstallingMod": "Eliminando {name}"
   },
   "content": {
+    "all": "Todo",
     "count": "{n} elementos",
+    "searchPlaceholder": "Buscar contenido...",
     "refresh": "Actualizar",
     "empty": "Aquí no hay nada todavía",
     "format": "formato",
@@ -505,6 +511,7 @@
     "updateAll": "Actualizar todo ({n})",
     "updateTo": "Actualizar a {v}",
     "pickVersion": "Elegir versión",
+    "versionHint": "Instala la versión elegida con sus dependencias y borra el archivo actual.",
     "useVersion": "Usar",
     "installed": "Instalado",
     "openPage": "Abrir página del mod",
@@ -587,7 +594,19 @@
     "customHooksDesc": "Ejecutar comandos del sistema personalizados alrededor del inicio del juego.",
     "requiredJava": "Minecraft {version} requiere Java {major}. El launcher lo selecciona automáticamente.",
     "javaDetected": "Detectado en tu sistema: {label}",
-    "javaWillDownload": "No se detectó un Java compatible; el launcher lo descargará."
+    "javaWillDownload": "No se detectó un Java compatible; el launcher lo descargará.",
+    "icon": "Icono"
+  },
+  "iconEditor": {
+    "title": "Editor de iconos",
+    "background": "Fondo",
+    "symbol": "Símbolo",
+    "addSymbol": "Añadir el tuyo",
+    "randomize": "Aleatorio",
+    "save": "Guardar icono",
+    "hint": "Se guarda como PNG de 512x512; el launcher redondea las esquinas al dibujarlo.",
+    "create": "Crear icono",
+    "upload": "Subir icono"
   },
   "share": {
     "title": "Compartir «{name}»",

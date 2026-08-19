@@ -1,348 +1,325 @@
 <template>
   <div class="space-y-4">
+    <!-- kind selector: one list for mods, packs, shaders and datapacks -->
+    <div class="flex flex-wrap items-center gap-1.5">
+      <button
+        v-for="k in kindTabs"
+        :key="k.key"
+        type="button"
+        class="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition"
+        :class="kind === k.key
+          ? 'bg-primary-500/15 text-primary-400'
+          : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'"
+        @click="kind = k.key"
+      >
+        <UIcon :name="k.icon" class="size-3.5" />
+        {{ $t(k.label) }}
+        <span v-if="counts[k.key]" class="rounded bg-white/8 px-1 tabular-nums">{{ counts[k.key] }}</span>
+      </button>
+    </div>
+
     <!-- toolbar -->
-    <div class="flex items-center justify-between">
-      <p class="text-xs text-muted">
-        {{ loading ? $t('common.loading') : $t('content.count', { n: count }) }}
-      </p>
-      <div class="flex items-center gap-1.5">
-        <UButton
-          v-if="installKind"
-          icon="i-lucide-plus"
-          size="xs"
-          :label="$t('modrinth.add')"
-          @click="openAdd"
-        />
-        <UButton
-          v-if="tab === 'servers'"
-          icon="i-lucide-plus"
-          size="xs"
-          :label="$t('content.addServer')"
-          @click="addServerOpen = true"
-        />
-        <UButton
-          icon="i-lucide-refresh-cw"
-          color="neutral"
-          variant="ghost"
-          size="xs"
-          :loading="loading"
-          :label="$t('content.refresh')"
-          @click="load"
-        />
-      </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <UInput
+        v-model="search"
+        icon="i-lucide-search"
+        variant="soft"
+        :placeholder="$t('content.searchPlaceholder')"
+        class="min-w-44 flex-1"
+      />
+      <USelect v-model="perPage" :items="perPageItems" value-key="value" class="w-28" />
+      <UButton
+        v-if="updateCount"
+        icon="i-lucide-circle-arrow-up"
+        color="primary"
+        size="sm"
+        :loading="updatingAll"
+        :label="$t('mods.updateAll', { n: updateCount })"
+        @click="updateAll"
+      />
+      <UButton
+        v-if="hasLocal"
+        icon="i-lucide-link"
+        color="neutral"
+        variant="soft"
+        size="sm"
+        :loading="linking"
+        :label="$t('mods.link')"
+        :title="$t('mods.linkHint')"
+        @click="linkLocal"
+      />
+      <UButton
+        v-if="blockedCount"
+        icon="i-lucide-file-warning"
+        color="warning"
+        variant="soft"
+        size="sm"
+        :label="$t('blocked.resolve', { n: blockedCount })"
+        @click="openBlocked"
+      />
+      <UButton icon="i-lucide-package-search" size="sm" :label="$t('modrinth.add')" @click="openBrowser" />
+      <UButton
+        v-if="hasMods"
+        icon="i-lucide-file-text"
+        color="neutral"
+        variant="soft"
+        size="sm"
+        :label="$t('modlist.export')"
+        @click="modList.open(props.instanceId)"
+      />
+      <UButton
+        icon="i-lucide-refresh-cw"
+        color="neutral"
+        variant="ghost"
+        size="sm"
+        :loading="loading"
+        :title="$t('content.refresh')"
+        square
+        @click="load"
+      />
     </div>
 
     <p v-if="error" class="text-sm text-error">{{ error }}</p>
 
-    <!-- empty -->
-    <div v-else-if="!loading && count === 0" class="flex flex-col items-center justify-center gap-3 py-16 text-center">
-      <UIcon :name="emptyIcon" class="size-10 text-neutral-600" />
-      <p class="text-sm text-muted">{{ $t('content.empty') }}</p>
+    <!-- conflicts -->
+    <div v-if="conflicts.length" class="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
+      <div class="flex items-center gap-1.5 text-sm font-medium text-amber-300">
+        <UIcon name="i-lucide-triangle-alert" class="size-4" />
+        {{ $t('conflicts.title', { n: conflicts.length }) }}
+      </div>
+      <ul class="mt-1 space-y-0.5 text-xs text-amber-200/80">
+        <li v-for="c in conflicts" :key="c.filename + c.kind">
+          {{ c.name }} — {{ c.kind === 'loader' ? $t('conflicts.loader', { detail: c.detail }) : $t('conflicts.duplicate') }}
+        </li>
+      </ul>
     </div>
 
-    <!-- loading skeletons (grid for screenshots, rows for everything else) -->
-    <div
-      v-else-if="loading"
-      :class="tab === 'screenshots' ? 'grid gap-3' : 'space-y-2'"
-      :style="tab === 'screenshots' ? 'grid-template-columns:repeat(auto-fill,minmax(220px,1fr))' : undefined"
-    >
-      <template v-if="tab === 'screenshots'">
-        <div v-for="n in 6" :key="`ss-sk-${n}`" class="overflow-hidden rounded-xl border border-default bg-white/3">
-          <div class="aspect-video w-full animate-pulse bg-white/5" />
-          <div class="px-2.5 py-1.5"><div class="h-3 w-2/3 animate-pulse rounded bg-white/5" /></div>
+    <!-- loading skeleton (the conflicts banner above is a sibling, not a branch:
+         a conflict must not hide the list) -->
+    <div v-if="loading" class="overflow-hidden rounded-xl border border-default">
+      <div v-for="n in 8" :key="`mod-sk-${n}`" class="flex items-center gap-3 border-b border-default/50 px-3 py-2.5 last:border-0">
+        <div class="size-9 shrink-0 animate-pulse rounded-lg bg-white/5" />
+        <div class="min-w-0 flex-1 space-y-2">
+          <div class="h-3.5 w-1/3 animate-pulse rounded bg-white/5" />
+          <div class="h-2.5 w-1/2 animate-pulse rounded bg-white/5" />
         </div>
-      </template>
-      <template v-else>
-        <div v-for="n in 6" :key="`row-sk-${n}`" class="flex items-center gap-3 rounded-xl border border-default bg-white/3 p-3">
-          <div class="size-11 shrink-0 animate-pulse rounded-lg bg-white/5" />
-          <div class="min-w-0 flex-1 space-y-2">
-            <div class="h-3.5 w-1/3 animate-pulse rounded bg-white/5" />
-            <div class="h-2.5 w-1/2 animate-pulse rounded bg-white/5" />
-          </div>
-        </div>
-      </template>
-    </div>
-
-    <!-- screenshots: image grid -->
-    <div
-      v-else-if="tab === 'screenshots'"
-      class="grid gap-3"
-      style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr))"
-    >
-      <button
-        v-for="(s, i) in screenshots"
-        :key="s.path"
-        type="button"
-        class="group overflow-hidden rounded-xl border border-default bg-white/3 text-left transition hover:border-primary-500/40"
-        @click="lightboxIndex = i"
-      >
-        <img :src="assetUrl(s.path)" loading="lazy" class="aspect-video w-full object-cover transition group-hover:opacity-90" :alt="s.name" >
-        <div class="truncate px-2.5 py-1.5 text-[11px] text-neutral-400" :title="s.name">{{ s.name }}</div>
-      </button>
-    </div>
-
-    <!-- worlds -->
-    <div v-else-if="tab === 'worlds'" class="space-y-2">
-      <div
-        v-for="w in worlds"
-        :key="w.folder"
-        class="flex items-center gap-3 rounded-xl border border-default bg-white/3 p-3"
-      >
-        <img
-          v-if="w.icon_path"
-          :src="assetUrl(w.icon_path)"
-          class="size-11 shrink-0 rounded-lg object-cover"
-          :alt="w.name"
-        />
-        <div v-else class="flex size-11 shrink-0 items-center justify-center rounded-lg bg-white/5">
-          <UIcon name="i-lucide-globe" class="size-5 text-neutral-500" />
-        </div>
-        <div class="min-w-0 flex-1">
-          <div class="truncate font-medium">{{ w.name }}</div>
-          <div class="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-neutral-400">
-            <span v-if="w.version" class="font-mono">{{ w.version }}</span>
-            <span v-if="w.game_mode">· {{ $t(`content.gameMode.${w.game_mode}`) }}</span>
-            <span v-if="w.last_played">· {{ formatDate(w.last_played) }}</span>
-          </div>
-        </div>
-        <!-- Quick Play button (MC 1.20+) -->
-        <UButton
-          v-if="instanceSupportsQuickPlay"
-          icon="i-lucide-play"
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          :disabled="isRunning"
-          :title="$t('quickPlay.playWorld')"
-          square
-          @click="quickPlayWorld(w.folder)"
-        />
-        <UButton
-          icon="i-lucide-archive"
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          :loading="busyWorld === w.folder"
-          :title="$t('content.backup')"
-          square
-          @click="backupWorld(w)"
-        />
-        <UButton
-          icon="i-lucide-trash-2"
-          size="xs"
-          color="error"
-          variant="ghost"
-          :title="$t('common.remove')"
-          square
-          @click="deleteWorld(w)"
-        />
+        <div class="h-3 w-16 shrink-0 animate-pulse rounded bg-white/5" />
       </div>
     </div>
 
-    <!-- resource packs / datapacks -->
-    <div v-else-if="tab === 'resourcepacks' || tab === 'datapacks'" class="space-y-2">
-      <div
-        v-for="p in packs"
-        :key="p.filename"
-        class="flex items-center gap-3 rounded-xl border border-default bg-white/3 p-3"
-        :class="{ 'opacity-55': !p.enabled }"
-      >
-        <img
-          v-if="p.icon"
-          :src="p.icon"
-          class="size-11 shrink-0 rounded-lg object-cover [image-rendering:pixelated]"
-          :alt="p.name"
-        />
-        <div v-else class="flex size-11 shrink-0 items-center justify-center rounded-lg bg-white/5">
-          <UIcon :name="emptyIcon" class="size-5 text-neutral-500" />
-        </div>
-        <div class="min-w-0 flex-1">
-          <div class="flex items-center gap-2">
-            <span class="truncate font-medium">{{ p.name }}</span>
-            <UBadge v-if="p.is_zip" color="neutral" variant="subtle" size="xs" label="zip" />
-          </div>
-          <div v-if="p.description" class="mt-0.5 truncate text-[12px] text-neutral-400" :title="p.description">
-            {{ p.description }}
-          </div>
-          <div class="mt-0.5 truncate font-mono text-[10px] text-neutral-600" :title="p.filename">{{ p.filename }}</div>
-        </div>
-        <span v-if="p.pack_format != null" class="shrink-0 font-mono text-[11px] text-neutral-500">
-          {{ $t('content.format') }} {{ p.pack_format }}
-        </span>
-        <USwitch
-          :model-value="p.enabled"
-          :title="p.enabled ? $t('mods.disable') : $t('mods.enable')"
-          @update:model-value="toggleContent(p.filename, $event)"
-        />
-        <UButton
-          icon="i-lucide-trash-2"
-          color="error"
-          variant="ghost"
-          size="xs"
-          :title="$t('common.remove')"
-          @click="removeContent(p.filename)"
-        />
-      </div>
+    <!-- empty: nothing of this kind installed -->
+    <div v-else-if="!ofKind.length" class="flex flex-col items-center justify-center gap-3 py-16 text-center">
+      <UIcon :name="kindIcon(browserKind)" class="size-10 text-neutral-600" />
+      <p class="max-w-sm text-sm text-muted">{{ kind === 'mod' || kind === 'all' ? $t('instance.modsHint') : $t('content.empty') }}</p>
+      <UButton icon="i-lucide-package-search" :label="$t('modrinth.add')" @click="openBrowser" />
     </div>
 
-    <!-- shaders -->
-    <div v-else-if="tab === 'shaders'" class="space-y-2">
-      <div
-        v-for="s in shaders"
-        :key="s.filename"
-        class="flex items-center gap-3 rounded-xl border border-default bg-white/3 p-3"
-        :class="{ 'opacity-55': !s.enabled }"
-      >
-        <div class="flex size-11 shrink-0 items-center justify-center rounded-lg bg-white/5">
-          <UIcon name="i-lucide-sparkles" class="size-5 text-neutral-500" />
+    <!-- no search results -->
+    <div v-else-if="!filtered.length" class="py-12 text-center text-sm text-muted">{{ $t('content.empty') }}</div>
+
+    <!-- table -->
+    <template v-else>
+      <p class="text-xs text-muted">{{ $t('content.count', { n: filtered.length }) }}</p>
+
+      <div class="overflow-hidden rounded-xl border border-default">
+        <!-- header (click to sort: asc → desc → off) -->
+        <div class="grid grid-cols-[auto_2.75rem_minmax(0,1fr)_8rem_7rem_4rem_auto] items-center gap-3 border-b border-default bg-white/4 px-3 py-2 text-[11px] font-medium tracking-wide text-neutral-500 uppercase">
+          <span />
+          <button type="button" class="flex items-center justify-center gap-1 transition hover:text-neutral-200" :class="{ 'text-primary-400': sortCol === 'state' }" @click="toggleSort('state')">
+            {{ $t('mods.col.enabled') }}
+            <UIcon :name="sortIcon('state')" class="size-3" :class="{ 'opacity-30': sortCol !== 'state' }" />
+          </button>
+          <button type="button" class="flex items-center gap-1 transition hover:text-neutral-200" :class="{ 'text-primary-400': sortCol === 'name' }" @click="toggleSort('name')">
+            {{ $t('mods.col.name') }}
+            <UIcon :name="sortIcon('name')" class="size-3" :class="{ 'opacity-30': sortCol !== 'name' }" />
+          </button>
+          <button type="button" class="flex items-center gap-1 transition hover:text-neutral-200" :class="{ 'text-primary-400': sortCol === 'version' }" @click="toggleSort('version')">
+            {{ $t('mods.col.version') }}
+            <UIcon :name="sortIcon('version')" class="size-3" :class="{ 'opacity-30': sortCol !== 'version' }" />
+          </button>
+          <button type="button" class="flex items-center gap-1 transition hover:text-neutral-200" :class="{ 'text-primary-400': sortCol === 'updated' }" @click="toggleSort('updated')">
+            {{ $t('mods.col.updated') }}
+            <UIcon :name="sortIcon('updated')" class="size-3" :class="{ 'opacity-30': sortCol !== 'updated' }" />
+          </button>
+          <button type="button" class="flex items-center justify-center gap-1 transition hover:text-neutral-200" :class="{ 'text-primary-400': sortCol === 'update' }" :title="$t('mods.col.update')" @click="toggleSort('update')">
+            <UIcon name="i-lucide-circle-arrow-up" class="size-3.5" />
+            <UIcon :name="sortIcon('update')" class="size-3" :class="{ 'opacity-30': sortCol !== 'update' }" />
+          </button>
+          <span />
         </div>
-        <div class="min-w-0 flex-1">
-          <span class="block truncate font-medium">{{ s.name }}</span>
-          <span class="block truncate font-mono text-[10px] text-neutral-600" :title="s.filename">{{ s.filename }}</span>
+
+        <!-- rows -->
+        <div
+          v-for="m in paged"
+          :key="`${m.kind}/${m.filename}`"
+          class="grid grid-cols-[auto_2.75rem_minmax(0,1fr)_8rem_7rem_4rem_auto] items-center gap-3 border-b border-default/50 px-3 py-2 transition last:border-0 hover:bg-white/3"
+          :class="{ 'opacity-55': !m.enabled }"
+        >
+          <!-- toggle -->
+          <div class="flex justify-center">
+            <USwitch
+              :model-value="m.enabled"
+              :title="m.enabled ? $t('mods.disable') : $t('mods.enable')"
+              @update:model-value="toggle(m, $event)"
+            />
+          </div>
+          <!-- icon -->
+          <img v-if="m.icon_url" :src="m.icon_url" class="size-9 rounded-lg object-cover" :alt="m.name ?? m.filename" />
+          <div v-else class="flex size-9 items-center justify-center rounded-lg bg-white/5">
+            <UIcon :name="kindIcon(m.kind)" class="size-4.5 text-neutral-500" />
+          </div>
+
+          <!-- name + provider -->
+          <div class="min-w-0">
+            <div class="group/n flex items-center gap-1">
+              <span class="truncate font-medium" :title="m.filename">{{ m.name ?? m.filename }}</span>
+              <UButton
+                v-if="m.project_id"
+                icon="i-lucide-external-link"
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                class="shrink-0 opacity-0 transition group-hover/n:opacity-100"
+                :title="$t('mods.openPage')"
+                @click="openModPage(m)"
+              />
+            </div>
+            <div class="mt-0.5 flex items-center gap-1.5">
+              <span
+                class="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-medium"
+                :class="providerBadgeClass(m.provider)"
+              >
+                {{ $t(`mods.provider.${m.provider}`) }}
+              </span>
+              <span v-if="kind === 'all'" class="text-[10px] text-neutral-500">{{ $t(kindLabel(m.kind)) }}</span>
+            </div>
+          </div>
+
+          <!-- version -->
+          <span class="truncate font-mono text-xs text-neutral-400" :title="m.version ?? ''">{{ m.version ?? '—' }}</span>
+
+          <!-- updated -->
+          <span class="text-xs text-neutral-500">{{ formatDate(m.modified) }}</span>
+
+
+
+          <!-- actions -->
+          <div class="flex items-center justify-end gap-0.5">
+            <UButton
+              v-if="!m.project_id && m.kind === 'mod'"
+              icon="i-lucide-search"
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              :loading="linking"
+              :title="$t('mods.checkModrinth')"
+              @click="linkLocal"
+            />
+            <UButton
+              v-if="m.project_id && updates[m.project_id]"
+              icon="i-lucide-circle-arrow-up"
+              color="primary"
+              variant="soft"
+              size="xs"
+              :loading="updatingId === m.filename"
+              :title="$t('mods.updateTo', { v: updates[m.project_id]?.version_number ?? '' })"
+              @click="updateMod(m)"
+            />
+            <UButton
+              v-if="m.project_id && m.kind === 'mod'"
+              icon="i-lucide-replace"
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              :title="$t('mods.changeVersion')"
+              @click="openVersions(m)"
+            />
+            <UButton
+              icon="i-lucide-trash-2"
+              color="error"
+              variant="ghost"
+              size="xs"
+              :title="$t('common.remove')"
+              @click="remove(m)"
+            />
+          </div>
         </div>
-        <UBadge v-if="s.is_zip" color="neutral" variant="subtle" size="xs" label="zip" />
-        <USwitch
-          :model-value="s.enabled"
-          :title="s.enabled ? $t('mods.disable') : $t('mods.enable')"
-          @update:model-value="toggleContent(s.filename, $event)"
-        />
-        <UButton
-          icon="i-lucide-trash-2"
-          color="error"
-          variant="ghost"
-          size="xs"
-          :title="$t('common.remove')"
-          @click="removeContent(s.filename)"
-        />
       </div>
-    </div>
 
-    <!-- servers -->
-    <div v-else-if="tab === 'servers'" class="space-y-2">
-      <div
-        v-for="(s, i) in servers"
-        :key="`${s.ip}-${i}`"
-        class="flex items-center gap-3 rounded-xl border border-default bg-white/3 p-3"
-        :class="{ 'opacity-55': s.hidden }"
-      >
-        <!-- Favicon: from ping result > server NBT > placeholder -->
-        <div class="relative size-11 shrink-0">
-          <img
-            v-if="pingFor(s.ip)?.favicon || s.icon"
-            :src="pingFor(s.ip)?.favicon ?? s.icon ?? ''"
-            class="size-11 rounded-lg object-cover [image-rendering:pixelated]"
-            :alt="s.name"
-          />
-          <div v-else class="flex size-11 items-center justify-center rounded-lg bg-white/5">
-            <UIcon name="i-lucide-server" class="size-5 text-neutral-500" />
-          </div>
-        </div>
-
-        <!-- Info -->
-        <div class="min-w-0 flex-1">
-          <div class="flex items-center gap-2">
-            <span class="truncate font-medium">{{ s.name || s.ip }}</span>
-            <UBadge v-if="s.hidden" color="neutral" variant="subtle" size="xs" :label="$t('content.hidden')" />
-          </div>
-          <!-- MOTD from ping -->
-          <div v-if="pingFor(s.ip)?.motd" class="mt-0.5 truncate text-[11px] text-neutral-400" :title="pingFor(s.ip)!.motd">
-            {{ pingFor(s.ip)!.motd }}
-          </div>
-          <div v-else class="truncate font-mono text-[11px] text-neutral-500">{{ s.ip }}</div>
-        </div>
-
-        <!-- Ping status (right side) -->
-        <div class="flex shrink-0 items-center gap-2">
-          <!-- Loading -->
-          <UIcon v-if="pingStatus(s.ip) === 'loading'" name="i-lucide-loader-circle" class="size-3.5 animate-spin text-neutral-500" />
-          <!-- Online -->
-          <template v-else-if="pingFor(s.ip)">
-            <span :class="latencyClass(pingFor(s.ip)!.latency_ms)" class="font-mono text-[11px]">{{ pingFor(s.ip)!.latency_ms }}ms</span>
-            <span class="text-[11px] text-neutral-500">{{ pingFor(s.ip)!.online }}/{{ pingFor(s.ip)!.max }}</span>
-          </template>
-          <!-- Offline -->
-          <span v-else-if="pingStatus(s.ip) === 'offline'" class="text-[11px] text-neutral-600">{{ $t('server.offline') }}</span>
-        </div>
-
-        <!-- Actions -->
-        <div class="flex shrink-0 items-center gap-1">
-          <UButton
-            v-if="instanceSupportsQuickPlay"
-            icon="i-lucide-play"
-            size="xs"
-            color="primary"
-            variant="ghost"
-            :disabled="isRunning"
-            :title="$t('quickPlay.connectServer')"
-            square
-            @click="quickPlayServer(s.ip)"
-          />
-          <UButton
-            icon="i-lucide-trash-2"
-            color="error"
-            variant="ghost"
-            size="xs"
-            :title="$t('common.remove')"
-            @click="removeServer(i)"
-          />
-        </div>
+      <!-- pagination -->
+      <div v-if="filtered.length > perPage" class="flex justify-center pt-1">
+        <UPagination v-model:page="page" :total="filtered.length" :items-per-page="perPage" />
       </div>
-    </div>
+    </template>
 
-    <!-- add server modal -->
-    <UModal v-model:open="addServerOpen" :title="$t('content.addServer')">
-      <template #body>
-        <div class="space-y-3">
-          <UFormField :label="$t('content.serverName')">
-            <UInput v-model="newServer.name" :placeholder="$t('content.serverNamePlaceholder')" class="w-full" autofocus />
-          </UFormField>
-          <UFormField :label="$t('content.serverAddress')">
-            <UInput v-model="newServer.ip" placeholder="mc.example.com" class="w-full" @keydown.enter="addServer" />
-          </UFormField>
-        </div>
-      </template>
+    <!-- change-version modal -->
+    <UModal v-model:open="versionsOpen" :title="$t('mods.pickVersion')" :ui="{ content: 'max-w-lg' }">
       <template #footer>
-        <div class="flex w-full justify-end gap-2">
-          <UButton variant="ghost" color="neutral" :label="$t('common.cancel')" @click="addServerOpen = false" />
-          <UButton :label="$t('common.add')" :loading="addingServer" :disabled="!newServer.ip.trim()" @click="addServer" />
+        <ModalHint>{{ $t('mods.versionHint') }}</ModalHint>
+      </template>
+      <template #body>
+        <div v-if="loadingVersions" class="py-8 text-center text-sm text-muted">{{ $t('common.loading') }}</div>
+        <div v-else-if="!modVersions.length" class="py-8 text-center text-sm text-muted">{{ $t('modrinth.noVersions') }}</div>
+        <div v-else class="max-h-[60vh] space-y-1.5 overflow-y-auto">
+          <div
+            v-for="v in modVersions"
+            :key="v.id"
+            class="flex items-center gap-3 rounded-lg border border-default bg-white/3 p-2.5"
+          >
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <span class="truncate text-sm font-medium">{{ v.name || v.version_number }}</span>
+                <UBadge v-if="versionsMod && installedVersionId === v.id" color="success" variant="subtle" size="xs" :label="$t('mods.installed')" />
+              </div>
+              <div class="mt-0.5 truncate text-[11px] text-neutral-500">
+                {{ v.game_versions.slice(0, 4).join(', ') }}<span v-if="v.loaders.length"> · {{ v.loaders.join(', ') }}</span>
+              </div>
+            </div>
+            <UButton
+              size="xs"
+              color="neutral"
+              variant="soft"
+              :loading="installingVersionId === v.id"
+              :disabled="installedVersionId === v.id || !!installingVersionId"
+              :label="$t('mods.useVersion')"
+              @click="chooseVersion(v.id)"
+            />
+          </div>
         </div>
       </template>
     </UModal>
 
-    <!-- screenshot lightbox -->
-    <UModal v-model:open="lightboxOpen" :ui="{ content: 'max-w-5xl w-[92vw]' }">
-      <template #content>
-        <div v-if="lightbox" class="flex flex-col">
-          <div class="flex items-center justify-between gap-2 border-b border-default px-4 py-2.5">
-            <span class="truncate text-sm font-medium" :title="lightbox.name">
-              {{ lightbox.name }}
-              <span class="ml-1 text-xs text-muted">{{ (lightboxIndex ?? 0) + 1 }} / {{ screenshots.length }}</span>
-            </span>
-            <div class="flex items-center gap-1.5">
-              <UButton icon="i-lucide-download" size="xs" color="neutral" variant="soft" :label="$t('content.download')" @click="downloadShot(lightbox)" />
-              <UButton icon="i-lucide-folder-open" size="xs" color="neutral" variant="soft" :label="$t('content.openLocation')" @click="revealShot(lightbox)" />
-              <UButton icon="i-lucide-trash-2" size="xs" color="error" variant="soft" :label="$t('common.remove')" @click="deleteScreenshot(lightbox)" />
-              <UButton icon="i-lucide-x" size="xs" color="neutral" variant="ghost" square @click="lightbox = null" />
+    <!-- delete dependencies modal -->
+    <UModal v-model:open="depsOpen" :title="$t('mods.depsTitle', { name: depsTarget?.name ?? depsTarget?.filename ?? '' })" :ui="{ content: 'max-w-md' }">
+      <template #body>
+        <p class="mb-3 text-sm text-muted">{{ $t('mods.depsDesc') }}</p>
+        <div class="max-h-[50vh] space-y-1.5 overflow-y-auto">
+          <label
+            v-for="d in deps"
+            :key="d.filename"
+            class="flex cursor-pointer items-center gap-3 rounded-lg border border-default bg-white/3 p-2.5"
+          >
+            <UCheckbox
+              :model-value="depsChecked.has(d.filename)"
+              @update:model-value="toggleDep(d.filename, $event)"
+            />
+            <img v-if="d.icon_url" :src="d.icon_url" class="size-8 shrink-0 rounded-md object-cover" :alt="d.name" >
+            <div v-else class="flex size-8 shrink-0 items-center justify-center rounded-md bg-white/5">
+              <UIcon name="i-lucide-blocks" class="size-4 text-neutral-500" />
             </div>
-          </div>
-
-          <div class="relative bg-black/40">
-            <img :src="assetUrl(lightbox.path)" class="max-h-[78vh] w-full object-contain" :alt="lightbox.name" >
-            <UButton
-              v-if="screenshots.length > 1"
-              icon="i-lucide-chevron-left"
-              color="neutral"
-              class="absolute top-1/2 left-2 -translate-y-1/2 rounded-full opacity-80 hover:opacity-100"
-              @click="step(-1)"
-            />
-            <UButton
-              v-if="screenshots.length > 1"
-              icon="i-lucide-chevron-right"
-              color="neutral"
-              class="absolute top-1/2 right-2 -translate-y-1/2 rounded-full opacity-80 hover:opacity-100"
-              @click="step(1)"
-            />
-          </div>
+            <span class="min-w-0 flex-1 truncate text-sm">{{ d.name }}</span>
+          </label>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton variant="ghost" color="neutral" :label="$t('mods.depsKeep')" @click="keepDeps" />
+          <UButton
+            color="error"
+            icon="i-lucide-trash-2"
+            :label="allDepsChecked ? $t('mods.depsDeleteAll') : $t('mods.depsDeleteSelected')"
+            @click="confirmDeps"
+          />
         </div>
       </template>
     </UModal>
@@ -350,304 +327,440 @@
 </template>
 
 <script setup lang="ts">
-import { invoke, convertFileSrc } from '@tauri-apps/api/core'
-import { save, confirm } from '@tauri-apps/plugin-dialog'
-import type { ScreenshotInfo, WorldInfo, PackInfo, ShaderInfo, ServerInfo, PingResult } from '~/types/launcher'
-import type { ContentKind } from '~/types/modrinth'
+import { invoke } from '@tauri-apps/api/core'
+import { openExternal as openUrl } from '~/utils/openExternal'
+import type { ModEntry, Instance } from '~/types/launcher'
+import type { ModUpdate, ModrinthVersion, ContentKind } from '~/types/modrinth'
 
-type ContentTab = 'screenshots' | 'worlds' | 'resourcepacks' | 'datapacks' | 'shaders' | 'servers'
+/** The kinds that live side by side in this tab, in selector order. */
+const KINDS = ['mod', 'resourcepack', 'shader', 'datapack'] as const
+type Kind = typeof KINDS[number]
+type Entry = ModEntry & { kind: Kind }
 
-const props = defineProps<{ instanceId: string; tab: ContentTab }>()
-const emit = defineEmits<{
-  quickPlay: [payload: { kind: 'Singleplayer'; world: string } | { kind: 'Multiplayer'; host: string; port?: number }]
-}>()
+const props = defineProps<{ instanceId: string; initialKind?: Kind }>()
+const toast = useToast()
 const { t } = useI18n()
 const browser = useModrinthBrowser()
+const modList = useModListModal()
+const linkModal = useLinkModsModal()
+const blockedModal = useBlockedModsModal()
 const instances = useInstancesStore()
+const modrinth = useModrinth()
+const curseforge = useCurseforge()
+const activity = useActivityCenter()
 
-const screenshots = ref<ScreenshotInfo[]>([])
-const worlds = ref<WorldInfo[]>([])
-const packs = ref<PackInfo[]>([])
-const shaders = ref<ShaderInfo[]>([])
-const servers = ref<ServerInfo[]>([])
+const mods = ref<Entry[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 
-const COMMANDS: Record<ContentTab, string> = {
-  screenshots: 'list_screenshots',
-  worlds: 'list_worlds',
-  resourcepacks: 'list_resource_packs',
-  datapacks: 'list_data_packs',
-  shaders: 'list_shaders',
-  servers: 'list_servers',
+// --- kind selector ---
+const kind = ref<Kind | 'all'>(props.initialKind ?? 'all')
+
+const KIND_META: Record<Kind, { label: string; icon: string }> = {
+  mod: { label: 'instance.tabs.mods', icon: 'i-lucide-blocks' },
+  resourcepack: { label: 'instance.tabs.resourcepacks', icon: 'i-lucide-image' },
+  shader: { label: 'instance.tabs.shaders', icon: 'i-lucide-sparkles' },
+  datapack: { label: 'instance.tabs.datapacks', icon: 'i-lucide-package' },
+}
+const kindIcon = (k: Kind) => KIND_META[k].icon
+const kindLabel = (k: Kind) => KIND_META[k].label
+
+const kindTabs = [
+  { key: 'all' as const, label: 'content.all', icon: 'i-lucide-layers' },
+  ...KINDS.map(k => ({ key: k, label: KIND_META[k].label, icon: KIND_META[k].icon })),
+]
+
+const ofKind = computed(() => (kind.value === 'all' ? mods.value : mods.value.filter(m => m.kind === kind.value)))
+const counts = computed(() => {
+  const out: Record<string, number> = { all: mods.value.length }
+  for (const k of KINDS) out[k] = mods.value.filter(m => m.kind === k).length
+  return out
+})
+
+// What the "Add" button and the empty state target; "all" browses mods.
+const browserKind = computed<Kind>(() => (kind.value === 'all' ? 'mod' : kind.value))
+const hasMods = computed(() => mods.value.some(m => m.kind === 'mod'))
+
+// Target instance filters (loader + game version) for Modrinth lookups.
+const instance = computed(() => instances.instances.find((i: Instance) => i.id === props.instanceId))
+const filterLoaders = computed(() => {
+  const lt = instance.value?.loader.type
+  return lt && lt !== 'vanilla' ? [lt] : undefined
+})
+const filterGv = computed(() => (instance.value ? [instance.value.mc_version] : undefined))
+
+// --- available updates ---
+const updates = ref<Record<string, ModUpdate>>({})
+const updatingId = ref<string | null>(null) // filename being updated
+const updatingAll = ref(false)
+const updateCount = computed(() => mods.value.filter(m => m.project_id && updates.value[m.project_id]).length)
+
+/** Reads every kind off disk and tags each row with the kind it came from. */
+async function listAll(): Promise<Entry[]> {
+  const lists = await Promise.all(KINDS.map(async k =>
+    (await invoke<ModEntry[]>('list_content', { instanceId: props.instanceId, kind: k })).map(m => ({ ...m, kind: k })),
+  ))
+  return lists.flat()
 }
 
-const EMPTY_ICONS: Record<ContentTab, string> = {
-  screenshots: 'i-lucide-camera',
-  worlds: 'i-lucide-globe',
-  resourcepacks: 'i-lucide-image',
-  datapacks: 'i-lucide-package',
-  shaders: 'i-lucide-sparkles',
-  servers: 'i-lucide-server',
-}
-const emptyIcon = computed(() => EMPTY_ICONS[props.tab])
-
-const count = computed(() => {
-  switch (props.tab) {
-    case 'screenshots': return screenshots.value.length
-    case 'worlds': return worlds.value.length
-    case 'resourcepacks':
-    case 'datapacks': return packs.value.length
-    case 'shaders': return shaders.value.length
-    case 'servers': return servers.value.length
-    default: return 0
+async function refreshUpdates() {
+  try {
+    const list = await modrinth.checkUpdates(props.instanceId, filterLoaders.value, filterGv.value)
+    updates.value = Object.fromEntries(list.map(u => [u.project_id, u]))
+  } catch {
+    updates.value = {}
   }
+}
+
+/** Installs `versionId` for a mod and removes its previous jar. Routes to the
+ *  right provider (CurseForge `versionId` is a fileId). */
+async function applyVersion(mod: Entry, versionId: string) {
+  let added
+  if (mod.provider === 'curseforge' && mod.project_id) {
+    const res = await curseforge.installWithDeps(props.instanceId, mod.project_id, versionId, filterGv.value?.[0], filterLoaders.value?.[0])
+    added = res.added
+    for (const b of res.blocked) {
+      toast.add({
+        title: t('modrinth.blocked', { name: b.name }),
+        color: 'warning',
+        actions: [{ label: t('logs.openLink'), onClick: () => openUrl(b.url) }],
+      })
+    }
+  } else {
+    added = await modrinth.installWithDeps(props.instanceId, versionId, filterGv.value?.[0], filterLoaders.value?.[0])
+  }
+  const fresh = added.find(a => a.project_id === mod.project_id)
+  if (fresh && fresh.filename !== mod.filename) {
+    await invoke('delete_mod', { instanceId: props.instanceId, filename: mod.filename })
+  }
+}
+
+async function updateMod(mod: Entry) {
+  const u = mod.project_id ? updates.value[mod.project_id] : null
+  if (!u) return
+  updatingId.value = mod.filename
+  const tid = activity.startTask(t('activity.updatingMod', { name: mod.name ?? mod.filename }))
+  try {
+    await applyVersion(mod, u.version_id)
+    await load()
+  } catch (e) {
+    toast.add({ title: String(e), color: 'error' })
+  } finally {
+    activity.endTask(tid)
+    updatingId.value = null
+  }
+}
+
+async function updateAll() {
+  updatingAll.value = true
+  const tid = activity.startTask(t('activity.updatingMods'))
+  try {
+    // Both providers update via bulk backend calls (no per-mod requests → no 429).
+    await modrinth.updateAll(props.instanceId, filterLoaders.value, filterGv.value)
+    await curseforge.updateAll(props.instanceId, filterLoaders.value, filterGv.value)
+    await load()
+  } catch (e) {
+    toast.add({ title: String(e), color: 'error' })
+  } finally {
+    activity.endTask(tid)
+    updatingAll.value = false
+  }
+}
+
+// --- change version modal ---
+const versionsMod = ref<Entry | null>(null)
+const versionsOpen = computed({
+  get: () => versionsMod.value !== null,
+  set: (v: boolean) => { if (!v) versionsMod.value = null },
+})
+const modVersions = ref<ModrinthVersion[]>([])
+const loadingVersions = ref(false)
+const installingVersionId = ref<string | null>(null)
+const installedVersionId = computed(() => versionsMod.value?.version_id ?? null)
+
+async function openVersions(mod: Entry) {
+  if (!mod.project_id) return
+  versionsMod.value = mod
+  modVersions.value = []
+  loadingVersions.value = true
+  try {
+    modVersions.value = mod.provider === 'curseforge'
+      ? await curseforge.versions(mod.project_id, filterLoaders.value, filterGv.value)
+      : await modrinth.versions(mod.project_id, filterLoaders.value, filterGv.value)
+  } catch (e) {
+    toast.add({ title: String(e), color: 'error' })
+  } finally {
+    loadingVersions.value = false
+  }
+}
+
+async function chooseVersion(versionId: string) {
+  const mod = versionsMod.value
+  if (!mod) return
+  installingVersionId.value = versionId
+  const tid = activity.startTask(t('activity.changingVersion', { name: mod.name ?? mod.filename }))
+  try {
+    await applyVersion(mod, versionId)
+    versionsMod.value = null
+    await load()
+  } catch (e) {
+    toast.add({ title: String(e), color: 'error' })
+  } finally {
+    activity.endTask(tid)
+    installingVersionId.value = null
+  }
+}
+
+/** Opens a mod's page in the external browser. */
+function openModPage(mod: Entry) {
+  if (!mod.project_id) return
+  if (mod.provider === 'curseforge') {
+    openUrl(`https://www.curseforge.com/projects/${mod.project_id}`)
+  } else {
+    openUrl(`https://modrinth.com/project/${mod.project_id}`)
+  }
+}
+
+// --- controls ---
+type SortCol = 'name' | 'version' | 'updated' | 'state' | 'update'
+const search = ref('')
+const perPage = ref(25)
+const page = ref(1)
+
+// Column-header sorting: click cycles asc → desc → off. Defaults to floating
+// mods with an available update to the top.
+const sortCol = ref<SortCol | null>('update')
+const sortDir = ref<'asc' | 'desc'>('asc')
+
+/** Whether a mod has an available update. */
+const hasUpdate = (m: Entry) => !!(m.project_id && updates.value[m.project_id])
+
+function toggleSort(col: SortCol) {
+  if (sortCol.value !== col) {
+    sortCol.value = col
+    sortDir.value = 'asc'
+  } else if (sortDir.value === 'asc') {
+    sortDir.value = 'desc'
+  } else {
+    sortCol.value = null // off
+  }
+}
+const sortIcon = (col: SortCol) =>
+  sortCol.value === col ? (sortDir.value === 'asc' ? 'i-lucide-arrow-up' : 'i-lucide-arrow-down') : 'i-lucide-chevrons-up-down'
+
+const perPageItems = [10, 25, 50, 100].map(n => ({ label: t('mods.perPage', { n }), value: n }))
+
+const nameOf = (m: Entry) => (m.name ?? m.filename).toLowerCase()
+const formatDate = (ms: number) => (ms ? new Date(ms).toLocaleDateString() : '—')
+
+const providerBadgeClass = (provider: string) => {
+  if (provider === 'curseforge') return 'bg-orange-500/10 text-orange-400 ring-1 ring-inset ring-orange-500/25'
+  if (provider === 'modrinth') return 'bg-green-500/10 text-green-400 ring-1 ring-inset ring-green-500/25'
+  return 'bg-neutral-500/10 text-neutral-400 ring-1 ring-inset ring-neutral-500/25'
+}
+
+// Ascending comparator per column; direction is applied afterwards.
+function compare(a: Entry, b: Entry, col: SortCol): number {
+  switch (col) {
+    case 'name': return nameOf(a).localeCompare(nameOf(b))
+    case 'version': return (a.version ?? '').localeCompare(b.version ?? '', undefined, { numeric: true })
+    case 'updated': return a.modified - b.modified
+    case 'state': return Number(b.enabled) - Number(a.enabled) // enabled first
+    case 'update': return Number(hasUpdate(b)) - Number(hasUpdate(a)) // updatable first
+  }
+}
+
+const filtered = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  let list = ofKind.value
+  if (q) list = list.filter(m => nameOf(m).includes(q) || m.filename.toLowerCase().includes(q))
+
+  const col = sortCol.value
+  if (!col) return list
+  const dir = sortDir.value === 'asc' ? 1 : -1
+  return [...list].sort((a, b) => compare(a, b, col) * dir || nameOf(a).localeCompare(nameOf(b)))
+})
+
+const paged = computed(() => {
+  const start = (page.value - 1) * perPage.value
+  return filtered.value.slice(start, start + perPage.value)
+})
+
+// Reset to page 1 when the view changes; clamp if the list shrinks.
+watch([search, sortCol, sortDir, perPage, kind], () => { page.value = 1 })
+watch(filtered, () => {
+  const max = Math.max(1, Math.ceil(filtered.value.length / perPage.value))
+  if (page.value > max) page.value = max
 })
 
 async function load() {
   loading.value = true
   error.value = null
   try {
-    const result = await invoke<unknown>(COMMANDS[props.tab], { id: props.instanceId })
-    switch (props.tab) {
-      case 'screenshots': screenshots.value = result as ScreenshotInfo[]; break
-      case 'worlds': worlds.value = result as WorldInfo[]; break
-      case 'resourcepacks':
-      case 'datapacks': packs.value = result as PackInfo[]; break
-      case 'shaders': shaders.value = result as ShaderInfo[]; break
-      case 'servers':
-        servers.value = result as ServerInfo[]
-        // Reset pings for the new server list and start pinging.
-        pings.value = {}
-        pingAll()
-        break
-    }
+    mods.value = await listAll()
   } catch (e) {
     error.value = String(e)
   } finally {
     loading.value = false
   }
+  void linkAndCheck()
+  void loadBlocked()
+  void loadConflicts()
 }
 
-const assetUrl = (path: string) => convertFileSrc(path)
-const formatDate = (ms: number) => new Date(ms).toLocaleDateString()
+// Whether a CurseForge API key is configured (enables CF linking).
+const cfEnabled = ref(false)
+curseforge.enabled().then(v => (cfEnabled.value = v)).catch(() => {})
 
-// --- Quick Play helpers ---
-const instance = computed(() => instances.instances.find(i => i.id === props.instanceId))
-
-/** MC 1.20+ supports --quickPlay* args */
-function supportsQuickPlay(ver: string): boolean {
-  const [, minorStr = '0'] = ver.split('.')
-  return parseInt(minorStr) >= 20
-}
-const instanceSupportsQuickPlay = computed(() =>
-  !!instance.value && supportsQuickPlay(instance.value.mc_version),
-)
-
-// Whether the instance is currently running (disables quick play buttons).
-const mc = useMinecraftLaunch(computed(() => props.instanceId))
-const isRunning = computed(() => mc.stage.value !== 'idle')
-
-function quickPlayWorld(folder: string) {
-  emit('quickPlay', { kind: 'Singleplayer', world: folder })
-}
-function quickPlayServer(ip: string) {
-  const [host, portStr] = ip.split(':')
-  const port = portStr ? Number(portStr) : undefined
-  emit('quickPlay', { kind: 'Multiplayer', host: host ?? ip, port: Number.isFinite(port) ? port : undefined })
+// Likely mod conflicts (wrong loader, duplicates).
+const conflicts = ref<{ filename: string, name: string, kind: string, detail: string }[]>([])
+async function loadConflicts() {
+  try { conflicts.value = await invoke('check_conflicts', { instanceId: props.instanceId }) }
+  catch { conflicts.value = [] }
 }
 
-// --- servers: add / remove ---
-const toast = useToast()
-const addServerOpen = ref(false)
-const addingServer = ref(false)
-const newServer = reactive({ name: '', ip: '' })
-
-// --- server pings ---
-type PingStatus = PingResult | 'loading' | 'offline'
-const pings = ref<Record<string, PingStatus>>({})
-
-function pingFor(ip: string): PingResult | null {
-  const v = pings.value[ip]
-  return v && typeof v === 'object' ? v : null
+// CurseForge mods blocked from auto-download, awaiting manual fetch.
+const blockedCount = ref(0)
+async function loadBlocked() {
+  try { blockedCount.value = (await curseforge.getBlocked(props.instanceId)).length }
+  catch { blockedCount.value = 0 }
 }
-function pingStatus(ip: string): 'loading' | 'online' | 'offline' | null {
-  const v = pings.value[ip]
-  if (!v) return null
-  if (v === 'loading') return 'loading'
-  if (v === 'offline') return 'offline'
-  return 'online'
+function openBlocked() {
+  blockedModal.open(props.instanceId, () => { load(); loadBlocked() })
 }
 
-function latencyClass(ms: number): string {
-  if (ms < 80) return 'text-emerald-400'
-  if (ms < 200) return 'text-yellow-400'
-  return 'text-red-400'
-}
-
-async function pingAll() {
-  for (const s of servers.value) {
-    if (pings.value[s.ip] === 'loading') continue
-    pings.value = { ...pings.value, [s.ip]: 'loading' }
-    invoke<PingResult>('ping_server', { host: s.ip.split(':')[0], port: s.ip.includes(':') ? Number(s.ip.split(':')[1]) : null })
-      .then(result => { pings.value = { ...pings.value, [s.ip]: result } })
-      .catch(() => { pings.value = { ...pings.value, [s.ip]: 'offline' } })
-  }
-}
-
-async function addServer() {
-  if (!newServer.ip.trim()) return
-  addingServer.value = true
+// Auto-link is a quiet best-effort Modrinth pass on load; the manual button
+// opens the per-file provider-choice dialog. Then check for updates.
+async function linkAndCheck() {
   try {
-    await invoke('add_server', { id: props.instanceId, name: newServer.name.trim(), ip: newServer.ip.trim() })
-    addServerOpen.value = false
-    newServer.name = ''
-    newServer.ip = ''
-    await load()
-  } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
-  } finally {
-    addingServer.value = false
-  }
+    const matched = await modrinth.matchLocal(props.instanceId)
+    if (matched > 0) {
+      mods.value = await listAll()
+    }
+  } catch { /* offline / not found — ignore on auto-run */ }
+  refreshUpdates()
 }
 
-async function removeServer(index: number) {
+const hasLocal = computed(() => mods.value.some(m => m.kind === 'mod' && !m.project_id))
+const linking = ref(false)
+
+/** Manual: open the per-file provider-choice dialog for unmatched local jars. */
+function linkLocal() {
+  const files = mods.value.filter(m => m.kind === 'mod' && !m.project_id).map(m => m.filename)
+  if (!files.length) {
+    toast.add({ title: t('mods.noMatch'), color: 'neutral' })
+    return
+  }
+  linkModal.open({
+    instanceId: props.instanceId,
+    files,
+    cfEnabled: cfEnabled.value,
+    onDone: async () => {
+      mods.value = await listAll()
+      refreshUpdates()
+    },
+  })
+}
+
+async function toggle(mod: Entry, enabled: boolean) {
   try {
-    await invoke('delete_server', { id: props.instanceId, index })
-    await load()
+    // Mods keep their own command (it knows the mods/ folder); everything else
+    // goes through content.rs, which validates names and handles folder packs.
+    if (mod.kind === 'mod') {
+      await invoke('set_mod_enabled', { instanceId: props.instanceId, filename: mod.filename, enabled })
+    } else {
+      await invoke('set_content_enabled', { id: props.instanceId, kind: mod.kind, filename: mod.filename, enabled })
+    }
+    mod.enabled = enabled
   } catch (e) {
     toast.add({ title: String(e), color: 'error' })
   }
 }
 
-// Delete a resource pack / shader / datapack (kind = current tab's install kind).
-async function removeContent(filename: string) {
-  if (!installKind.value) return
+// --- delete (with orphaned-dependency prompt) ---
+interface RemovableDep { project_id: string; name: string; filename: string; icon_url: string | null; kind: string }
+const depsOpen = ref(false)
+const depsTarget = ref<Entry | null>(null)
+const deps = ref<RemovableDep[]>([])
+const depsChecked = ref<Set<string>>(new Set())
+const allDepsChecked = computed(() => deps.value.length > 0 && depsChecked.value.size === deps.value.length)
+
+function toggleDep(filename: string, on: boolean) {
+  const next = new Set(depsChecked.value)
+  if (on) next.add(filename)
+  else next.delete(filename)
+  depsChecked.value = next
+}
+
+/** Deletes the mod and the given dependency filenames, updating the list. */
+async function deleteMods(mod: Entry, depFilenames: string[]) {
   try {
-    await invoke('delete_content', { id: props.instanceId, kind: installKind.value, filename })
-    await load()
+    const all = [mod.filename, ...depFilenames]
+    for (const filename of all) {
+      await invoke('delete_mod', { instanceId: props.instanceId, filename })
+    }
+    const removed = new Set(all)
+    mods.value = mods.value.filter(m => !removed.has(m.filename))
   } catch (e) {
     toast.add({ title: String(e), color: 'error' })
   }
 }
 
-// Enable/disable a resource pack / shader / datapack (.disabled suffix).
-async function toggleContent(filename: string, enabled: boolean) {
-  if (!installKind.value) return
+async function remove(mod: Entry) {
+  // Only mods carry dependencies worth asking about.
+  if (mod.kind !== 'mod') {
+    try {
+      await invoke('delete_content', { id: props.instanceId, kind: mod.kind, filename: mod.filename })
+      mods.value = mods.value.filter(m => m !== mod)
+    } catch (e) {
+      toast.add({ title: String(e), color: 'error' })
+    }
+    return
+  }
   try {
-    await invoke('set_content_enabled', { id: props.instanceId, kind: installKind.value, filename, enabled })
-    await load()
+    const found = await invoke<RemovableDep[]>('get_removable_dependencies', {
+      instanceId: props.instanceId,
+      filename: mod.filename,
+    })
+    if (!found.length) {
+      await deleteMods(mod, [])
+      return
+    }
+    depsTarget.value = mod
+    deps.value = found
+    depsChecked.value = new Set(found.map(d => d.filename))
+    depsOpen.value = true
   } catch (e) {
     toast.add({ title: String(e), color: 'error' })
   }
 }
 
-// --- worlds: backup / delete ---
-const busyWorld = ref<string | null>(null)
-
-async function backupWorld(w: WorldInfo) {
-  const dest = await save({ defaultPath: `${w.folder}.zip`, filters: [{ name: 'Zip', extensions: ['zip'] }] })
-  if (typeof dest !== 'string') return
-  busyWorld.value = w.folder
-  try {
-    await invoke('backup_world', { id: props.instanceId, folder: w.folder, dest })
-    toast.add({ title: t('content.backupDone'), color: 'success' })
-  } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
-  } finally {
-    busyWorld.value = null
-  }
+async function confirmDeps() {
+  const mod = depsTarget.value
+  if (!mod) return
+  const selected = deps.value.filter(d => depsChecked.value.has(d.filename)).map(d => d.filename)
+  depsOpen.value = false
+  await deleteMods(mod, selected)
 }
 
-async function deleteWorld(w: WorldInfo) {
-  const ok = await confirm(t('content.deleteWorldConfirm', { name: w.name }), { title: t('content.deleteWorldTitle'), kind: 'warning' })
-  if (!ok) return
-  try {
-    await invoke('delete_world', { id: props.instanceId, folder: w.folder })
-    await load()
-  } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
-  }
+async function keepDeps() {
+  const mod = depsTarget.value
+  if (!mod) return
+  depsOpen.value = false
+  await deleteMods(mod, [])
 }
 
-// --- screenshots: delete ---
-async function deleteScreenshot(s: ScreenshotInfo) {
-  const ok = await confirm(t('content.deleteScreenshotConfirm'), { title: t('content.deleteScreenshotTitle'), kind: 'warning' })
-  if (!ok) return
-  try {
-    await invoke('delete_screenshot', { id: props.instanceId, name: s.name })
-    lightboxIndex.value = null
-    await load()
-  } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
-  }
-}
-
-// --- screenshots: lightbox / navigation / download / reveal ---
-const lightboxIndex = ref<number | null>(null)
-const lightbox = computed<ScreenshotInfo | null>({
-  get: () => (lightboxIndex.value !== null ? screenshots.value[lightboxIndex.value] ?? null : null),
-  set: (v) => { if (v === null) lightboxIndex.value = null },
-})
-const lightboxOpen = computed({
-  get: () => lightboxIndex.value !== null,
-  set: (v: boolean) => { if (!v) lightboxIndex.value = null },
-})
-
-/** Moves through the gallery, wrapping around. */
-function step(delta: number) {
-  if (lightboxIndex.value === null || !screenshots.value.length) return
-  const n = screenshots.value.length
-  lightboxIndex.value = (lightboxIndex.value + delta + n) % n
-}
-
-function onKey(e: KeyboardEvent) {
-  if (lightboxIndex.value === null) return
-  if (e.key === 'ArrowRight') { e.preventDefault(); step(1) }
-  else if (e.key === 'ArrowLeft') { e.preventDefault(); step(-1) }
-  else if (e.key === 'Escape') lightboxIndex.value = null
-}
-onMounted(() => window.addEventListener('keydown', onKey))
-onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
-
-async function downloadShot(s: ScreenshotInfo) {
-  try {
-    const dest = await save({ defaultPath: s.name, filters: [{ name: 'PNG', extensions: ['png'] }] })
-    if (!dest) return
-    await invoke('copy_file', { from: s.path, to: dest })
-    toast.add({ title: t('content.downloaded'), color: 'success' })
-  } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
-  }
-}
-
-async function revealShot(s: ScreenshotInfo) {
-  try {
-    await invoke('reveal_in_explorer', { path: s.path })
-  } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
-  }
-}
-
-// Tabs whose content can be downloaded from Modrinth.
-const INSTALL_KINDS: Partial<Record<ContentTab, ContentKind>> = {
-  shaders: 'shader',
-  datapacks: 'datapack',
-  resourcepacks: 'resourcepack',
-}
-const installKind = computed(() => INSTALL_KINDS[props.tab] ?? null)
-
-function openAdd() {
-  if (!installKind.value) return
+function openBrowser() {
+  const instance = instances.instances.find((i: Instance) => i.id === props.instanceId)
   browser.open({
-    kind: installKind.value,
+    kind: browserKind.value as ContentKind,
     mode: 'install',
     instanceId: props.instanceId,
-    gameVersion: instance.value?.mc_version,
-    loader: instance.value?.loader.type,
+    gameVersion: instance?.mc_version,
+    loader: instance?.loader.type,
     onInstalled: () => load(),
   })
 }
 
-watch(() => [props.instanceId, props.tab], load, { immediate: true })
+watch(() => props.instanceId, load, { immediate: true })
 </script>

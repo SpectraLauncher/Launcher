@@ -70,6 +70,7 @@
     "createGroupTitle": "新建分组",
     "groupName": "分组名称",
     "groupNamePlaceholder": "例如 模组",
+    "groupHint": "分组只在这台电脑上整理库，磁盘上的文件不会移动。",
     "deleteGroup": "删除分组",
     "copied": "路径已复制到剪贴板",
     "comingSoon": "即将推出",
@@ -106,11 +107,10 @@
     "installed": "已安装",
     "created": "创建于",
     "loaderVersion": "加载器版本",
-    "soon": "即将",
-    "emptyTab": "此部分即将可用。",
     "console": "控制台",
     "noLogs": "还没有日志。启动实例以查看控制台。",
     "tabs": {
+      "content": "内容",
       "mods": "模组",
       "shaders": "光影",
       "datapacks": "数据包",
@@ -130,6 +130,8 @@
     "updateNow": "更新",
     "updated": "整合包已更新",
     "export": "导出 / 备份",
+    "createShortcut": "创建快捷方式",
+    "shortcutCreated": "快捷方式已添加到桌面",
     "exported": "实例已导出",
     "changeIcon": "更改图标",
     "iconChanged": "图标已更改"
@@ -226,6 +228,7 @@
     "plain": "纯文本",
     "custom": "自定义",
     "count": "{n} 个模组",
+    "customHint": "占位符：",
     "save": "保存",
     "saved": "模组列表已保存"
   },
@@ -234,6 +237,7 @@
     "title": "更改模组加载器",
     "desc": "为 Minecraft {mc} 选择一个加载器。现有模组可能需要更新。",
     "change": "更改",
+    "current": "当前",
     "apply": "应用",
     "done": "加载器已更改",
     "settingsHint": "在 Fabric、Forge、NeoForge、Quilt 或 Vanilla 之间切换。"
@@ -403,7 +407,9 @@
     "uninstallingMod": "正在移除 {name}"
   },
   "content": {
+    "all": "全部",
     "count": "{n} 个项目",
+    "searchPlaceholder": "搜索内容...",
     "refresh": "刷新",
     "empty": "这里还什么都没有",
     "format": "格式",
@@ -505,6 +511,7 @@
     "updateAll": "全部更新（{n}）",
     "updateTo": "更新到 {v}",
     "pickVersion": "选择版本",
+    "versionHint": "安装所选版本及其依赖，并删除当前的文件。",
     "useVersion": "使用",
     "installed": "已安装",
     "openPage": "打开模组页面",
@@ -587,7 +594,19 @@
     "customHooksDesc": "在游戏启动前后运行自定义系统命令。",
     "requiredJava": "Minecraft {version} 需要 Java {major}。启动器会自动选择。",
     "javaDetected": "在你的系统中检测到：{label}",
-    "javaWillDownload": "未检测到匹配的 Java — 启动器将下载它。"
+    "javaWillDownload": "未检测到匹配的 Java — 启动器将下载它。",
+    "icon": "图标"
+  },
+  "iconEditor": {
+    "title": "图标编辑器",
+    "background": "背景",
+    "symbol": "符号",
+    "addSymbol": "添加自定义",
+    "randomize": "随机",
+    "save": "保存图标",
+    "hint": "保存为 512x512 的 PNG；圆角由启动器绘制时添加。",
+    "create": "创建图标",
+    "upload": "上传图标"
   },
   "share": {
     "title": "分享“{name}”",

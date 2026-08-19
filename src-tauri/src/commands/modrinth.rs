@@ -273,6 +273,12 @@ pub async fn modrinth_match_file(instance_id: String, filename: String) -> Resul
         dependencies: Vec::new(),
         installed_at: chrono::Utc::now().to_rfc3339(),
         provider: "modrinth".to_string(),
+        // COMPAT: the author needs a separate members call, so it stays empty
+        // until the backfill pass fetches it.
+        author: None,
+        env: project
+            .as_ref()
+            .and_then(|p| env_from_sides(p.client_side.as_deref(), p.server_side.as_deref())),
     };
     index.items.retain(|i| i.project_id != item.project_id && i.filename != item.filename);
     index.items.push(item);
@@ -511,6 +517,21 @@ pub struct InstalledItem {
     /// "modrinth" | "curseforge" — which provider this came from (for updates).
     #[serde(default = "default_provider")]
     pub provider: String,
+
+    // --- added in 0.6.4, for the content filters ---
+    //
+    // COMPAT(drop after 0.7): both are optional so an index written by an older
+    // launcher still parses — anything installed before this reads as `None`
+    // and shows up under "unknown" in the filters. Once nobody is carrying a
+    // pre-0.6.4 index, these can become plain fields and the "unknown" bucket
+    // can go with them.
+    /// Project author, as the provider reports it.
+    #[serde(default)]
+    pub author: Option<String>,
+    /// Where the project runs: "client", "server", "both", "singleplayer", or
+    /// `None` when the provider does not say — CurseForge often does not.
+    #[serde(default)]
+    pub env: Option<String>,
 }
 
 pub fn default_provider() -> String {
@@ -780,6 +801,29 @@ struct ProjectInfo {
     project_type: String,
     #[serde(default)]
     categories: Vec<String>,
+    /// "required" | "optional" | "unsupported" — Modrinth says this for every
+    /// project, which is where the environment filter gets its answer.
+    #[serde(default)]
+    client_side: Option<String>,
+    #[serde(default)]
+    server_side: Option<String>,
+}
+
+/// Turns Modrinth's two sides into the one word the filter uses.
+///
+/// "unsupported" on both means the project only makes sense in a single-player
+/// world (a datapack, usually) rather than that it runs nowhere.
+pub(crate) fn env_from_sides(client: Option<&str>, server: Option<&str>) -> Option<String> {
+    let needed = |v: Option<&str>| matches!(v, Some("required") | Some("optional"));
+    match (needed(client), needed(server)) {
+        (true, true) => Some("both".into()),
+        (true, false) => Some("client".into()),
+        (false, true) => Some("server".into()),
+        (false, false) => match (client, server) {
+            (None, None) => None,
+            _ => Some("singleplayer".into()),
+        },
+    }
 }
 
 /// The content kind + target folder for a project's version.
@@ -919,6 +963,8 @@ fn install_rec<'a>(
             dependencies: dep_project_ids,
             installed_at: chrono::Utc::now().to_rfc3339(),
             provider: "modrinth".to_string(),
+            author: None,
+            env: None,
         };
         // Replace any existing record for this project, then add.
         index.items.retain(|i| i.project_id != item.project_id);
@@ -1580,6 +1626,8 @@ async fn index_modpack_content(
             dependencies: Vec::new(),
             installed_at: chrono::Utc::now().to_rfc3339(),
             provider: "modrinth".to_string(),
+            author: None,
+            env: None,
         };
         index.items.retain(|i| i.project_id != item.project_id);
         index.items.push(item);
@@ -1681,6 +1729,8 @@ pub async fn match_local_mods(instance_id: String) -> Result<usize, String> {
             dependencies: Vec::new(),
             installed_at: chrono::Utc::now().to_rfc3339(),
             provider: "modrinth".to_string(),
+            author: None,
+            env: None,
         };
         index.items.retain(|i| i.project_id != item.project_id && i.filename != item.filename);
         index.items.push(item);
@@ -1778,6 +1828,8 @@ mod tests {
             dependencies: vec![],
             installed_at: String::new(),
             provider: provider.into(),
+            author: None,
+            env: None,
         }
     }
 

@@ -58,7 +58,6 @@
     <ExportModListModal />
     <LinkModsModal />
     <BlockedModsModal />
-    <ChangeLoaderModal />
     <OnboardingModal />
 
     <!-- drag & drop overlay -->

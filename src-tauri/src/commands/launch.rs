@@ -622,3 +622,40 @@ fn kill_process_tree(pid: u32, force: bool) -> Result<(), String> {
             .map_err(|e| format!("kill: {e}"))
     }
 }
+
+// ===== deep link (`spectra://launch/<instance-id>`) =====
+
+/// `spectra://launch/<id>` → the instance id, if that is what this URL is.
+/// Ids are UUIDs we minted, so anything else is rejected rather than passed on.
+pub fn instance_id_from_url(url: &str) -> Option<String> {
+    let rest = url.strip_prefix("spectra://")?.trim_start_matches('/');
+    let id = rest.strip_prefix("launch/")?.trim_end_matches('/');
+    let plain = !id.is_empty()
+        && id.len() <= 64
+        && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-');
+    plain.then(|| id.to_string())
+}
+
+/// Hands the frontend the instance a shortcut asked for when the click is what
+/// started the launcher. Returns `None` once consumed.
+#[tauri::command]
+pub fn take_pending_launch(state: tauri::State<'_, crate::AppState>) -> Option<String> {
+    state.pending_launch.lock().ok()?.take()
+}
+
+#[cfg(test)]
+mod deep_link_tests {
+    use super::instance_id_from_url;
+
+    #[test]
+    fn parses_launch_links() {
+        let id = "2f2a1ad4-0bb4-4e03-8251-ecfc8a5b8fd7";
+        assert_eq!(instance_id_from_url(&format!("spectra://launch/{id}")), Some(id.into()));
+        assert_eq!(instance_id_from_url(&format!("spectra://launch/{id}/")), Some(id.into()));
+        assert_eq!(instance_id_from_url("spectra://share/ABC123"), None);
+        assert_eq!(instance_id_from_url("spectra://launch/"), None);
+        // no path traversal or shell games in something we hand to a launcher
+        assert_eq!(instance_id_from_url("spectra://launch/../../etc/passwd"), None);
+        assert_eq!(instance_id_from_url("spectra://launch/a b"), None);
+    }
+}

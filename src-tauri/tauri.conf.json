@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Spectra Launcher",
-  "version": "0.6.3",
+  "version": "0.7.0",
   "identifier": "pl.makoto.spectra-launcher",
   "build": {
     "frontendDist": "../.output/public",
