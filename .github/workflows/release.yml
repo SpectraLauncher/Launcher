@@ -108,7 +108,22 @@ jobs:
         if: matrix.platform == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libssl-dev libfuse2 file
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libssl-dev libfuse2 squashfs-tools file
+
+      - name: Let the AppImage use the system libwayland (Ubuntu only)
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          set -euo pipefail
+          TAURI_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/tauri"
+          URL='https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage'
+          SHA='c20cd71e3a4e3b80c3483cef793cda3f4e990aca14014d23c544ca3ce1270b4d'
+          mkdir -p "$TAURI_CACHE"
+          TMP="$(mktemp)"
+          curl -fsSL "$URL" -o "$TMP"
+          echo "$SHA  $TMP" | sha256sum --check --quiet
+          install -m 755 "$TMP" "$TAURI_CACHE/linuxdeploy-x86_64.AppImage"
+          rm -f "$TMP"
+          echo 'LINUXDEPLOY_EXCLUDED_LIBRARIES=libwayland-client.so*' >> "$GITHUB_ENV"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
@@ -160,3 +175,16 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+  publish:
+    needs: [prepare, release]
+    if: ${{ needs.prepare.outputs.should_release == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Publish the draft, once every platform has uploaded
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release edit "v${{ needs.prepare.outputs.version }}"             --draft=false --latest --repo "$GITHUB_REPOSITORY"

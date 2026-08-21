@@ -1,3 +1,10 @@
+## Changes (v0.7.1)
+
+### 🐛 Bug Fixes
+- **Linux: the launcher shows up under Games**: it shipped without a category, so KDE filed it under "Lost & Found" instead of with the rest of your games.
+- **Linux: the media pieces come along**: WebKit complained on every start that GStreamer's `appsink` was missing. The `.deb` and `.rpm` now ask your package manager for those pieces, and the AppImage carries them — which makes that download 15-35 MB bigger.
+- **Linux: a blank window on Arch, Fedora and friends**: the launcher opened to an empty white window and never showed anything, leaving `Could not create default EGL display: EGL_BAD_PARAMETER` behind in the terminal. The AppImage was carrying its own copy of the library the app talks to your desktop with, and that copy has to match the desktop actually running — on the systems above it did not, so nothing could be drawn. It now uses the copy already on your machine. Only the AppImage was affected; the `.deb` and `.rpm` builds always used the system one.
+
 ## Changes (v0.7.0)
 
 ### ✨ Features & Improvements

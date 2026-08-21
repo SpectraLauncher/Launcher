@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Spectra Launcher",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "identifier": "pl.makoto.spectra-launcher",
   "build": {
     "frontendDist": "../.output/public",
@@ -35,7 +35,9 @@
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": ["spectra"]
+        "schemes": [
+          "spectra"
+        ]
       }
     },
     "updater": {
@@ -50,6 +52,7 @@
   },
   "bundle": {
     "active": true,
+    "category": "Game",
     "createUpdaterArtifacts": true,
     "targets": "all",
     "icon": [
@@ -58,6 +61,23 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "linux": {
+      "deb": {
+        "depends": [
+          "gstreamer1.0-plugins-base",
+          "gstreamer1.0-plugins-good"
+        ]
+      },
+      "rpm": {
+        "depends": [
+          "gstreamer1-plugins-base",
+          "gstreamer1-plugins-good"
+        ]
+      },
+      "appimage": {
+        "bundleMediaFramework": true
+      }
+    }
   }
 }
