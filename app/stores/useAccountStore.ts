@@ -32,7 +32,6 @@ export const useAccountStore = defineStore('accounts', {
       }
     },
 
-    /** Opens the Microsoft login window and adds/activates the account. */
     async login() {
       this.loading = true
       this.error = null
@@ -48,7 +47,6 @@ export const useAccountStore = defineStore('accounts', {
       }
     },
 
-    /** Adds (or re-activates) an offline account by username. */
     async loginOffline(username: string) {
       this.loading = true
       this.error = null

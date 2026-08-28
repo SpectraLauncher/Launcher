@@ -1,10 +1,4 @@
 <script setup lang="ts">
-// The instance's "Share" tab: turn the instance into a code, send it to friends
-// from inside the launcher, and push later changes to everyone who took it.
-//
-// Sharing without an account still works exactly as it did — it just produces a
-// plain 7-day code with nobody attached to it.
-
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import type { SharePreview, ShareResult, UnresolvedFile } from '~/types/launcher'
@@ -35,12 +29,8 @@ interface OwnedShare {
 const preview = ref<SharePreview | null>(null)
 const loadingPreview = ref(true)
 
-// Live progress, straight from the Rust side. `total: 0` means the phase has no
-// measurable length — the bar moves without claiming a percentage.
 const progress = ref<{ stage: string, current: number, total: number } | null>(null)
 
-// How much of the whole job each phase is worth. Packing and uploading are the
-// two that actually take time; the ends are bookkeeping.
 const STAGE_WEIGHTS: Record<string, number> = {
   scanning: 0.05,
   packing: 0.35,
@@ -55,11 +45,9 @@ const stageFraction = computed(() => {
   return Math.min(1, p.current / p.total)
 })
 
-/** 0–100 for the current phase, or null while it is unmeasurable. */
 const stagePercent = computed(() =>
   stageFraction.value === null ? null : Math.round(stageFraction.value * 100))
 
-/** 0–100 across every phase, so the second bar only ever goes forwards. */
 const overallPercent = computed(() => {
   const p = progress.value
   if (!p) return 0
@@ -71,13 +59,9 @@ const overallPercent = computed(() => {
   return Math.round((before + inside) * 100)
 })
 
-// Files with no provider behind them: nobody can re-download these, so the
-// sharer ticks the ones worth the upload size instead of an all-or-nothing
-// switch. Nothing is selected by default — that is what keeps a share small.
 const selected = ref(new Set<string>())
 const expanded = ref(new Set<string>())
 
-/** The unresolved files grouped by their content folder — the tree is 2 deep. */
 const groups = computed(() => {
   const map = new Map<string, UnresolvedFile[]>()
   for (const file of preview.value?.unresolved ?? []) {
@@ -143,7 +127,6 @@ const shareUrl = computed(() =>
   share.value ? `https://spectra.makoto.com.pl/s/${share.value.code}` : anonymous.value?.url ?? '')
 const code = computed(() => share.value?.code ?? anonymous.value?.code ?? '')
 
-/** Friends who do not have this pack yet. */
 const invitable = computed(() => {
   const have = new Set(share.value?.recipients.map(r => r.user.id) ?? [])
   return friends.value.filter(f => !have.has(f.id))
@@ -172,7 +155,6 @@ async function loadPreview() {
   }
 }
 
-/** Which of my shares (if any) is this instance? */
 async function loadShare() {
   if (!account.isSignedIn.value) return
   try {
@@ -188,12 +170,10 @@ async function loadFriends() {
   try {
     const res = await account.api<{ friends: SpectraFriend[] }>('GET', '/api/friends')
     friends.value = res.friends
-  } catch { /* the panel shows the real error */ }
+  } catch {  }
 }
 
-/** First upload, and also the "push update" — the server decides which it is. */
 const upload = () => run('upload', async () => {
-  // Also shows in the titlebar, like every other long job in the launcher.
   progress.value = { stage: 'scanning', current: 0, total: 0 }
   try {
     const result = await activity.withTask(t('share.working', { name: props.instanceName }), () =>
@@ -208,9 +188,6 @@ const upload = () => run('upload', async () => {
   }
 })
 
-// Killing a code is not undoable, so the button asks once. A second click
-// within a few seconds is the confirmation — cheaper than a modal for something
-// this small, and it cannot be triggered by a stray double-click.
 const confirmingRevoke = ref(false)
 let revokeTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -227,7 +204,6 @@ const revoke = () => run('revoke', async () => {
   await account.api('DELETE', `/api/share/${share.value.code}`)
   share.value = null
   anonymous.value = null
-  // The tab goes back to offering a fresh code, so the preview has to be current.
   await loadPreview()
 })
 
@@ -237,7 +213,6 @@ const extend = () => run('extend', async () => {
   await loadShare()
 })
 
-/** Coarse "in 3 days" / "in 5 hours" — enough to know whether to act. */
 function expiresIn(expires: number) {
   const ms = expires - Date.now()
   const hours = Math.max(0, Math.round(ms / 3_600_000))
@@ -286,7 +261,6 @@ watch(() => account.isSignedIn.value, () => {
       {{ error }}
     </p>
 
-    <!-- what would go out -->
     <div v-if="!share && !anonymous" class="rounded-xl border border-default p-4">
       <h3 class="text-sm font-semibold">{{ $t('share.tabTitle') }}</h3>
       <p class="mt-1 text-sm text-muted">{{ $t('share.intro') }}</p>
@@ -317,7 +291,6 @@ watch(() => account.isSignedIn.value, () => {
 
         <div class="mt-2 max-h-56 overflow-y-auto">
           <div v-for="g in groups" :key="g.dir">
-            <!-- folder -->
             <div class="flex items-center gap-1.5 rounded-md py-1 pr-2 hover:bg-white/5">
               <button
                 type="button"
@@ -344,15 +317,12 @@ watch(() => account.isSignedIn.value, () => {
               </button>
               <UIcon name="i-lucide-folder" class="size-4 shrink-0 text-neutral-500" />
               <span class="min-w-0 flex-1 truncate text-sm">{{ g.dir }}</span>
-              <!-- The count needs its own shape: sitting bare next to the size it
-                   reads as one number ("3" + "201.0 MB" → "3201 MB"). -->
               <span class="shrink-0 rounded-full bg-white/8 px-1.5 py-0.5 text-[10px] text-neutral-400">
                 {{ g.files.length }}
               </span>
               <span class="w-16 shrink-0 text-right font-mono text-[11px] text-muted">{{ fmtSize(g.bytes) }}</span>
             </div>
 
-            <!-- files -->
             <template v-if="expanded.has(g.dir)">
               <div
                 v-for="f in g.files"
@@ -394,7 +364,6 @@ watch(() => account.isSignedIn.value, () => {
         @click="upload"
       />
 
-      <!-- what is happening, and how far along the whole job is -->
       <div v-if="progress" class="mt-4 space-y-2 rounded-lg border border-default bg-elevated/30 p-3">
         <div class="flex items-center gap-2 text-xs">
           <UIcon name="i-lucide-loader-circle" class="size-3.5 shrink-0 animate-spin text-primary-400" />
@@ -423,7 +392,6 @@ watch(() => account.isSignedIn.value, () => {
 
     </div>
 
-    <!-- the code, once there is one -->
     <div v-else class="rounded-xl border border-default p-4">
       <div class="flex flex-wrap items-center gap-3">
         <div class="rounded-lg border border-default bg-elevated/40 px-4 py-2">
@@ -464,7 +432,6 @@ watch(() => account.isSignedIn.value, () => {
         />
       </div>
 
-      <!-- how long the code has left, and the way to buy another week -->
       <div v-if="share" class="mt-4 flex flex-wrap items-center gap-3 border-t border-default pt-4">
         <UIcon name="i-lucide-clock" class="size-4 shrink-0 text-neutral-500" />
         <p class="min-w-[180px] flex-1 text-sm" :class="share.canExtend ? 'text-amber-300' : 'text-muted'">
@@ -520,7 +487,6 @@ watch(() => account.isSignedIn.value, () => {
       </div>
     </div>
 
-    <!-- signed out: the code works, the friend list is what is missing -->
     <div v-if="!account.isSignedIn.value" class="rounded-xl border border-default p-4 text-center">
       <UIcon name="i-lucide-users" class="mx-auto size-7 text-neutral-600" />
       <p class="mt-2 text-sm font-medium">{{ $t('share.signInTitle') }}</p>
@@ -528,7 +494,6 @@ watch(() => account.isSignedIn.value, () => {
       <UButton class="mt-3" size="sm" :label="$t('spectra.signIn')" @click="account.login()" />
     </div>
 
-    <!-- who has it -->
     <div v-else-if="share" class="rounded-xl border border-default p-4">
       <h3 class="text-sm font-semibold">{{ $t('share.sharedWith') }}</h3>
 
@@ -569,7 +534,6 @@ watch(() => account.isSignedIn.value, () => {
       </ul>
       <p v-else class="mt-2 text-sm text-muted">{{ $t('share.nobodyYet') }}</p>
 
-      <!-- invite -->
       <div class="mt-4 border-t border-default pt-4">
         <h4 class="text-xs font-semibold tracking-wide text-muted uppercase">{{ $t('share.invite') }}</h4>
         <ul v-if="invitable.length" class="mt-2 space-y-1.5">

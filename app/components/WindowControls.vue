@@ -37,8 +37,6 @@ const { platform, ready } = usePlatform()
 const isMaximized = ref(false)
 const appWindow = getCurrentWindow()
 
-// Custom controls on every desktop OS. On macOS they sit on the left in
-// reverse order (close, maximize, minimize).
 const showControls = computed(() => platform.value === 'windows' || platform.value === 'linux' || platform.value === 'macos')
 const isMac = computed(() => platform.value === 'macos')
 

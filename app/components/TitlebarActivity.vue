@@ -1,6 +1,5 @@
 <template>
   <div class="flex items-center gap-2">
-    <!-- update available: dedicated button that triggers the update directly -->
     <button
       v-if="updater.available.value && updater.status.value !== 'downloading' && updater.status.value !== 'ready'"
       type="button"
@@ -22,7 +21,6 @@
       :title="clickable ? $t('activity.openLogs') : view.label"
       @click="onClick"
     >
-      <!-- downloading / installing (instance downloads AND launcher self-update) -->
       <template v-if="view.kind === 'install'">
         <UIcon name="i-lucide-loader-circle" class="size-3.5 shrink-0 animate-spin text-primary-400" />
         <span class="max-w-48 truncate text-neutral-200">{{ view.label }}</span>
@@ -35,19 +33,16 @@
         </span>
       </template>
 
-      <!-- ad-hoc task (mod/modpack install/update, …) -->
       <template v-else-if="view.kind === 'task'">
         <UIcon name="i-lucide-loader-circle" class="size-3.5 shrink-0 animate-spin text-primary-400" />
         <span class="max-w-64 truncate text-neutral-200">{{ view.label }}</span>
       </template>
 
-      <!-- game running -->
       <template v-else-if="view.kind === 'running'">
         <span class="size-2 shrink-0 rounded-full bg-[#3fb877] shadow-[0_0_8px_#3fb877]" />
         <span class="max-w-56 truncate text-neutral-200">{{ view.label }}</span>
       </template>
 
-      <!-- idle -->
       <template v-else>
         <span class="size-2 shrink-0 rounded-full bg-neutral-600" />
         <span class="text-neutral-400">{{ view.label }}</span>
@@ -77,8 +72,6 @@ const view = computed<View>(() => {
   const top = ac.top.value
   const labels = ac.taskLabels.value
 
-  // 0) launcher self-update (with %), 1) modpack download, 2) instance downloads,
-  //    3) ad-hoc ops, 4) running, 5) idle.
   if (updater.status.value === 'downloading' || updater.status.value === 'ready') {
     const label = updater.status.value === 'ready' ? t('update.ready') : t('update.titlebar')
     return { kind: 'install', label, percent: updater.status.value === 'ready' ? 100 : updater.progress.value }
@@ -102,7 +95,6 @@ const view = computed<View>(() => {
   return { kind: 'idle', label: t('activity.idle'), percent: null }
 })
 
-// The chip is clickable whenever a game is running, to open its live logs.
 const runningInstance = computed(() => ac.list.value.find(a => a.kind === 'running')?.instanceId ?? null)
 const clickable = computed(() => runningInstance.value !== null)
 

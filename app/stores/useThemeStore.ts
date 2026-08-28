@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 
 export type ThemeMode = 'dark' | 'oled' | 'squared'
 
-/** Accent colors offered in settings — these are @nuxt/ui color aliases. */
 export const ACCENT_COLORS = [
   'sky',
   'blue',
@@ -36,7 +35,6 @@ function loadPersisted(): PersistedTheme {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return fallback
     const saved = { ...fallback, ...JSON.parse(raw) }
-    // The old gold "Zębatkowo" theme became the accent-agnostic "Squared".
     if ((saved.mode as string) === 'zebatkowo') saved.mode = 'squared'
     return saved
   } catch {
@@ -47,7 +45,6 @@ function loadPersisted(): PersistedTheme {
 export const useThemeStore = defineStore('theme', {
   state: () => loadPersisted() as PersistedTheme,
   getters: {
-    /** Root background class for the app shell (matches the Spectra design). */
     bgClass(state): string {
       if (state.mode === 'oled') return 'bg-black'
       return 'bg-primary-950/5'
@@ -62,11 +59,9 @@ export const useThemeStore = defineStore('theme', {
       )
     },
 
-    /** Applies the current theme to the document. Safe to call repeatedly. */
     apply() {
       if (!import.meta.client) return
 
-      // This launcher is dark-only; OLED is a darker variant of dark.
       try {
         const colorMode = useColorMode()
         colorMode.preference = 'dark'
@@ -75,17 +70,13 @@ export const useThemeStore = defineStore('theme', {
       }
 
       document.documentElement.classList.toggle('oled', this.mode === 'oled')
-      // "Squared": same palette, no rounded corners — driven entirely by CSS
-      // scoped to this class (see main.css), so the accent still applies.
       document.documentElement.classList.toggle('squared', this.mode === 'squared')
 
-      // Live accent change via @nuxt/ui app config.
       try {
         const appConfig = useAppConfig()
         // @ts-expect-error – ui.colors is augmented by @nuxt/ui
         appConfig.ui.colors.primary = this.accent
       } catch {
-        // app config not ready yet; will be applied on next call
       }
     },
 

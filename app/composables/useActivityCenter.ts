@@ -1,7 +1,6 @@
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import type { MultiProgress, ConsoleLine, ExitInfo, CrashInfo, ModpackProgress } from '~/types/launcher'
 
-/** A single thing happening for an instance, surfaced in the titlebar. */
 export interface Activity {
   instanceId: string
   kind: 'install' | 'running'
@@ -9,35 +8,21 @@ export interface Activity {
   total: number
 }
 
-// Higher number = higher priority. The titlebar shows the activity with the
-// highest priority across all instances.
 const PRIORITY: Record<Activity['kind'], number> = {
   install: 2,
   running: 1,
 }
 
-// Module-level so the listeners are attached exactly once for the whole app,
-// no matter how many components/composables call `attach()` (even concurrently).
 let unlisteners: UnlistenFn[] = []
 let attachPromise: Promise<void> | null = null
 
-/**
- * Single global hub for the live launch/install events streamed from Rust.
- * Owns the Tauri listeners (attached once) and exposes the current activities
- * keyed by instance id, plus the highest-priority one for the titlebar.
- */
 export const useActivityCenter = () => {
   const activities = useState<Record<string, Activity>>('mc-activities', () => ({}))
-  // Console output is kept per instance so each instance page shows only its own.
   const logs = useState<Record<string, string[]>>('mc-logs', () => ({}))
-  // Crash info per instance — set when mc://crashed fires, cleared on dismiss.
   const crashes = useState<Record<string, CrashInfo>>('mc-crashes', () => ({}))
-  // Live modpack download progress (shown in the titlebar), or null when idle.
   const modpack = useState<{ name: string, current: number, total: number } | null>('mc-modpack', () => null)
-  // Ad-hoc frontend-driven operations (mod/modpack install/update, …) → label.
   const tasks = useState<Record<string, string>>('mc-tasks', () => ({}))
 
-  /** Registers a running operation in the titlebar; returns its id for endTask. */
   function startTask(label: string): string {
     const id = crypto.randomUUID()
     tasks.value = { ...tasks.value, [id]: label }
@@ -49,7 +34,6 @@ export const useActivityCenter = () => {
     delete next[id]
     tasks.value = next
   }
-  /** Runs `fn` while showing `label` in the titlebar. */
   async function withTask<T>(label: string, fn: () => Promise<T>): Promise<T> {
     const id = startTask(label)
     try {
@@ -95,14 +79,12 @@ export const useActivityCenter = () => {
           await listen<CrashInfo>('mc://crashed', (e) => {
             const iid = e.payload.instance_id
             crashes.value = { ...crashes.value, [iid]: e.payload }
-            // Auto-open the crash modal for the crashed instance.
             crashInstance.value = iid
             crashOpen.value = true
           }),
           await listen<ModpackProgress>('modrinth://modpack-progress', (e) => {
             const { name, current, total } = e.payload
             modpack.value = { name, current, total }
-            // Clear shortly after the downloads finish (overrides extract after).
             if (total > 0 && current >= total) {
               setTimeout(() => {
                 if (modpack.value && modpack.value.current >= modpack.value.total) modpack.value = null
@@ -123,7 +105,6 @@ export const useActivityCenter = () => {
 
   const list = computed(() => Object.values(activities.value))
 
-  /** Highest-priority activity across all instances, or null when idle. */
   const top = computed<Activity | null>(() => {
     let best: Activity | null = null
     for (const a of list.value) {
@@ -132,8 +113,6 @@ export const useActivityCenter = () => {
     return best
   })
 
-  /** Marks an instance as running without a console event — used to reflect
-   *  instances adopted from a previous launcher session after a restart. */
   const markRunning = (id: string) => {
     if (activities.value[id]) return
     upsert(id, { kind: 'running' })
@@ -147,7 +126,6 @@ export const useActivityCenter = () => {
 
   const taskLabels = computed(() => Object.values(tasks.value))
 
-  // Live-logs modal (opened by clicking the titlebar activity).
   const liveLogsOpen = useState('mc-livelogs-open', () => false)
   const liveLogsInstance = useState<string | null>('mc-livelogs-instance', () => null)
   function openLiveLogs(instanceId?: string) {
@@ -155,7 +133,6 @@ export const useActivityCenter = () => {
     liveLogsOpen.value = true
   }
 
-  // Crash report modal — opened automatically on mc://crashed.
   const crashOpen = useState('mc-crash-open', () => false)
   const crashInstance = useState<string | null>('mc-crash-instance', () => null)
   const crashFor = (id: string) => computed(() => crashes.value[id] ?? null)

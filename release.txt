@@ -1,3 +1,20 @@
+## Changes (v0.7.2)
+
+### ✨ Features & Improvements
+- **Your playtime shows up on your Spectra profile**: when you are signed in, the launcher now reports how often you start the game and how long you play, and your public profile turns that into a contribution graph, first-join date, average per day and last-seven-days figures. It is also what earns the automatic badges — launch streaks, hours played, days active, and the ones tied to a particular day. Nothing is sent while you are signed out.
+- **Every privacy switch starts on**: playtime, profile activity, Discord Rich Presence, crash reports and anonymous statistics are all enabled out of the box, and the first-run setup puts them in front of you on one screen so you can turn off whatever you do not want. The same switches stay in Settings → Privacy, and turning one off stops the sending immediately.
+- **Browsing mods and modpacks now opens its own window**: it used to be a dialog that covered the launcher, so checking what another instance already has meant closing it, looking, and starting over. The window sits next to the launcher instead — keep instance Y's mod list open on one side while you add mods to instance X on the other. Anything you install still lands in the right instance and the launcher refreshes itself.
+- **The browser was rebuilt for that bigger window**: a grid view alongside the list, a density switch for how much fits on screen, and your choice of view, density and sorting is remembered for next time. A row of recently opened projects sits above the results.
+- **Install several mods at once**: tick the ones you want and install them in one go instead of one at a time. If a single mod fails the rest still go in, and you get told which one did not.
+- **The list loads itself as you scroll**: results keep coming when you reach the bottom instead of making you click "Load more" every twenty entries. If a page fails to load, scrolling stops there and a "Try again" button appears, so a hiccup does not turn into a silent retry loop.
+- **Keyboard**: `/` jumps to the search box; `Escape` clears your selection, then closes the details pane, then closes the window.
+- **Open your profile from the launcher**: the account panel has a button that opens your public Spectra profile in the browser.
+
+### 🐛 Bug Fixes
+- **Stopping an instance no longer looks like a crash**: killing the game from the launcher left a non-zero exit code behind, which the crash reporter could not tell apart from a real crash, so you got a crash dialog for something you did on purpose. Stopping it yourself is now recognised as such. A game killed from outside the launcher, for example from Task Manager, still counts as a crash — the launcher has no way to know that was deliberate.
+- **The search results stopped growing without saying why**: when loading the next page of mods failed, the error was printed at the very top of the list — far above where you were scrolled — so it looked as if there was simply nothing more to load. The message now appears next to the button, which turns into "Try again".
+- **Pagination could stall on repeats**: the next page was requested from the wrong position whenever a provider filtered anything out of the previous one, which could serve the same entries again. Repeats are now dropped, the position moves by a whole page, and an empty page properly ends the list.
+
 ## Changes (v0.7.1)
 
 ### 🐛 Bug Fixes

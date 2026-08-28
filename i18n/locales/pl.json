@@ -144,7 +144,8 @@
     "close": "Zamknij",
     "copy": "Kopiuj",
     "copied": "Skopiowano do schowka",
-    "loading": "Ładowanie…"
+    "loading": "Ładowanie…",
+    "retry": "Spróbuj ponownie"
   },
   "logs": {
     "none": "Brak zapisanych logów.",
@@ -366,6 +367,8 @@
     "privacy": {
       "track_playtime": "Zliczanie czasu gry",
       "track_playtimeDesc": "Mierz i zapisuj łączny czas gry dla każdej instancji.",
+      "share_activity": "Pokazuj aktywność na profilu",
+      "share_activityDesc": "Wysyła liczbę uruchomień i czas gry na Twój publiczny profil Spectra — pod wykres aktywności i statystyki. Wymaga zalogowania.",
       "discord_rpc": "Discord Rich Presence",
       "discord_rpcDesc": "Pokazuj w Discordzie, w co aktualnie grasz.",
       "crash_reports": "Raporty awarii",
@@ -404,7 +407,8 @@
     "importingModpack": "Importowanie modpacka…",
     "importingInstance": "Importowanie: {name}",
     "exportingInstance": "Eksportowanie: {name}",
-    "uninstallingMod": "Usuwanie {name}"
+    "uninstallingMod": "Usuwanie {name}",
+    "installingMods": "Instalowanie {n} pozycji"
   },
   "content": {
     "all": "Wszystko",
@@ -478,7 +482,15 @@
     "tabDescription": "Opis",
     "tabGallery": "Galeria",
     "noGallery": "Brak zdjęć w galerii",
-    "uninstalled": "Usunięto {name}"
+    "uninstalled": "Usunięto {name}",
+    "viewGrid": "Siatka",
+    "viewList": "Lista",
+    "density": "Gęstość",
+    "recent": "Ostatnie",
+    "picked": "Zaznaczono: {n}",
+    "clearPicked": "Wyczyść",
+    "installPicked": "Zainstaluj zaznaczone",
+    "installedMany": "Zainstalowano {n}"
   },
   "mods": {
     "manual": "ręcznie",
@@ -658,6 +670,7 @@
   "spectra": {
     "title": "Konto Spectra",
     "signIn": "Zaloguj się",
+    "viewProfile": "Otwórz mój profil na stronie",
     "signOut": "Wyloguj się",
     "signedOutTitle": "Graj ze znajomymi",
     "signedOutHint": "Zaloguj się, żeby mieć listę znajomych i wysyłać im paczki prosto do launchera.",

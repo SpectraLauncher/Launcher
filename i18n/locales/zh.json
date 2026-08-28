@@ -144,7 +144,8 @@
     "close": "关闭",
     "copy": "复制",
     "copied": "已复制到剪贴板",
-    "loading": "加载中…"
+    "loading": "加载中…",
+    "retry": "重试"
   },
   "logs": {
     "none": "还没有保存的日志。",
@@ -366,6 +367,8 @@
     "privacy": {
       "track_playtime": "记录游玩时长",
       "track_playtimeDesc": "测量并保存每个实例的总游玩时长。",
+      "share_activity": "在个人资料中显示活动",
+      "share_activityDesc": "将启动次数和游戏时长发送到你的公开 Spectra 个人资料，用于活动图表和统计数据。需要登录。",
       "discord_rpc": "Discord Rich Presence",
       "discord_rpcDesc": "在 Discord 上显示你正在玩什么。",
       "crash_reports": "崩溃报告",
@@ -404,7 +407,8 @@
     "importingModpack": "正在导入整合包…",
     "importingInstance": "正在导入：{name}",
     "exportingInstance": "正在导出：{name}",
-    "uninstallingMod": "正在移除 {name}"
+    "uninstallingMod": "正在移除 {name}",
+    "installingMods": "正在安装 {n} 个项目"
   },
   "content": {
     "all": "全部",
@@ -478,7 +482,15 @@
     "tabDescription": "描述",
     "tabGallery": "图库",
     "noGallery": "没有图库图片",
-    "uninstalled": "已移除 {name}"
+    "uninstalled": "已移除 {name}",
+    "viewGrid": "网格",
+    "viewList": "列表",
+    "density": "密度",
+    "recent": "最近",
+    "picked": "已选 {n} 个",
+    "clearPicked": "清除",
+    "installPicked": "安装所选",
+    "installedMany": "已安装 {n} 个"
   },
   "mods": {
     "manual": "手动",
@@ -658,6 +670,7 @@
   "spectra": {
     "title": "Spectra 账户",
     "signIn": "登录",
+    "viewProfile": "在网站上打开我的个人资料",
     "signOut": "退出登录",
     "signedOutTitle": "和好友一起玩",
     "signedOutHint": "登录后即可建立好友列表，并把整合包直接发送到他们的启动器。",

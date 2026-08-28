@@ -7,7 +7,6 @@
           class="flex items-center gap-1.5 rounded-md py-1 pr-2 hover:bg-white/5"
           :style="indent"
         >
-          <!-- expand toggle (dirs only) -->
           <button
             v-if="child.is_dir"
             type="button"
@@ -18,7 +17,6 @@
           </button>
           <span v-else class="size-4 shrink-0" />
 
-          <!-- tri-state checkbox -->
           <button
             type="button"
             class="flex size-4 shrink-0 items-center justify-center rounded border transition"
@@ -75,7 +73,6 @@ function fmtSize(n: number) {
   return `${(n / 1024 / 1024 / 1024).toFixed(2)} GB`
 }
 
-// Nearest ancestor-or-self marker wins; default included.
 function isIncluded(path: string): boolean {
   const parts = path.split('/')
   for (let i = parts.length; i >= 1; i--) {

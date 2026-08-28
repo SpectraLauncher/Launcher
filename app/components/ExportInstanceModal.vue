@@ -2,7 +2,6 @@
   <UModal v-model:open="isOpen" :title="$t('export.title', { name: target?.name ?? '' })" :ui="{ content: 'max-w-xl' }">
     <template #body>
       <div class="space-y-5">
-        <!-- format -->
         <div>
           <p class="mb-2 text-sm font-medium">{{ $t('export.format') }}</p>
           <div class="grid grid-cols-2 gap-2">
@@ -23,7 +22,6 @@
           </div>
         </div>
 
-        <!-- modpack metadata (mrpack / curseforge) -->
         <template v-if="isModpack">
           <div class="grid grid-cols-2 gap-3">
             <UFormField :label="$t('export.version')">
@@ -36,7 +34,6 @@
           <USwitch v-model="optionalDisabled" :label="$t('export.optionalDisabled')" :description="$t('export.optionalDisabledDesc')" />
         </template>
 
-        <!-- file tree -->
         <div>
           <p class="mb-2 text-sm font-medium">{{ $t('export.include') }}</p>
           <div class="max-h-64 overflow-y-auto rounded-lg border border-default p-1.5">
@@ -83,7 +80,7 @@ const { t } = useI18n()
 type Format = 'mrpack' | 'curseforge' | 'backup'
 const format = ref<Format>('mrpack')
 const version = ref('1.0.0')
-const meta = ref('') // summary (mrpack) or author (curseforge)
+const meta = ref('')
 const optionalDisabled = ref(false)
 const excluded = ref<Set<string>>(new Set())
 const included = ref<Set<string>>(new Set())
@@ -94,7 +91,6 @@ const cfEnabled = ref(false)
 const isCf = computed(() => format.value === 'curseforge')
 const isModpack = computed(() => format.value !== 'backup')
 
-// Personal/heavy folders excluded by default (harmless if they don't exist).
 const DEFAULT_EXCLUDE = ['saves', 'screenshots', 'crash-reports', 'backups']
 
 const formats = computed<{ value: Format, label: string, desc: string, icon: string }[]>(() => {
@@ -104,7 +100,6 @@ const formats = computed<{ value: Format, label: string, desc: string, icon: str
   return list
 })
 
-// Nearest ancestor-or-self marker wins; default included.
 function isIncluded(path: string): boolean {
   const parts = path.split('/')
   for (let i = parts.length; i >= 1; i--) {
@@ -115,8 +110,6 @@ function isIncluded(path: string): boolean {
   return true
 }
 
-// Toggling a node flips its effective state and overrides any markers beneath it
-// — so you can exclude a folder yet re-include one child (e.g. config/fancymenu).
 function toggle(path: string, _isDir: boolean) {
   const wasIncluded = isIncluded(path)
   const ex = new Set(excluded.value)

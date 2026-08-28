@@ -144,7 +144,8 @@
     "close": "Закрыть",
     "copy": "Копировать",
     "copied": "Скопировано в буфер обмена",
-    "loading": "Загрузка…"
+    "loading": "Загрузка…",
+    "retry": "Повторить"
   },
   "logs": {
     "none": "Пока нет сохранённых логов.",
@@ -366,6 +367,8 @@
     "privacy": {
       "track_playtime": "Учитывать время в игре",
       "track_playtimeDesc": "Измерять и сохранять общее время игры для каждого профиля.",
+      "share_activity": "Показывать активность в профиле",
+      "share_activityDesc": "Отправляет количество запусков и время игры в ваш публичный профиль Spectra — для графика активности и статистики. Требуется вход в аккаунт.",
       "discord_rpc": "Discord Rich Presence",
       "discord_rpcDesc": "Показывать в Discord, во что вы играете.",
       "crash_reports": "Отчёты о крашах",
@@ -404,7 +407,8 @@
     "importingModpack": "Импорт сборки…",
     "importingInstance": "Импорт: {name}",
     "exportingInstance": "Экспорт: {name}",
-    "uninstallingMod": "Удаление {name}"
+    "uninstallingMod": "Удаление {name}",
+    "installingMods": "Установка {n} элементов"
   },
   "content": {
     "all": "Всё",
@@ -478,7 +482,15 @@
     "tabDescription": "Описание",
     "tabGallery": "Галерея",
     "noGallery": "Нет изображений в галерее",
-    "uninstalled": "{name} удалён"
+    "uninstalled": "{name} удалён",
+    "viewGrid": "Сетка",
+    "viewList": "Список",
+    "density": "Плотность",
+    "recent": "Недавние",
+    "picked": "Выбрано: {n}",
+    "clearPicked": "Очистить",
+    "installPicked": "Установить выбранные",
+    "installedMany": "Установлено: {n}"
   },
   "mods": {
     "manual": "вручную",
@@ -658,6 +670,7 @@
   "spectra": {
     "title": "Аккаунт Spectra",
     "signIn": "Войти",
+    "viewProfile": "Открыть мой профиль на сайте",
     "signOut": "Выйти",
     "signedOutTitle": "Играйте с друзьями",
     "signedOutHint": "Войдите, чтобы вести список друзей и отправлять им сборки прямо в лаунчер.",

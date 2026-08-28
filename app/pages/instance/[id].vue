@@ -9,7 +9,6 @@
         <UIcon name="i-lucide-arrow-left" class="size-4" /> {{ $t('instance.back') }}
       </button>
 
-      <!-- hero -->
       <div class="relative overflow-hidden rounded-2xl border border-default bg-linear-[135deg] from-primary-500/12 to-transparent p-6">
         <div class="flex flex-wrap items-center gap-5">
           <div class="size-20 shrink-0 overflow-hidden rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.4)]">
@@ -34,7 +33,6 @@
             </p>
           </div>
 
-          <!-- actions -->
           <div class="flex items-center gap-2">
             <UButton
               icon="i-lucide-folder"
@@ -86,7 +84,6 @@
           </div>
         </div>
 
-        <!-- progress while installing/running -->
         <div v-if="mc.stage.value !== 'idle'" class="mt-5 space-y-2">
           <div class="flex items-center justify-between text-xs text-muted">
             <span>{{ stageLabel }}</span>
@@ -102,7 +99,6 @@
 
         <p v-if="mc.error.value" class="mt-3 text-sm text-error">{{ mc.error.value }}</p>
 
-        <!-- modpack update available -->
         <div v-if="modpackUpdate" class="mt-4 rounded-xl border border-primary-500/40 bg-primary-500/10 p-3">
           <div class="flex flex-wrap items-center gap-2">
             <UIcon name="i-lucide-circle-arrow-up" class="size-4 text-primary-400" />
@@ -125,8 +121,6 @@
         </div>
       </div>
 
-      <!-- settings: a modal off the gear, not a tab — it is a place you visit,
-           not part of browsing the instance -->
       <UModal
         v-model:open="settingsOpen"
         :title="$t('instance.tabs.settings')"
@@ -137,15 +131,8 @@
         </template>
       </UModal>
 
-      <!-- Opened from the settings modal above (and from the ⋯ menu). Nuxt UI
-           overlays have no z-index — they stack in the order their portals
-           mount, which is component mount order — so this has to come after the
-           settings modal, and cannot live in the layout with the other global
-           modals. Giving it a z-index instead would push its own dropdowns
-           underneath it. -->
       <ChangeLoaderModal />
 
-      <!-- tabs -->
       <div class="flex flex-wrap gap-1.5 border-b border-default pb-3">
         <button
           v-for="tab in tabs"
@@ -162,18 +149,13 @@
         </button>
       </div>
 
-      <!-- tab content -->
       <div>
-        <!-- logs: saved logs (latest.log, *.log.gz, crash-reports) -->
         <InstanceLogs v-if="activeTab === 'logs'" :instance-id="id" :initial-rel="initialCrashRel" />
 
-        <!-- mods, resource packs, shaders and datapacks in one list -->
         <InstanceContent v-else-if="activeTab === 'content'" :instance-id="id" :initial-kind="initialKind" />
 
-        <!-- worlds, screenshots and servers, read off disk -->
         <InstanceGameFiles v-else-if="isGameFileTab" :instance-id="id" :tab="activeTab as GameFileTab" @quick-play="handleQuickPlay" />
 
-        <!-- instance settings -->
         <InstanceShare
           v-else-if="activeTab === 'share'"
           :instance-id="id"
@@ -193,7 +175,6 @@
     {{ $t('instance.notFound') }}
   </div>
 
-  <!-- pre-launch warnings -->
   <UModal v-model:open="prelaunchOpen" :title="$t('prelaunch.title')" :ui="{ content: 'max-w-md' }">
     <template #body>
       <ul class="space-y-1.5 text-sm">
@@ -236,17 +217,15 @@ onMounted(async () => {
   await instances.ensureLoaded()
   mc.attach()
   checkModpackUpdate()
-  // Reflect an instance still running from a previous launcher session.
   try {
     if (await invoke<boolean>('is_instance_running', { id: id.value })) {
       activity.markRunning(id.value)
     }
-  } catch { /* ignore */ }
+  } catch {  }
 })
 
 const instance = computed(() => instances.instances.find(i => i.id === id.value))
 
-// --- modpack update ---
 const modpackUpdate = ref<ModpackUpdate | null>(null)
 const showChangelog = ref(false)
 const updatingModpack = ref(false)
@@ -258,7 +237,7 @@ async function checkModpackUpdate() {
   if (!instance.value?.modpack_project_id) return
   try {
     modpackUpdate.value = await modrinth.checkModpackUpdate(id.value)
-  } catch { /* offline — ignore */ }
+  } catch {  }
 }
 
 async function toggleChangelog() {
@@ -288,7 +267,6 @@ async function updateModpack() {
   }
 }
 
-// NeoForge/Fabric/etc. carry a version; vanilla doesn't.
 const loaderVersion = computed(() =>
   instance.value && 'version' in instance.value.loader ? instance.value.loader.version : '',
 )
@@ -311,7 +289,6 @@ const playLabel = computed(() => {
   if (mc.stage.value === 'running') return t('instance.running')
   return t('instance.play')
 })
-// --- stop / kill ---
 const stopping = ref(false)
 const killing = ref(false)
 
@@ -320,13 +297,11 @@ async function stopInstance(force: boolean) {
   else stopping.value = true
   try {
     await invoke('stop_instance', { id: id.value, force })
-    // Adopted instances (from a previous session) have no exit event to clear the
-    // UI, so reconcile here once the process is actually gone.
     try {
       if (!(await invoke<boolean>('is_instance_running', { id: id.value }))) {
         activity.clear(id.value)
       }
-    } catch { /* ignore */ }
+    } catch {  }
   } catch (e) {
     toast.add({ title: String(e), color: 'error' })
   } finally {
@@ -335,7 +310,6 @@ async function stopInstance(force: boolean) {
   }
 }
 
-// --- tabs ---
 type TabKey = 'content' | 'worlds' | 'screenshots' | 'servers' | 'logs' | 'share' | 'snapshots'
 const tabs: { key: TabKey; label: string; icon: string }[] = [
   { key: 'content', label: 'instance.tabs.content', icon: 'i-lucide-blocks' },
@@ -349,8 +323,6 @@ const tabs: { key: TabKey; label: string; icon: string }[] = [
 const activeTab = ref<TabKey>('content')
 const settingsOpen = ref(false)
 
-// COMPAT(drop after 0.7): the mods/resourcepacks/shaders/datapacks tabs merged
-// into Content, so old links land there with the right kind selected.
 type ContentTabKind = 'mod' | 'resourcepack' | 'shader' | 'datapack'
 const MERGED_TABS: Record<string, ContentTabKind> = {
   mods: 'mod',
@@ -359,7 +331,6 @@ const MERGED_TABS: Record<string, ContentTabKind> = {
   datapacks: 'datapack',
 }
 
-// Deep-link from the crash modal: ?tab=logs&crashRel=crash-reports%2F...
 const initialCrashRel = ref<string | null>(null)
 const initialKind = ref<ContentTabKind | undefined>()
 onMounted(() => {
@@ -373,12 +344,10 @@ onMounted(() => {
   const crashRelParam = route.query.crashRel as string | undefined
   if (crashRelParam) {
     initialCrashRel.value = decodeURIComponent(crashRelParam)
-    // Clean the URL without navigation so refreshing doesn't re-trigger.
     router.replace({ query: {} })
   }
 })
 
-// Tabs whose content is read off disk by <InstanceGameFiles>.
 type GameFileTab = 'screenshots' | 'worlds' | 'servers'
 const GAME_FILE_TABS: GameFileTab[] = ['screenshots', 'worlds', 'servers']
 const isGameFileTab = computed(() => (GAME_FILE_TABS as string[]).includes(activeTab.value))
@@ -416,7 +385,6 @@ const menuItems = computed(() => [[
   },
 ]])
 
-// --- pre-launch validation ---
 const prelaunchOpen = ref(false)
 const prelaunchWarnings = ref<string[]>([])
 let pendingQuickPlay: QuickPlay | undefined
@@ -425,18 +393,16 @@ async function collectWarnings(): Promise<string[]> {
   const out: string[] = []
   const inst = instance.value
   if (!inst) return out
-  // RAM (only when the instance overrides with its own value).
   await sysMem.ensure()
   if (inst.override_memory && inst.memory_mb && sysMem.totalMb.value && inst.memory_mb > sysMem.totalMb.value * 0.9) {
     out.push(t('prelaunch.ramHigh', { mb: inst.memory_mb }))
   }
-  // Mod conflicts (wrong loader / duplicates).
   try {
     const conflicts = await invoke<{ name: string, kind: string, detail: string }[]>('check_conflicts', { instanceId: id.value })
     for (const c of conflicts) {
       out.push(c.kind === 'loader' ? t('prelaunch.conflict', { name: c.name, detail: c.detail }) : t('prelaunch.duplicate', { name: c.name }))
     }
-  } catch { /* ignore */ }
+  } catch {  }
   return out
 }
 
@@ -458,7 +424,7 @@ async function launchWith(qp?: QuickPlay) {
 
 function doLaunch(qp?: QuickPlay) {
   if (!instance.value) return
-  mc.launch(instance.value.id, qp).catch(() => { /* surfaced via mc.error */ })
+  mc.launch(instance.value.id, qp).catch(() => {  })
 }
 
 function confirmLaunch() {
@@ -470,7 +436,6 @@ function confirmLaunch() {
 const play = () => launchWith()
 const handleQuickPlay = (qp: QuickPlay) => launchWith(qp)
 
-/** Drops a desktop shortcut that opens `spectra://launch/<id>`. */
 async function createShortcut() {
   try {
     await invoke<string>('create_desktop_shortcut', { id: id.value })
@@ -488,7 +453,6 @@ async function openGameFolder() {
   }
 }
 
-// The icon is edited in the settings modal; this only forces a redraw.
 const iconKey = ref(0)
 
 </script>

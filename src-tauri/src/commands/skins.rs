@@ -1,10 +1,3 @@
-//! Local skin library: the player saves several skins and picks one at launch.
-//!
-//! Skins are stored as `skins/<id>.png` with an index at `skins/skins.json`.
-//! Uploading the selected skin to Mojang (so it shows in-game) is done against
-//! the Minecraft Services API and will be wired up once the auth session is
-//! threaded through here — see `apply_skin`.
-
 use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -44,7 +37,6 @@ pub fn list_skins() -> Result<Vec<SavedSkin>, String> {
     load_index()
 }
 
-/// Copies a `.png` from `source_path` into the skin library and indexes it.
 #[tauri::command]
 pub fn save_skin(name: String, model: String, source_path: String) -> Result<SavedSkin, String> {
     std::fs::create_dir_all(paths::skins_dir()).map_err(|e| e.to_string())?;
@@ -67,14 +59,12 @@ pub fn save_skin(name: String, model: String, source_path: String) -> Result<Sav
     Ok(skin)
 }
 
-/// Marks `id` as the active skin and clears the flag on all others.
 fn mark_active(index: &mut [SavedSkin], id: &str) {
     for s in index.iter_mut() {
         s.active = s.id == id;
     }
 }
 
-/// Sets a saved skin's arm model ("classic" = 4px arms, "slim" = 3px).
 #[tauri::command]
 pub fn set_skin_model(id: String, model: String) -> Result<(), String> {
     let m = if model == "slim" { "slim" } else { "classic" };
@@ -94,7 +84,6 @@ pub fn delete_skin(id: String) -> Result<(), String> {
     save_index(&index)
 }
 
-/// Absolute path to a saved skin's PNG (for `convertFileSrc` in the 3D preview).
 #[tauri::command]
 pub fn get_skin_path(id: String) -> Result<String, String> {
     let path = skin_png_file(&id);
@@ -104,16 +93,12 @@ pub fn get_skin_path(id: String) -> Result<String, String> {
     Ok(path.to_string_lossy().into_owned())
 }
 
-/// A saved skin's PNG as a `data:` URL, for loading into the WebGL viewer without
-/// asset-protocol/CORS tainting.
 #[tauri::command]
 pub fn get_skin_data_url(id: String) -> Result<String, String> {
     let bytes = std::fs::read(skin_png_file(&id)).map_err(|_| format!("skin '{id}' not found"))?;
     Ok(png_data_url(&bytes))
 }
 
-/// Downloads any skin texture URL (e.g. a default skin) as a `data:` URL so the
-/// 3D viewer can use it regardless of the source's CORS headers.
 #[tauri::command]
 pub async fn fetch_skin_data_url(url: String) -> Result<String, String> {
     let bytes = http()?.get(&url).send().await.map_err(|e| e.to_string())?
@@ -121,11 +106,8 @@ pub async fn fetch_skin_data_url(url: String) -> Result<String, String> {
     Ok(png_data_url(&bytes))
 }
 
-// ===== Logged-in player's current skin =====
-
 #[derive(Serialize)]
 pub struct PlayerSkin {
-    /// The skin texture as a `data:` URL.
     skin: String,
     slim: bool,
 }
@@ -140,8 +122,6 @@ struct SessionProperty {
     value: String,
 }
 
-/// Downloads a player's current skin (bytes + model) from Mojang's public session
-/// server. Falls back to the classic default skin if the profile has none.
 async fn fetch_player_skin(uuid: &str) -> Result<(Vec<u8>, bool), String> {
     let id = uuid.replace('-', "");
     let client = http()?;
@@ -175,15 +155,12 @@ async fn fetch_player_skin(uuid: &str) -> Result<(Vec<u8>, bool), String> {
     Ok((bytes, slim))
 }
 
-/// The player's current skin as a `data:` URL + model.
 #[tauri::command]
 pub async fn get_player_skin(uuid: String) -> Result<PlayerSkin, String> {
     let (bytes, slim) = fetch_player_skin(&uuid).await?;
     Ok(PlayerSkin { skin: png_data_url(&bytes), slim })
 }
 
-/// Imports the player's current skin into the library (deduplicated by file
-/// contents) and marks it as the active skin. Returns the saved entry.
 #[tauri::command]
 pub async fn import_player_skin(uuid: String, name: String) -> Result<SavedSkin, String> {
     let (bytes, slim) = fetch_player_skin(&uuid).await?;
@@ -191,7 +168,6 @@ pub async fn import_player_skin(uuid: String, name: String) -> Result<SavedSkin,
 
     let mut index = load_index()?;
 
-    // Reuse an identical skin already in the library instead of duplicating.
     if let Some(existing) = index.iter().find(|s| {
         std::fs::read(skin_png_file(&s.id)).map(|b| b == bytes).unwrap_or(false)
     }) {
@@ -218,7 +194,6 @@ pub async fn import_player_skin(uuid: String, name: String) -> Result<SavedSkin,
     Ok(skin)
 }
 
-/// A cape owned by the logged-in player.
 #[derive(Serialize)]
 pub struct Cape {
     pub id: String,
@@ -243,7 +218,6 @@ struct ProfileCapesResponse {
     capes: Vec<ProfileCape>,
 }
 
-/// Capes the active Microsoft account owns (empty for offline accounts).
 #[tauri::command]
 pub async fn get_player_capes() -> Result<Vec<Cape>, String> {
     let account = refresh_active_account().await?;
@@ -266,7 +240,6 @@ pub async fn get_player_capes() -> Result<Vec<Cape>, String> {
         .collect())
 }
 
-/// Sets the active cape (`Some(id)`) or hides any cape (`None`).
 #[tauri::command]
 pub async fn set_active_cape(cape_id: Option<String>) -> Result<(), String> {
     let account = refresh_active_account().await?;
@@ -288,7 +261,6 @@ pub async fn set_active_cape(cape_id: Option<String>) -> Result<(), String> {
     Ok(())
 }
 
-/// Uploads a saved skin to the active Microsoft account so it shows in-game.
 #[tauri::command]
 pub async fn apply_skin(id: String) -> Result<(), String> {
     let account = refresh_active_account().await?;
@@ -320,7 +292,6 @@ pub async fn apply_skin(id: String) -> Result<(), String> {
         return Err(format!("skin upload failed: {}", resp.status()));
     }
 
-    // Reflect the new active skin in the library.
     let mut index = load_index()?;
     mark_active(&mut index, &id);
     save_index(&index)?;

@@ -1,7 +1,3 @@
-/**
- * Global open/close state for the shared <ExportInstanceModal>. Open it from
- * anywhere (instance page, home context menu) with the instance to export.
- */
 export const useExportModal = () => {
   const isOpen = useState('export-modal-open', () => false)
   const target = useState<{ id: string, name: string } | null>('export-modal-target', () => null)

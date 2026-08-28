@@ -1,12 +1,3 @@
-//! CurseForge (Eternal/Core API) integration: search, version listing, project
-//! info, mod install (with dependencies) and modpack (.zip) install as a new
-//! instance. The API key is embedded at build time from `.env` (see build.rs).
-//!
-//! Results are normalized to the SAME shapes the Modrinth browser already
-//! consumes (hits/versions/project), so the UI can switch providers with a flag.
-//!
-//! Reference: https://docs.curseforge.com/  (and PrismLauncher's Flame impl).
-
 use std::collections::HashMap;
 use std::io::{Cursor, Read, Write};
 use std::path::{Component, Path, PathBuf};
@@ -21,10 +12,8 @@ use crate::paths;
 
 const API: &str = "https://api.curseforge.com/v1";
 const GAME_ID: i64 = 432;
-// Injected at build time from .env (build.rs). Empty → CurseForge disabled.
 const CF_API_KEY: &str = env!("CURSEFORGE_API_KEY");
 
-/// Whether a CurseForge API key was embedded at build time.
 #[tauri::command]
 pub fn cf_enabled() -> bool {
     !CF_API_KEY.trim().is_empty()
@@ -45,7 +34,6 @@ fn http() -> &'static reqwest::Client {
     })
 }
 
-/// Sends a request, retrying once on HTTP 429 after the `Retry-After` delay.
 async fn send(req: reqwest::RequestBuilder) -> Result<reqwest::Response, String> {
     if CF_API_KEY.trim().is_empty() {
         return Err("CurseForge is not configured (no API key)".into());
@@ -68,19 +56,16 @@ async fn send(req: reqwest::RequestBuilder) -> Result<reqwest::Response, String>
     }
 }
 
-// ===== shared id mappings =====
-
 fn class_id(kind: &str) -> i64 {
     match kind {
         "modpack" => 4471,
         "resourcepack" => 12,
         "shader" => 6552,
         "datapack" => 6945,
-        _ => 6, // mod
+        _ => 6,
     }
 }
 
-/// CurseForge modLoaderType numeric ids.
 fn loader_id(loader: &str) -> Option<u8> {
     match loader {
         "forge" => Some(1),
@@ -91,17 +76,14 @@ fn loader_id(loader: &str) -> Option<u8> {
     }
 }
 
-/// Maps the Modrinth-style sort index to a CurseForge sortField.
 fn sort_field(index: &str) -> u8 {
     match index {
-        "downloads" => 6,  // TotalDownloads
-        "newest" | "updated" => 3, // LastUpdated
-        "follows" => 2,    // Popularity (no "follows" on CF)
-        _ => 2,            // relevance → Popularity
+        "downloads" => 6,
+        "newest" | "updated" => 3,
+        "follows" => 2,
+        _ => 2,
     }
 }
-
-// ===== CF raw response types (only the fields we use) =====
 
 #[derive(Deserialize)]
 struct CfLogo {
@@ -251,8 +233,6 @@ struct CfDataResponse<T> {
     data: T,
 }
 
-// ===== normalized output (mirrors the Modrinth frontend types) =====
-
 #[derive(Serialize)]
 pub struct Hit {
     project_id: String,
@@ -334,8 +314,6 @@ pub struct ProjectFull {
     gallery: Vec<GalleryItem>,
 }
 
-// ===== conversions =====
-
 fn logo_url(logo: &Option<CfLogo>) -> Option<String> {
     logo.as_ref().and_then(|l| l.thumbnail_url.clone().or_else(|| l.url.clone()))
 }
@@ -369,7 +347,6 @@ fn mod_to_hit(m: CfMod, kind: &str) -> Hit {
     }
 }
 
-/// Splits a CF file's `gameVersions` (which mixes MC versions and loader names).
 fn split_game_versions(raw: &[String]) -> (Vec<String>, Vec<String>) {
     let mut mc = Vec::new();
     let mut loaders = Vec::new();
@@ -400,7 +377,7 @@ fn file_to_version(f: CfFile) -> Version {
     let deps = f
         .dependencies
         .iter()
-        .filter(|d| d.relation_type == 3) // RequiredDependency
+        .filter(|d| d.relation_type == 3)
         .map(|d| Dependency {
             project_id: Some(d.mod_id.to_string()),
             version_id: None,
@@ -428,8 +405,6 @@ fn file_to_version(f: CfFile) -> Version {
         dependencies: deps,
     }
 }
-
-// ===== commands: browse =====
 
 #[derive(Deserialize)]
 pub struct SearchParams {
@@ -468,11 +443,9 @@ pub async fn curseforge_search(params: SearchParams) -> Result<SearchResponse, S
     if let Some(v) = params.game_versions.first() {
         query.push(("gameVersion".into(), v.clone()));
     }
-    // Single loader filter (CF accepts modLoaderType as a single value).
     if let Some(id) = params.loaders.iter().find_map(|l| loader_id(l)) {
         query.push(("modLoaderType".into(), id.to_string()));
     }
-    // Map selected category names → CurseForge numeric ids.
     if !params.categories.is_empty() {
         let cats = categories_for(class_id(&kind)).await;
         let ids: Vec<String> = params
@@ -519,7 +492,6 @@ pub async fn curseforge_versions(
 
 #[tauri::command]
 pub async fn curseforge_project(id: String) -> Result<ProjectFull, String> {
-    // Base project + the long HTML description (separate endpoint).
     let resp = send(http().get(format!("{API}/mods/{id}"))).await?;
     if !resp.status().is_success() {
         return Err(format!("CurseForge project failed: {}", resp.status()));
@@ -565,7 +537,6 @@ pub async fn curseforge_project(id: String) -> Result<ProjectFull, String> {
 #[derive(Serialize, Clone)]
 pub struct Category {
     name: String,
-    /// CurseForge's numeric category id (as string), used as the filter value.
     header: String,
 }
 
@@ -575,7 +546,6 @@ struct CfCategory {
     name: String,
 }
 
-/// name → id pairs per classId, fetched once and cached for the session.
 fn category_cache() -> &'static std::sync::Mutex<HashMap<i64, Vec<(String, i64)>>> {
     static C: std::sync::OnceLock<std::sync::Mutex<HashMap<i64, Vec<(String, i64)>>>> =
         std::sync::OnceLock::new();
@@ -614,13 +584,6 @@ pub async fn curseforge_categories(project_type: String) -> Result<Vec<Category>
     Ok(cats.into_iter().map(|(name, id)| Category { name, header: id.to_string() }).collect())
 }
 
-// ===== install: mods (+ required deps) into an instance =====
-
-/// A mod that couldn't be downloaded because its author disabled third-party
-/// distribution (CurseForge returns no download URL). The user must grab it
-/// manually from the project page.
-/// A file CurseForge won't serve to third-party launchers. The user downloads it
-/// manually from `url`; we then match it back by `fingerprint` and copy it in.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct BlockedMod {
     name: String,
@@ -666,7 +629,6 @@ pub async fn curseforge_install_with_deps(
     .await?;
 
     write_content_index(&instance_id, &index)?;
-    // Persist any blocked mods (merged) so they can be resolved later.
     if !blocked.is_empty() {
         let mut all = get_blocked_mods(instance_id.clone());
         for b in &blocked {
@@ -698,8 +660,6 @@ fn install_rec<'a>(
         }
         let file = fetch_file(project_id, file_id).await?;
         let m = fetch_mod(project_id).await?;
-        // …and skip one the user already has from Modrinth, rather than
-        // downloading a second copy and taking over its index entry.
         if is_dependency
             && crate::commands::modrinth::installed_by_other_provider(
                 index,
@@ -723,7 +683,6 @@ fn install_rec<'a>(
                     .map_err(|e| format!("write file: {e}"))?;
             }
             _ => {
-                // Author opted out of third-party distribution — report it.
                 blocked.push(BlockedMod {
                     name: m.name.clone(),
                     filename: safe_name(&file.file_name),
@@ -739,7 +698,6 @@ fn install_rec<'a>(
 
         visited.insert(project_id.to_string());
         let (game_versions, loaders) = split_game_versions(&file.game_versions);
-        // Record required dependencies (relation_type 3) for orphan cleanup on delete.
         let dep_project_ids: Vec<String> = file
             .dependencies
             .iter()
@@ -767,7 +725,6 @@ fn install_rec<'a>(
         index.items.push(item.clone());
         added.push(item);
 
-        // Required dependencies.
         for dep in file.dependencies.iter().filter(|d| d.relation_type == 3) {
             let dep_pid = dep.mod_id.to_string();
             if visited.contains(&dep_pid) {
@@ -802,7 +759,6 @@ async fn fetch_mod(project_id: &str) -> Result<CfMod, String> {
     Ok(d.data)
 }
 
-/// Newest file id for a project matching the loader/game version (best effort).
 async fn resolve_latest_file(
     project_id: &str,
     loader: &Option<String>,
@@ -820,13 +776,9 @@ async fn resolve_latest_file(
         return Ok(None);
     }
     let parsed: CfListResponse<CfFile> = resp.json().await.map_err(|e| e.to_string())?;
-    // Files come newest-first; take the first.
     Ok(parsed.data.into_iter().next().map(|f| f.id.to_string()))
 }
 
-/// Newest file `(file_id, filename)` per project matching loader/game version,
-/// resolved in ONE bulk `POST /mods` request (avoids per-mod requests / 429s).
-/// Returns a map keyed by project_id (as string).
 pub async fn bulk_latest_files(
     project_ids: &[String],
     loaders: &Option<Vec<String>>,
@@ -854,8 +806,6 @@ pub async fn bulk_latest_files(
     out
 }
 
-/// Updates every CurseForge mod at once: one bulk lookup for newest files, one
-/// bulk lookup for their download URLs, then concurrent downloads. Returns count.
 #[tauri::command]
 pub async fn curseforge_update_all(
     instance_id: String,
@@ -877,7 +827,6 @@ pub async fn curseforge_update_all(
     let pids: Vec<String> = cf.iter().map(|(_, p, _)| p.clone()).collect();
     let latest = bulk_latest_files(&pids, &loaders, &game_versions).await;
 
-    // Mods with a newer file id.
     let mut need: Vec<(usize, i64)> = Vec::new();
     for (pos, pid, vid) in &cf {
         if let Some((new_id, _)) = latest.get(pid) {
@@ -892,7 +841,6 @@ pub async fn curseforge_update_all(
         return Ok(0);
     }
 
-    // Bulk-resolve download URLs.
     let file_ids: Vec<i64> = need.iter().map(|(_, f)| *f).collect();
     let files = bulk_files(&file_ids).await.unwrap_or_default();
 
@@ -905,7 +853,7 @@ pub async fn curseforge_update_all(
         let Some(file) = files.get(&fid).cloned() else { continue };
         let url = match &file.download_url {
             Some(u) if !u.is_empty() => u.clone(),
-            _ => continue, // blocked → leave the old file in place
+            _ => continue,
         };
         let mods_dir = mods_dir.clone();
         let sem = sem.clone();
@@ -940,8 +888,6 @@ pub async fn curseforge_update_all(
 }
 
 fn kind_and_folder(m: &CfMod) -> (&'static str, &'static str) {
-    // CF doesn't return classId on the mod object reliably across endpoints, so
-    // infer from category names; default to mod.
     let cats: Vec<String> = m.categories.iter().map(|c| c.name.to_lowercase()).collect();
     if cats.iter().any(|c| c.contains("resource pack")) {
         ("resourcepack", "resourcepacks")
@@ -954,10 +900,6 @@ fn kind_and_folder(m: &CfMod) -> (&'static str, &'static str) {
     }
 }
 
-// ===== match local mods by CurseForge fingerprint (Murmur2) =====
-
-/// CurseForge's file fingerprint: MurmurHash2 (seed 1) over the file bytes with
-/// whitespace bytes (\t \n \r space) stripped. Matches PrismLauncher / the CF app.
 fn cf_fingerprint(data: &[u8]) -> u32 {
     const M: u32 = 0x5bd1_e995;
     const R: u32 = 24;
@@ -1020,16 +962,12 @@ struct CfFingerprintResponse {
     data: CfFingerprintData,
 }
 
-/// Matches local jars in `mods/` against CurseForge by file fingerprint and
-/// records any matches in the content index (so manually-added CF mods gain
-/// update/version features). Returns how many were newly matched.
 #[tauri::command]
 pub async fn curseforge_match_local(instance_id: String) -> Result<usize, String> {
     let dir = paths::instance_game_dir(&instance_id).join("mods");
     let known: std::collections::HashSet<String> =
         read_content_index(&instance_id).items.iter().map(|i| i.filename.clone()).collect();
 
-    // fingerprint -> base jar filename (only jars not already linked).
     let mut by_fp: HashMap<u64, String> = HashMap::new();
     let Ok(entries) = std::fs::read_dir(&dir) else { return Ok(0) };
     for entry in entries.flatten() {
@@ -1065,7 +1003,6 @@ pub async fn curseforge_match_local(instance_id: String) -> Result<usize, String
         return Ok(0);
     }
 
-    // Fetch mod metadata (name/icon/categories) for the matched projects.
     let mod_ids: Vec<i64> = parsed
         .data
         .exact_matches
@@ -1109,8 +1046,6 @@ pub async fn curseforge_match_local(instance_id: String) -> Result<usize, String
     Ok(count)
 }
 
-/// Matches a single local jar against CurseForge by fingerprint and records it
-/// if found. Returns whether a match was recorded.
 #[tauri::command]
 pub async fn curseforge_match_file(instance_id: String, filename: String) -> Result<bool, String> {
     let dir = paths::instance_game_dir(&instance_id).join("mods");
@@ -1181,8 +1116,6 @@ async fn bulk_mods(mod_ids: &[i64]) -> Result<HashMap<i64, CfMod>, String> {
     Ok(parsed.data.into_iter().map(|m| (m.id, m)).collect())
 }
 
-// ===== install: modpack (.zip with manifest.json) as a new instance =====
-
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct CfManifest {
@@ -1226,7 +1159,6 @@ struct ModpackProgress {
     name: String,
 }
 
-/// Parses a CurseForge manifest loader id like "forge-47.2.0" / "fabric-0.15.0".
 fn loader_from_manifest(loaders: &[CfManifestLoader]) -> Loader {
     let primary = loaders.iter().find(|l| l.primary).or_else(|| loaders.first());
     let Some(l) = primary else { return Loader::Vanilla };
@@ -1241,9 +1173,6 @@ fn loader_from_manifest(loaders: &[CfManifestLoader]) -> Loader {
     }
 }
 
-/// Imports a CurseForge modpack from a local `.zip` (manifest.json + overrides)
-/// as a new instance. Resolves each manifest file's download URL via the API;
-/// files whose authors block distribution are reported as `blocked`.
 #[tauri::command]
 pub async fn curseforge_import_modpack_file(
     app: AppHandle,
@@ -1254,8 +1183,6 @@ pub async fn curseforge_import_modpack_file(
     install_modpack_bytes(&app, bytes, name_override, None).await
 }
 
-/// Installs a CurseForge modpack straight from the browser: resolves the chosen
-/// file's download URL, fetches the `.zip` and processes it like a local import.
 #[tauri::command]
 pub async fn curseforge_install_modpack(
     app: AppHandle,
@@ -1290,7 +1217,6 @@ pub(crate) async fn install_modpack_bytes(
 
     let mut instance = instances::create_instance(name, mc_version, loader, None, None)?;
 
-    // Download + apply the modpack's icon, if any.
     if let Some(url) = icon_url.filter(|u| !u.trim().is_empty()) {
         if let Ok(data) = download(&url).await {
             if std::fs::write(paths::instance_icon_file(&instance.id), &data).is_ok() {
@@ -1300,11 +1226,9 @@ pub(crate) async fn install_modpack_bytes(
         }
     }
 
-    // Resolve all file download URLs in one bulk request.
     let file_ids: Vec<i64> = manifest.files.iter().map(|f| f.file_id).collect();
     let resolved = bulk_files(&file_ids).await.unwrap_or_default();
 
-    // Fetch mod metadata to populate the content index (so we know names, icons, kinds).
     let mod_ids: Vec<i64> = resolved.values().map(|f| f.mod_id).collect::<std::collections::HashSet<_>>().into_iter().collect();
     let mods = bulk_mods(&mod_ids).await.unwrap_or_default();
 
@@ -1313,8 +1237,6 @@ pub(crate) async fn install_modpack_bytes(
     std::fs::create_dir_all(&mods_dir).map_err(|e| e.to_string())?;
     let mut blocked: Vec<BlockedMod> = Vec::new();
 
-    // Plan downloads (and collect blocked mods) before fetching, so we can run
-    // the downloads concurrently.
     struct Job {
         url: String,
         dest: PathBuf,
@@ -1329,7 +1251,6 @@ pub(crate) async fn install_modpack_bytes(
         let url = match &file.download_url {
             Some(u) if !u.is_empty() => u.clone(),
             _ => {
-                // Author blocked third-party download — record it for manual fetch.
                 blocked.push(BlockedMod {
                     name: cf_mod.map(|m| m.name.clone()).unwrap_or_else(|| file.file_name.clone()),
                     filename: safe_name(&file.file_name),
@@ -1366,7 +1287,6 @@ pub(crate) async fn install_modpack_bytes(
         jobs.push(Job { url, dest, item });
     }
 
-    // Download concurrently (bounded) and collect the successfully-installed items.
     let total = jobs.len() as u64;
     let sem = std::sync::Arc::new(tokio::sync::Semaphore::new(10));
     let done = std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0));
@@ -1400,17 +1320,13 @@ pub(crate) async fn install_modpack_bytes(
 
     let _ = write_content_index(&instance.id, &index);
 
-    // Extract overrides/ into the game dir.
     extract_overrides(&bytes, &game_dir)?;
-    // Keep the manifest for reference.
     let _ = std::fs::write(paths::instance_dir(&instance.id).join("manifest.json"), raw_manifest);
 
-    // Persist blocked mods so the UI can guide the user to download them manually.
     save_blocked_mods(&instance.id, &blocked);
     Ok(instance)
 }
 
-/// Builds a CurseForge download page URL for a blocked file.
 fn blocked_url(cf_mod: Option<&CfMod>, mod_id: i64, file_id: i64) -> String {
     if let Some(m) = cf_mod {
         if let Some(w) = m.links.as_ref().and_then(|l| l.website_url.clone()).filter(|s| !s.is_empty()) {
@@ -1438,7 +1354,6 @@ fn save_blocked_mods(id: &str, blocked: &[BlockedMod]) {
     }
 }
 
-/// The blocked mods still awaiting manual download for an instance.
 #[tauri::command]
 pub fn get_blocked_mods(instance_id: String) -> Vec<BlockedMod> {
     std::fs::read_to_string(blocked_mods_file(&instance_id))
@@ -1453,9 +1368,6 @@ pub struct BlockedResolveResult {
     remaining: Vec<BlockedMod>,
 }
 
-/// Scans `dir` (defaults to the OS Downloads folder) for files matching the
-/// instance's blocked mods (by CurseForge fingerprint) and copies matches into
-/// the mods folder. Returns how many were resolved and what's still missing.
 #[tauri::command]
 pub fn resolve_blocked_mods(instance_id: String, dir: Option<String>) -> Result<BlockedResolveResult, String> {
     let mut blocked = get_blocked_mods(instance_id.clone());
@@ -1472,8 +1384,6 @@ pub fn resolve_blocked_mods(instance_id: String, dir: Option<String>) -> Result<
 
     let mut resolved = 0usize;
     let mut index = read_content_index(&instance_id);
-    // Collect candidate files (shallow recursive) whose name plausibly matches,
-    // then confirm by fingerprint — avoids hashing the whole Downloads folder.
     let candidates = scan_candidate_files(&scan_dir, &blocked, 2);
     for path in candidates {
         if blocked.is_empty() {
@@ -1484,7 +1394,6 @@ pub fn resolve_blocked_mods(instance_id: String, dir: Option<String>) -> Result<
         if let Some(pos) = blocked.iter().position(|b| b.fingerprint == fp) {
             let b = blocked.remove(pos);
             let _ = std::fs::write(mods_dir.join(safe_name(&b.filename)), &bytes);
-            // Record it as a CurseForge mod so it shows correctly and gets updates.
             index.items.retain(|i| i.filename != b.filename && i.project_id != b.project_id);
             index.items.push(InstalledItem {
                 project_id: b.project_id.clone(),
@@ -1514,14 +1423,11 @@ pub fn resolve_blocked_mods(instance_id: String, dir: Option<String>) -> Result<
     Ok(BlockedResolveResult { resolved, remaining: blocked })
 }
 
-/// The OS Downloads directory, if any (for the blocked-mods scan default).
 #[tauri::command]
 pub fn default_downloads_dir() -> Option<String> {
     dirs::download_dir().map(|p| p.to_string_lossy().into_owned())
 }
 
-/// Recursively (bounded depth) gathers .jar/.zip files whose normalized name
-/// matches one of the blocked filenames.
 fn scan_candidate_files(dir: &Path, blocked: &[BlockedMod], depth: u32) -> Vec<PathBuf> {
     let wanted: std::collections::HashSet<String> =
         blocked.iter().map(|b| normalize_name(&b.filename)).collect();
@@ -1550,7 +1456,6 @@ fn collect_candidates(dir: &Path, wanted: &std::collections::HashSet<String>, de
     }
 }
 
-/// Lowercase, strip separators — lax filename compare (like PrismLauncher).
 fn normalize_name(name: &str) -> String {
     name.to_lowercase().chars().filter(|c| c.is_ascii_alphanumeric()).collect()
 }
@@ -1605,8 +1510,6 @@ fn extract_overrides(bytes: &[u8], game_dir: &Path) -> Result<(), String> {
     Ok(())
 }
 
-// ===== export instance to a CurseForge .zip =====
-
 #[derive(Serialize)]
 struct CfExportManifest {
     #[serde(rename = "manifestType")]
@@ -1643,23 +1546,17 @@ struct CfExportFile {
     required: bool,
 }
 
-/// Builds the `modLoaders` id for the manifest (e.g. "fabric-0.15.0").
 fn export_loader_id(loader: &Loader, mc: &str) -> Option<String> {
     match loader {
         Loader::Fabric(v) => Some(format!("fabric-{v}")),
         Loader::Quilt(v) => Some(format!("quilt-{v}")),
         Loader::Forge(v) => Some(format!("forge-{v}")),
-        // CurseForge expects the MC version embedded for NeoForge 1.20.1.
         Loader::NeoForge(v) if mc == "1.20.1" => Some(format!("neoforge-1.20.1-{v}")),
         Loader::NeoForge(v) => Some(format!("neoforge-{v}")),
         Loader::Vanilla => None,
     }
 }
 
-/// Exports an instance as a CurseForge `.zip` (manifest.json + overrides). Mods/
-/// resource packs that resolve to CurseForge (by fingerprint, and that allow
-/// third-party download) go into the manifest; everything else among the
-/// selected entries is bundled under `overrides/`.
 #[tauri::command]
 pub async fn export_curseforge(
     id: String,
@@ -1675,7 +1572,6 @@ pub async fn export_curseforge(
     let game_dir = paths::instance_game_dir(&id);
     let filter = crate::commands::import::ExportFilter::new(include, exclude);
 
-    // Hash candidate content (mods/resource packs/shaders) by CF fingerprint.
     struct Cand {
         rel: String,
         disabled: bool,
@@ -1704,7 +1600,6 @@ pub async fn export_curseforge(
         }
     }
 
-    // Resolve fingerprints → manifest entries; matched files leave the overrides.
     let mut files: Vec<CfExportFile> = Vec::new();
     let mut matched: std::collections::HashSet<String> = std::collections::HashSet::new();
     if !cands.is_empty() {
@@ -1720,7 +1615,7 @@ pub async fn export_curseforge(
                 for m in parsed.data.exact_matches {
                     let file = m.file;
                     if !file.is_available {
-                        continue; // not distributable → bundle the jar in overrides
+                        continue;
                     }
                     let Some(cand) = cands.iter().find(|c| c.fp == file.file_fingerprint) else { continue };
                     files.push(CfExportFile {
@@ -1763,9 +1658,6 @@ pub async fn export_curseforge(
     Ok(())
 }
 
-/// Walks the game dir adding files under `overrides/`, honoring the selection,
-/// skipping regenerable folders, junk, manifest-referenced files and (unless
-/// `optional_disabled`) disabled mods.
 fn cf_add_overrides(
     zip: &mut zip::ZipWriter<std::fs::File>,
     base: &Path,
@@ -1804,10 +1696,7 @@ fn cf_add_overrides(
     Ok(())
 }
 
-// ===== helpers =====
-
 async fn download(url: &str) -> Result<Vec<u8>, String> {
-    // CDN downloads don't need the API key, but reusing the client is fine.
     let resp = http().get(url).send().await.map_err(|e| e.to_string())?;
     if !resp.status().is_success() {
         return Err(format!("download failed ({}): {url}", resp.status()));

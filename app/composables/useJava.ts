@@ -18,7 +18,6 @@ export interface JavaValidation {
   error?: string
 }
 
-/** Detected Java installations (system + launcher-managed), shared globally. */
 export const useJava = () => {
   const installations = useState<JavaInstallation[]>('java-installations', () => [])
   const scanning = useState('java-scanning', () => false)

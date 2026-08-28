@@ -144,7 +144,8 @@
     "close": "Close",
     "copy": "Copy",
     "copied": "Copied to clipboard",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "retry": "Try again"
   },
   "logs": {
     "none": "No saved logs yet.",
@@ -366,6 +367,8 @@
     "privacy": {
       "track_playtime": "Track playtime",
       "track_playtimeDesc": "Measure and store total playtime for each instance.",
+      "share_activity": "Share activity on my profile",
+      "share_activityDesc": "Send launch count and playtime to your public Spectra profile, for the activity graph and statistics. Requires being signed in.",
       "discord_rpc": "Discord Rich Presence",
       "discord_rpcDesc": "Show what you are playing on Discord.",
       "crash_reports": "Crash reports",
@@ -404,7 +407,8 @@
     "importingModpack": "Importing modpack…",
     "importingInstance": "Importing: {name}",
     "exportingInstance": "Exporting: {name}",
-    "uninstallingMod": "Removing {name}"
+    "uninstallingMod": "Removing {name}",
+    "installingMods": "Installing {n} items"
   },
   "content": {
     "all": "All",
@@ -478,7 +482,15 @@
     "tabDescription": "Description",
     "tabGallery": "Gallery",
     "noGallery": "No gallery images",
-    "uninstalled": "{name} removed"
+    "uninstalled": "{name} removed",
+    "viewGrid": "Grid",
+    "viewList": "List",
+    "density": "Density",
+    "recent": "Recent",
+    "picked": "{n} selected",
+    "clearPicked": "Clear",
+    "installPicked": "Install selected",
+    "installedMany": "Installed {n} items"
   },
   "mods": {
     "manual": "manual",
@@ -658,6 +670,7 @@
   "spectra": {
     "title": "Spectra account",
     "signIn": "Sign in",
+    "viewProfile": "Open my profile on the website",
     "signOut": "Sign out",
     "signedOutTitle": "Play with your friends",
     "signedOutHint": "Sign in to build a friends list and send modpacks straight to their launcher.",

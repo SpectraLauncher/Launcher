@@ -4,7 +4,8 @@
   "description": "enables the default permissions",
   "windows": [
     "main",
-    "msa-login"
+    "msa-login",
+    "content-browser"
   ],
   "permissions": [
     "core:default",

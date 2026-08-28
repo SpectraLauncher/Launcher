@@ -1,8 +1,7 @@
-// https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  ssr: false, 
+  ssr: false,
   app: {
     head: {
     }
@@ -31,33 +30,23 @@ export default defineNuxtConfig({
     ignore: ['src-tauri/**']
   },
 
-  // Icons ship inside the app instead of being fetched from api.iconify.design
-  // at runtime. A launcher is a desktop app served from a custom scheme — on
-  // macOS that request does not come back, which is why the "+" and friends
-  // were missing there while Windows was fine. Bundled, there is nothing to
-  // fetch: the icons also work with no internet at all.
   icon: {
     clientBundle: {
-      // Everything referenced in the source, plus anything Nuxt UI adds itself.
       scan: true,
       includeCustomCollections: true,
-      // Enough headroom for the ~90 in use; the build fails loudly if exceeded.
       sizeLimitKb: 512,
     },
-    // No silent fall back to the network — a missing icon should be caught here,
-    // not on somebody's machine.
     fallbackToApi: false,
   },
 
   css: ['~/assets/css/main.css'],
-  
+
   modules: [
     '@pinia/nuxt',
     '@nuxt/scripts',
     '@nuxt/ui',
     '@nuxtjs/i18n',
   ],
-
 
   i18n: {
     strategy: 'no_prefix',

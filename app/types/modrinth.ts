@@ -1,9 +1,5 @@
-// Mirrors src-tauri/src/commands/modrinth.rs.
-
-/** Modrinth's real project types. "datapack" is a UI pseudo-type (mod + category). */
 export type ModrinthProjectType = 'mod' | 'modpack' | 'resourcepack' | 'shader'
 
-/** What the browser is browsing for (includes the datapack pseudo-type). */
 export type ContentKind = 'mod' | 'modpack' | 'resourcepack' | 'shader' | 'datapack'
 
 export type ModrinthSortIndex = 'relevance' | 'downloads' | 'follows' | 'newest' | 'updated'
@@ -87,20 +83,17 @@ export interface ModrinthProjectFull {
   id: string
   title: string
   description: string
-  /** Long markdown description. */
   body: string
   icon_url: string | null
   gallery: ModrinthGalleryItem[]
 }
 
-/** An available update for an installed mod (mirrors ModUpdate in modrinth.rs). */
 export interface ModUpdate {
   project_id: string
   version_id: string
   version_number: string
 }
 
-/** An available modpack update (mirrors ModpackUpdate in modrinth.rs). */
 export interface ModpackUpdate {
   version_id: string
   version_number: string
@@ -109,7 +102,6 @@ export interface ModpackUpdate {
   date_published: string
 }
 
-/** A recorded installed item, mirrors InstalledItem in modrinth.rs. */
 export interface InstalledItem {
   project_id: string
   version_id: string

@@ -1,14 +1,3 @@
-//! Installing + launching an instance through Lyceris.
-//!
-//! `launch_instance` installs (downloading/verifying the game files) then
-//! launches, resolving once the game process has started. Progress and console
-//! output stream to the frontend as Tauri events, all carrying the `instance_id`
-//! they belong to:
-//!   - `mc://multi-progress`  `{ instance_id, current, total }`  (libraries/assets/java)
-//!   - `mc://file-progress`   `{ instance_id, path, current, total }`
-//!   - `mc://console`         `{ instance_id, line }`
-//!   - `mc://exited`          `{ instance_id, code }`
-
 use lyceris::auth::AuthMethod;
 use lyceris::minecraft::config::{ConfigBuilder, Memory};
 use lyceris::minecraft::emitter::{Emitter, Event};
@@ -26,8 +15,6 @@ use crate::commands::settings::get_settings;
 use crate::models::{AccountKind, Instance, Loader};
 use crate::{paths, store, AppState};
 
-/// Describes which game session to jump into immediately on launch.
-/// Requires Minecraft 1.20+ (the `--quickPlay*` flags were added then).
 #[derive(Debug, Deserialize)]
 #[serde(tag = "kind")]
 pub enum QuickPlay {
@@ -62,12 +49,10 @@ struct ExitInfo {
     code: Option<i32>,
 }
 
-/// Emitted when the game exits with a non-zero code and a crash report is found.
 #[derive(Clone, Serialize)]
 struct CrashInfo {
     instance_id: String,
     code: Option<i32>,
-    /// Relative path from the game dir (e.g. "crash-reports/crash-2026-06-22_13.21.01-client.txt").
     crash_report_rel: Option<String>,
 }
 
@@ -76,15 +61,11 @@ fn to_lyceris_loader(loader: &Loader, mc: &str) -> Option<Box<dyn LyLoader>> {
         Loader::Vanilla => None,
         Loader::Fabric(v) => Some(Fabric(v.clone()).into()),
         Loader::Quilt(v) => Some(Quilt(v.clone()).into()),
-        // Lyceris rebuilds the installer version as `{mc}-{v}`, so it wants only
-        // the Forge build (e.g. "47.4.0"), not the full maven id "1.20.1-47.4.0"
-        // we store — otherwise the MC version doubles and the download 404s.
         Loader::Forge(v) => Some(Forge(v.strip_prefix(&format!("{mc}-")).unwrap_or(v).to_string()).into()),
         Loader::NeoForge(v) => Some(NeoForge(v.clone()).into()),
     }
 }
 
-/// Builds an emitter that forwards Lyceris events for `id` to the webview.
 async fn build_emitter(app: &AppHandle, id: &str) -> Emitter {
     let emitter = Emitter::default();
 
@@ -93,7 +74,6 @@ async fn build_emitter(app: &AppHandle, id: &str) -> Emitter {
     emitter
         .on(
             Event::MultipleDownloadProgress,
-            // 4th field is the file type as a string ("Asset"/"Library"/"Java"/…).
             move |(_, current, total, _): (String, u64, u64, String)| {
                 let _ = app_multi.emit(
                     "mc://multi-progress",
@@ -143,9 +123,6 @@ async fn build_emitter(app: &AppHandle, id: &str) -> Emitter {
     emitter
 }
 
-/// Installs (verifying/repairing files) then launches the instance. Returns once
-/// the game process is running; it's then awaited in the background so we can
-/// emit `mc://exited` and clear the running flag.
 #[tauri::command]
 pub async fn launch_instance(
     app: AppHandle,
@@ -160,10 +137,6 @@ pub async fn launch_instance(
         }
     }
 
-    // Cross-restart guard: a live lock file means another launcher session (or a
-    // leftover game) still owns this game dir. Reconcile state so the UI shows it
-    // as running and stop/kill works, then refuse the duplicate launch. A stale
-    // lock (process gone) is cleared so the launch proceeds.
     if let Some(pid) = read_lock_pid(&id) {
         if is_game_pid_alive(pid) {
             if let Ok(mut pids) = state.pids.lock() {
@@ -177,7 +150,6 @@ pub async fn launch_instance(
         remove_lock(&id);
     }
 
-    // Any early failure must release the running flag.
     let result = launch_inner(&app, &id, quick_play).await;
     if result.is_err() {
         if let Ok(mut running) = state.running.lock() {
@@ -190,8 +162,6 @@ pub async fn launch_instance(
 async fn launch_inner(app: &AppHandle, id: &str, quick_play: Option<QuickPlay>) -> Result<(), String> {
     let instance: Instance =
         store::read_json(&paths::instance_config_file(id))?.ok_or("instance not found")?;
-    // Stamp "last played" up front (at launch attempt), so the library reflects
-    // it immediately even while the game is still installing/starting.
     let _ = instances::touch_last_played(id);
     let settings = get_settings()?;
     let account = refresh_active_account().await?;
@@ -210,7 +180,6 @@ async fn launch_inner(app: &AppHandle, id: &str, quick_play: Option<QuickPlay>) 
         },
     };
 
-    // Resolve effective launch options: per-instance override, else global default.
     let memory_mb = (if instance.override_memory { instance.memory_mb } else { None })
         .unwrap_or(settings.default_memory_mb) as u64;
     let java_args = if instance.override_java_args {
@@ -229,7 +198,6 @@ async fn launch_inner(app: &AppHandle, id: &str, quick_play: Option<QuickPlay>) 
         (settings.default_pre_launch.clone(), settings.default_post_exit.clone())
     };
 
-    // Translate window prefs into Minecraft game arguments.
     let mut game_args: Vec<String> = Vec::new();
     if fullscreen {
         game_args.push("--fullscreen".into());
@@ -242,7 +210,6 @@ async fn launch_inner(app: &AppHandle, id: &str, quick_play: Option<QuickPlay>) 
         game_args.push("--height".into());
         game_args.push(h.to_string());
     }
-    // Quick Play: jump directly into a world or server (Minecraft 1.20+).
     match quick_play {
         Some(QuickPlay::Singleplayer { world }) => {
             game_args.push("--quickPlaySingleplayer".into());
@@ -259,7 +226,6 @@ async fn launch_inner(app: &AppHandle, id: &str, quick_play: Option<QuickPlay>) 
         None => {}
     }
 
-    // Pre-launch hook (waited on so it can prepare things before the game starts).
     if let Some(cmd) = pre_launch.as_deref().filter(|s| !s.trim().is_empty()) {
         run_hook(cmd, true);
     }
@@ -273,10 +239,6 @@ async fn launch_inner(app: &AppHandle, id: &str, quick_play: Option<QuickPlay>) 
     let emitter = build_emitter(app, id).await;
     let app_state = app.state::<AppState>();
 
-    // Vanilla and modded produce different Config<T> types, so the install/launch
-    // pair has to live inside each branch. The install phase is serialized through
-    // a global lock so two instances can't provision the shared Java runtime at
-    // the same time (which would corrupt it); launch itself stays concurrent.
     let mut child = match to_lyceris_loader(&instance.loader, &instance.mc_version) {
         None => {
             let config = builder.build();
@@ -304,13 +266,11 @@ async fn launch_inner(app: &AppHandle, id: &str, quick_play: Option<QuickPlay>) 
         }
     };
 
-    // Privacy-gated extras.
     let track_playtime = settings.track_playtime;
     let discord_rpc = settings.discord_rpc;
+    let share_activity = settings.share_activity;
     let started = std::time::Instant::now();
 
-    // Remember the game PID so the UI can stop/kill it, and write a run lock so a
-    // relaunch (even after the launcher restarts) sees the instance is busy.
     if let Some(pid) = child.id() {
         if let Ok(mut pids) = app_state.pids.lock() {
             pids.insert(id.to_string(), pid);
@@ -318,8 +278,6 @@ async fn launch_inner(app: &AppHandle, id: &str, quick_play: Option<QuickPlay>) 
         write_lock(id, pid);
     }
 
-    // Discord presence is recomputed from all running instances, so several at
-    // once stay correct and the first to exit doesn't wipe the others' presence.
     if discord_rpc {
         if let Ok(mut map) = app_state.discord_playing.lock() {
             map.insert(id.to_string(), (instance.name.clone(), instance.mc_version.clone()));
@@ -327,8 +285,38 @@ async fn launch_inner(app: &AppHandle, id: &str, quick_play: Option<QuickPlay>) 
         crate::discord::update_presence(&app_state);
     }
 
-    // Wait for exit off the command path. Move `emitter` in so its console reader
-    // stays alive for the whole session, and clear the running flag at the end.
+    if share_activity {
+        let app_hb = app.clone();
+        let id_hb = id.to_string();
+        tauri::async_runtime::spawn(async move {
+            crate::commands::spectra::report_activity(true, 0).await;
+
+            let mut reported = 0u64;
+            loop {
+                tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+
+                let running = app_hb
+                    .try_state::<AppState>()
+                    .and_then(|state| state.running.lock().ok().map(|set| set.contains(&id_hb)))
+                    .unwrap_or(false);
+
+                if running {
+                    let due = started.elapsed().as_secs().saturating_sub(reported);
+                    if due >= 300 {
+                        crate::commands::spectra::report_activity(false, due).await;
+                        reported += due.min(crate::commands::spectra::ACTIVITY_MAX_SECONDS);
+                    }
+                    continue;
+                }
+
+                for chunk in crate::commands::spectra::activity_chunks(started.elapsed().as_secs(), reported) {
+                    crate::commands::spectra::report_activity(false, chunk).await;
+                }
+                break;
+            }
+        });
+    }
+
     let app_bg = app.clone();
     let id_bg = id.to_string();
     let game_start = std::time::SystemTime::now();
@@ -338,7 +326,11 @@ async fn launch_inner(app: &AppHandle, id: &str, quick_play: Option<QuickPlay>) 
             Ok(status) => status.code(),
             Err(_) => None,
         };
+        let mut stopped_by_user = false;
         if let Some(state) = app_bg.try_state::<AppState>() {
+            if let Ok(mut stopping) = state.stopping.lock() {
+                stopped_by_user = stopping.remove(&id_bg);
+            }
             if let Ok(mut running) = state.running.lock() {
                 running.remove(&id_bg);
             }
@@ -356,17 +348,15 @@ async fn launch_inner(app: &AppHandle, id: &str, quick_play: Option<QuickPlay>) 
         if track_playtime {
             let _ = instances::add_playtime(&id_bg, started.elapsed().as_secs());
         }
-        // Post-exit hook (fire-and-forget).
         if let Some(cmd) = post_exit.as_deref().filter(|s| !s.trim().is_empty()) {
             run_hook(cmd, false);
         }
 
-        // Crash detection: non-zero exit code → look for a crash report created
-        // after the game started. If found, emit mc://crashed instead of mc://exited.
-        let is_crash = code.map(|c| c != 0).unwrap_or(false);
+        let is_crash = !stopped_by_user && code.map(|c| c != 0).unwrap_or(false);
         if is_crash {
             let crash_rel = find_latest_crash_report(&id_bg, game_start);
-            let _ = app_bg.emit(
+            let _ = app_bg.emit_to(
+                "main",
                 "mc://crashed",
                 CrashInfo {
                     instance_id: id_bg.clone(),
@@ -387,7 +377,6 @@ async fn launch_inner(app: &AppHandle, id: &str, quick_play: Option<QuickPlay>) 
     Ok(())
 }
 
-/// Runs a user launch hook through the OS shell. `wait` blocks until it finishes.
 fn run_hook(cmd: &str, wait: bool) {
     let mut command;
     #[cfg(windows)]
@@ -408,13 +397,11 @@ fn run_hook(cmd: &str, wait: bool) {
     }
 }
 
-/// Re-installs (verifies/repairs) an instance's files without launching it.
 #[tauri::command]
 pub async fn repair_instance(app: AppHandle, id: String) -> Result<(), String> {
     let instance: Instance =
         store::read_json(&paths::instance_config_file(&id))?.ok_or("instance not found")?;
     let settings = get_settings()?;
-    // Install doesn't authenticate; a placeholder identity is enough.
     let auth = AuthMethod::Offline { username: "Player".into(), uuid: None };
     let memory_mb = instance.memory_mb.unwrap_or(settings.default_memory_mb) as u64;
 
@@ -427,31 +414,27 @@ pub async fn repair_instance(app: AppHandle, id: String) -> Result<(), String> {
         None => install(&builder.build(), Some(&emitter)).await,
         Some(loader) => install(&builder.loader(loader).build(), Some(&emitter)).await,
     };
-    // Clear the titlebar activity regardless of outcome.
     let _ = app.emit("mc://exited", ExitInfo { instance_id: id, code: Some(0) });
     result.map_err(|e| format!("repair failed: {e}"))
 }
 
-/// Whether an instance is currently running (for UI state on reload).
 #[tauri::command]
 pub fn is_instance_running(state: State<'_, AppState>, id: String) -> Result<bool, String> {
     let running = state.running.lock().map_err(|e| e.to_string())?;
     Ok(running.contains(&id))
 }
 
-/// Asks the running game to close (graceful) — `force` hard-kills it instead.
-/// The process tree is targeted so the JVM and its children all stop.
 #[tauri::command]
 pub fn stop_instance(state: State<'_, AppState>, id: String, force: bool) -> Result<(), String> {
     let pid = {
         let pids = state.pids.lock().map_err(|e| e.to_string())?;
         pids.get(&id).copied().ok_or("instance is not running")?
     };
+    if let Ok(mut stopping) = state.stopping.lock() {
+        stopping.insert(id.clone());
+    }
     kill_process_tree(pid, force)?;
 
-    // Instances owned by this session are cleaned up by their wait-task on exit.
-    // Adopted ones (from a previous launcher run) have no such task, so once
-    // we've killed them, clear their state here.
     let is_adopted = state.adopted.lock().map(|a| a.contains(&id)).unwrap_or(false);
     if is_adopted {
         if let Ok(mut running) = state.running.lock() {
@@ -463,16 +446,14 @@ pub fn stop_instance(state: State<'_, AppState>, id: String, force: bool) -> Res
         if let Ok(mut adopted) = state.adopted.lock() {
             adopted.remove(&id);
         }
+        if let Ok(mut stopping) = state.stopping.lock() {
+            stopping.remove(&id);
+        }
         remove_lock(&id);
     }
     Ok(())
 }
 
-// ---------- crash report detection ----------
-
-/// Scans `crash-reports/` for the newest `.txt` or `.log` file that was
-/// modified *after* `since`. Returns a relative path like
-/// `"crash-reports/crash-2026-06-22_13.21.01-client.txt"`, or `None`.
 fn find_latest_crash_report(id: &str, since: std::time::SystemTime) -> Option<String> {
     let dir = paths::instance_game_dir(id).join("crash-reports");
     let entries = std::fs::read_dir(&dir).ok()?;
@@ -490,7 +471,7 @@ fn find_latest_crash_report(id: &str, since: std::time::SystemTime) -> Option<St
             continue;
         };
         if modified < since {
-            continue; // older than game start — not caused by this session
+            continue;
         }
         if best.as_ref().map(|(t, _)| modified > *t).unwrap_or(true) {
             let Some(name) = path.file_name().map(|n| n.to_string_lossy().into_owned()) else {
@@ -502,14 +483,10 @@ fn find_latest_crash_report(id: &str, since: std::time::SystemTime) -> Option<St
     best.map(|(_, rel)| rel)
 }
 
-// ---------- run locks (cross-restart double-launch protection) ----------
-
-/// Writes the instance's run lock holding the game PID.
 fn write_lock(id: &str, pid: u32) {
     let _ = std::fs::write(paths::instance_lock_file(id), pid.to_string());
 }
 
-/// Reads the PID from an instance's run lock, if present and valid.
 fn read_lock_pid(id: &str) -> Option<u32> {
     std::fs::read_to_string(paths::instance_lock_file(id))
         .ok()?
@@ -522,8 +499,6 @@ fn remove_lock(id: &str) {
     let _ = std::fs::remove_file(paths::instance_lock_file(id));
 }
 
-/// True if a process with `pid` exists and looks like a JVM. The name check
-/// guards against the OS reusing a dead game's PID for an unrelated process.
 fn is_game_pid_alive(pid: u32) -> bool {
     use sysinfo::{Pid, ProcessesToUpdate, System};
     let p = Pid::from_u32(pid);
@@ -535,9 +510,6 @@ fn is_game_pid_alive(pid: u32) -> bool {
     }
 }
 
-/// On startup, adopt any instances still running from a previous launcher session
-/// (live lock files) into the in-memory state so the UI shows them as running and
-/// stop/kill works; clear locks left behind by games that have since exited.
 pub fn reconcile_running(app: &AppHandle) {
     let state = app.state::<AppState>();
     let Ok(entries) = std::fs::read_dir(paths::instances_dir()) else { return };
@@ -557,7 +529,6 @@ pub fn reconcile_running(app: &AppHandle) {
             if let Ok(mut adopted) = state.adopted.lock() {
                 adopted.insert(id.clone());
             }
-            // Spawn a watcher so the UI updates when the game eventually exits.
             spawn_adopted_watcher(app.clone(), id, pid);
         } else {
             remove_lock(&id);
@@ -565,8 +536,6 @@ pub fn reconcile_running(app: &AppHandle) {
     }
 }
 
-/// Polls the adopted process every 4 seconds. When Java exits, cleans up state
-/// and emits `mc://exited` so the frontend stops showing the instance as running.
 fn spawn_adopted_watcher(app: AppHandle, id: String, pid: u32) {
     tauri::async_runtime::spawn(async move {
         loop {
@@ -576,7 +545,6 @@ fn spawn_adopted_watcher(app: AppHandle, id: String, pid: u32) {
                     if let Ok(mut r) = state.running.lock() { r.remove(&id); }
                     if let Ok(mut p) = state.pids.lock()    { p.remove(&id); }
                     if let Ok(mut a) = state.adopted.lock() { a.remove(&id); }
-                    // Update Discord presence in case it was shown for this instance.
                     if let Ok(mut map) = state.discord_playing.lock() { map.remove(&id); }
                     crate::discord::update_presence(&state);
                 }
@@ -606,9 +574,6 @@ fn kill_process_tree(pid: u32, force: bool) -> Result<(), String> {
     #[cfg(not(windows))]
     {
         let sig = if force { "-KILL" } else { "-TERM" };
-        // Use the process group (negative PID) so the whole JVM + child tree is
-        // signalled, mirroring `taskkill /T` on Windows. Fallback to bare kill
-        // if getpgid fails (shouldn't happen for a live process).
         let pgid = unsafe { libc::getpgid(pid as libc::pid_t) };
         let target = if pgid > 0 {
             format!("-{pgid}")
@@ -623,10 +588,6 @@ fn kill_process_tree(pid: u32, force: bool) -> Result<(), String> {
     }
 }
 
-// ===== deep link (`spectra://launch/<instance-id>`) =====
-
-/// `spectra://launch/<id>` → the instance id, if that is what this URL is.
-/// Ids are UUIDs we minted, so anything else is rejected rather than passed on.
 pub fn instance_id_from_url(url: &str) -> Option<String> {
     let rest = url.strip_prefix("spectra://")?.trim_start_matches('/');
     let id = rest.strip_prefix("launch/")?.trim_end_matches('/');
@@ -636,8 +597,6 @@ pub fn instance_id_from_url(url: &str) -> Option<String> {
     plain.then(|| id.to_string())
 }
 
-/// Hands the frontend the instance a shortcut asked for when the click is what
-/// started the launcher. Returns `None` once consumed.
 #[tauri::command]
 pub fn take_pending_launch(state: tauri::State<'_, crate::AppState>) -> Option<String> {
     state.pending_launch.lock().ok()?.take()
@@ -654,7 +613,6 @@ mod deep_link_tests {
         assert_eq!(instance_id_from_url(&format!("spectra://launch/{id}/")), Some(id.into()));
         assert_eq!(instance_id_from_url("spectra://share/ABC123"), None);
         assert_eq!(instance_id_from_url("spectra://launch/"), None);
-        // no path traversal or shell games in something we hand to a launcher
         assert_eq!(instance_id_from_url("spectra://launch/../../etc/passwd"), None);
         assert_eq!(instance_id_from_url("spectra://launch/a b"), None);
     }

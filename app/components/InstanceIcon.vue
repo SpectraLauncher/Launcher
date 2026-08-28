@@ -11,8 +11,6 @@
 <script setup lang="ts">
 import type { Instance } from '~/types/launcher'
 
-// Shows the instance's icon.png (via the asset protocol) when it has one,
-// otherwise a colored initial. Size/rounding/font come from the parent's class.
 const props = defineProps<{ instance: Pick<Instance, 'id' | 'name' | 'icon'> }>()
 
 const src = ref<string | null>(null)

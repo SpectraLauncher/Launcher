@@ -2,22 +2,11 @@ import { invoke } from '@tauri-apps/api/core'
 import { toValue, type MaybeRefOrGetter } from 'vue'
 import type { QuickPlay } from '~/types/launcher'
 
-/**
- * Drives launching an instance and exposes its live state. Event listening +
- * activity tracking live in `useActivityCenter` (a single global hub); this
- * composable derives a per-instance `stage`/`progress`/`log`/`error` view.
- *
- * Pass the instance id you're interested in so the state is scoped to it (e.g.
- * the instance page). Without an id, `stage`/`progress` fall back to the
- * highest-priority activity (used by views that only call `launch`).
- */
 export const useMinecraftLaunch = (instanceId?: MaybeRefOrGetter<string | undefined>) => {
   const ac = useActivityCenter()
   const instances = useInstancesStore()
   const telemetry = useTelemetry()
 
-  // Per-instance state, keyed by id, so concurrent instances don't bleed into
-  // each other's UI.
   const launchingIds = useState<Record<string, boolean>>('mc-launching-ids', () => ({}))
   const errors = useState<Record<string, string | null>>('mc-errors', () => ({}))
 
@@ -48,16 +37,12 @@ export const useMinecraftLaunch = (instanceId?: MaybeRefOrGetter<string | undefi
     errors.value = { ...errors.value, [launchId]: null }
     ac.clearLog(launchId)
     launchingIds.value = { ...launchingIds.value, [launchId]: true }
-    // Optimistically stamp "last played" so the library updates instantly
-    // (the backend persists it at launch; we sync from disk afterwards).
     const inst = instances.instances.find(i => i.id === launchId)
     if (inst) inst.last_played = new Date().toISOString()
     await ac.attach()
     try {
       await invoke('launch_instance', { id: launchId, quickPlay: quickPlay ?? null })
-      // Anonymous stats: which loader/MC version actually gets played.
       telemetry.track('launch', { loader: inst?.loader.type, mc: inst?.mc_version })
-      // Sync playtime / last_played from disk once the game has started.
       instances.load()
     } catch (e) {
       errors.value = { ...errors.value, [launchId]: String(e) }

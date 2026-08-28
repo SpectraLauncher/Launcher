@@ -1,15 +1,7 @@
-//! Minecraft Server List Ping (SLP) protocol implementation.
-//!
-//! Sends a Handshake → Status Request → reads Status Response → Ping/Pong
-//! to measure latency and retrieve server metadata without actually joining.
-//! All I/O is wrapped in a 3-second timeout to keep the UI snappy on offline
-//! or slow servers.
-
 use serde::Serialize;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
-/// Metadata returned after a successful server ping.
 #[derive(Serialize, Clone)]
 pub struct PingResult {
     pub latency_ms: u64,
@@ -17,25 +9,15 @@ pub struct PingResult {
     pub protocol: i64,
     pub online: i64,
     pub max: i64,
-    /// Plain-text MOTD (§ formatting codes stripped).
     pub motd: String,
-    /// Favicon as a `data:image/png;base64,…` URL, or `None`.
     pub favicon: Option<String>,
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Tauri command
-// ──────────────────────────────────────────────────────────────────────────────
-
-/// Pings a Minecraft server using SLP and returns its status.
-/// Resolves quickly even for unreachable servers (3-second hard timeout).
 #[tauri::command]
 pub async fn ping_server(host: String, port: Option<u16>) -> Result<PingResult, String> {
     let port = port.unwrap_or(25565);
     let addr = format!("{host}:{port}");
 
-    // One hard timeout over the whole exchange (connect + handshake + status +
-    // ping), so a server that accepts the socket but never replies can't hang us.
     tokio::time::timeout(std::time::Duration::from_secs(3), async {
         let stream = TcpStream::connect(&addr)
             .await
@@ -46,30 +28,23 @@ pub async fn ping_server(host: String, port: Option<u16>) -> Result<PingResult, 
     .map_err(|_| "timeout".to_string())?
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Protocol implementation
-// ──────────────────────────────────────────────────────────────────────────────
-
 async fn do_ping(mut s: TcpStream, host: &str, port: u16) -> Result<PingResult, String> {
-    // ── Handshake (next_state = 1 = Status) ───────────────────────────
     {
         let mut body = Vec::new();
-        write_varint(&mut body, 0x00); // packet id
-        write_varint(&mut body, -1); // protocol version: -1 = "any"
+        write_varint(&mut body, 0x00);
+        write_varint(&mut body, -1);
         write_string(&mut body, host);
         body.extend_from_slice(&port.to_be_bytes());
-        write_varint(&mut body, 1); // next state: status
+        write_varint(&mut body, 1);
         send_packet(&mut s, &body).await?;
     }
 
-    // ── Status Request (empty body, packet id 0x00) ────────────────────
     {
         let mut body = Vec::new();
         write_varint(&mut body, 0x00);
         send_packet(&mut s, &body).await?;
     }
 
-    // ── Status Response ────────────────────────────────────────────────
     let json_str = {
         let body = recv_packet(&mut s).await?;
         let mut cur = 0usize;
@@ -80,23 +55,18 @@ async fn do_ping(mut s: TcpStream, host: &str, port: u16) -> Result<PingResult, 
         String::from_utf8_lossy(bytes).into_owned()
     };
 
-    // ── Ping / Pong ────────────────────────────────────────────────────
     let latency_ms = {
         let mut body = Vec::new();
-        write_varint(&mut body, 0x01); // packet id
-        body.extend_from_slice(&1i64.to_be_bytes()); // arbitrary payload
+        write_varint(&mut body, 0x01);
+        body.extend_from_slice(&1i64.to_be_bytes());
         let t = std::time::Instant::now();
         send_packet(&mut s, &body).await?;
-        let _ = recv_packet(&mut s).await; // discard pong
+        let _ = recv_packet(&mut s).await;
         t.elapsed().as_millis() as u64
     };
 
     parse_status(&json_str, latency_ms)
 }
-
-// ──────────────────────────────────────────────────────────────────────────────
-// JSON parsing
-// ──────────────────────────────────────────────────────────────────────────────
 
 fn parse_status(json: &str, latency_ms: u64) -> Result<PingResult, String> {
     let v: serde_json::Value =
@@ -112,7 +82,6 @@ fn parse_status(json: &str, latency_ms: u64) -> Result<PingResult, String> {
     Ok(PingResult { latency_ms, version, protocol, online, max, motd, favicon })
 }
 
-/// Recursively extracts plain text from a Minecraft chat component.
 fn flatten_chat(v: &serde_json::Value) -> String {
     match v {
         serde_json::Value::String(s) => strip_codes(s),
@@ -132,7 +101,6 @@ fn flatten_chat(v: &serde_json::Value) -> String {
     }
 }
 
-/// Removes Minecraft `§x` color/formatting codes.
 fn strip_codes(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     let mut skip = false;
@@ -149,10 +117,6 @@ fn strip_codes(s: &str) -> String {
     }
     out
 }
-
-// ──────────────────────────────────────────────────────────────────────────────
-// I/O helpers
-// ──────────────────────────────────────────────────────────────────────────────
 
 async fn send_packet(s: &mut TcpStream, body: &[u8]) -> Result<(), String> {
     let mut packet = Vec::with_capacity(5 + body.len());

@@ -1,8 +1,4 @@
 <script setup lang="ts">
-// Titlebar toggle for the account panel. Doubles as the notification badge —
-// the panel is hidden completely when collapsed, so this is the only place an
-// invite can announce itself.
-
 const panel = useAccountPanel()
 const account = useSpectraAccount()
 const notifications = useSpectraNotifications()

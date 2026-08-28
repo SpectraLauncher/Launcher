@@ -1,7 +1,6 @@
 <template>
   <UContextMenu :items="contextItems">
     <div class="h-full overflow-y-auto p-8" @contextmenu.capture="onContext">
-      <!-- header -->
       <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 class="text-2xl font-bold tracking-tight">{{ $t('library.title') }}</h1>
@@ -14,7 +13,6 @@
         </div>
       </div>
 
-      <!-- sponsored section (always on top; hidden when SPONSORS is empty or user dismissed) -->
       <section v-if="sponsor.visible.value && !filtering" class="mb-8">
         <div class="mb-3.5 flex items-center gap-2">
           <span class="flex items-center gap-1.5 text-sm font-semibold text-amber-400">
@@ -36,7 +34,6 @@
               <div class="flex items-center gap-2">
                 <span class="truncate font-semibold">{{ s.title }}</span>
                 <UBadge color="warning" variant="subtle" size="xs" :label="$t('library.sponsoredBadge')" />
-                <!-- type badge -->
                 <UBadge
                   v-if="s.type !== 'modpack'"
                   color="neutral"
@@ -46,7 +43,6 @@
                 />
               </div>
               <p class="mt-1 line-clamp-2 text-xs text-muted">{{ s.description }}</p>
-              <!-- server address -->
               <p v-if="s.type === 'server' && (s as any).address" class="mt-0.5 font-mono text-xs text-amber-300/70">{{ (s as any).address }}</p>
             </div>
             <span class="hidden shrink-0 items-center gap-1.5 rounded-lg bg-amber-500/15 px-3 py-2 text-sm font-medium text-amber-300 transition group-hover:bg-amber-500/25 sm:flex">
@@ -57,7 +53,6 @@
         </div>
       </section>
 
-      <!-- skeleton grid during the first load -->
       <div
         v-if="instances.loading && !instances.loaded"
         class="grid gap-3.5"
@@ -78,19 +73,16 @@
         </div>
       </div>
 
-      <!-- empty library -->
       <div v-else-if="!instances.instances.length" class="flex flex-col items-center justify-center gap-4 py-24 text-center">
         <UIcon name="i-lucide-box" class="size-12 text-neutral-600" />
         <p class="text-sm text-muted">{{ $t('library.empty') }}</p>
         <UButton icon="i-lucide-plus" :label="$t('nav.newInstance')" @click="openCreate()" />
       </div>
 
-      <!-- no results -->
       <div v-else-if="filtering && totalVisible === 0" class="py-24 text-center text-sm text-muted">
         {{ $t('library.noResults') }}
       </div>
 
-      <!-- groups (the whole list is draggable to reorder groups) -->
       <VueDraggable
         v-else
         v-model="layout.groups.value"
@@ -105,7 +97,6 @@
       >
         <section v-for="group in layout.groups.value" v-show="!filtering || visibleCount(group) > 0" :key="group.id">
           <div class="group/h mb-3.5 flex items-center gap-2">
-            <!-- collapse toggle -->
             <button
               type="button"
               class="flex items-center gap-1.5 rounded-md py-0.5 text-sm font-semibold text-neutral-300 transition hover:text-white"
@@ -117,7 +108,6 @@
               />
               {{ group.name ?? $t('library.ungrouped') }}
             </button>
-            <!-- drag handle (named groups only) -->
             <UIcon
               v-if="group.name && !filtering"
               name="i-lucide-grip-vertical"
@@ -163,7 +153,6 @@
               @click="enter(item.id)"
             >
               <div class="flex items-center gap-3">
-                <!-- hover the card, launch from the icon -->
                 <div class="relative size-13 shrink-0">
                   <InstanceIcon
                     :instance="item"
@@ -186,7 +175,7 @@
                 <div class="min-w-0 flex-1">
                   <div class="truncate font-semibold">{{ item.name }}</div>
                   <div class="mt-1.5 flex flex-wrap items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><!-- Icon from Lucide by Lucide Contributors - https://github.com/lucide-icons/lucide/blob/main/LICENSE --><path fill="none" stroke="#888888" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 11h4M8 9v4m7-1h.01M18 10h.01m-.69-5H6.68a4 4 0 0 0-3.978 3.59l-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258q-.01-.075-.017-.151A4 4 0 0 0 17.32 5"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="none" stroke="#888888" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 11h4M8 9v4m7-1h.01M18 10h.01m-.69-5H6.68a4 4 0 0 0-3.978 3.59l-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258q-.01-.075-.017-.151A4 4 0 0 0 17.32 5"/></svg>
                     <span class="font-mono text-[11px] text-neutral-400">{{ item.mc_version }}</span>
                     <span class="font-mono text-[11px] text-neutral-400">{{ loaderLabel(item.loader.type) }}</span>
                   </div>
@@ -199,7 +188,6 @@
     </div>
   </UContextMenu>
 
-  <!-- create group modal -->
   <UModal v-model:open="createGroupOpen" :title="$t('library.createGroupTitle')">
     <template #body>
       <UFormField :label="$t('library.groupName')">
@@ -239,22 +227,16 @@ const toast = useToast()
 const { t } = useI18n()
 const { open: openCreate } = useCreateInstanceModal()
 const sponsor = useSponsor()
-const browser = useModrinthBrowser()
+const browser = useContentWindow()
 
-// Opens the appropriate action when a sponsor card is clicked.
 function onSponsorClick(s: ReturnType<typeof useSponsor>['sponsors'][number]) {
   if (s.type === 'modpack' && s.modrinthSlug) {
     browser.open({
       kind: 'modpack',
       mode: 'createModpack',
       query: s.modrinthSlug,
-      onInstalled: (instance) => {
-        instances.load()
-        if (instance) router.push(`/instance/${instance.id}`)
-      },
     })
   } else {
-    // For servers, hosting, and modpacks without a Modrinth slug — open in browser.
     openExternal(s.url).catch(() => {})
   }
 }
@@ -264,13 +246,11 @@ onMounted(async () => {
   layout.reconcile(instances.instances)
 })
 
-// Re-sync the layout when instances are added/removed.
 watch(
   () => instances.instances.map(i => i.id).join(','),
   () => layout.reconcile(instances.instances),
 )
 
-// --- search / filter ---
 const search = ref('')
 const loaderFilter = ref<'all' | LoaderType>('all')
 const loaderFilterItems = computed(() => [
@@ -292,11 +272,6 @@ function matches(item: Instance): boolean {
 const visibleCount = (group: DisplayGroup) => group.items.filter(matches).length
 const totalVisible = computed(() => layout.groups.value.reduce((n, g) => n + visibleCount(g), 0))
 
-// --- navigation / actions ---
-// A drag releases on the same card it grabbed, which fires a `click`. Guard
-// against that so dragging an instance never accidentally opens it. The card
-// only becomes a drag past `fallback-tolerance` pixels, so the shaky hand that
-// moves 1-2px while clicking still opens the instance.
 let suppressClickUntil = 0
 const dragJustEnded = () => Date.now() < suppressClickUntil
 
@@ -305,13 +280,11 @@ const enter = (id: string) => {
   router.push(`/instance/${id}`)
 }
 
-/** Installing or already running — a second launch would be refused anyway. */
 const busy = (id: string) => activity.list.value.some(a => a.instanceId === id)
 
-/** Launches straight from the library; progress shows in the titlebar. */
 const quickPlay = (item: Instance) => {
   if (dragJustEnded() || busy(item.id)) return
-  mc.launch(item.id).catch(() => { /* surfaced by the activity centre */ })
+  mc.launch(item.id).catch(() => {  })
 }
 
 const onInstanceDragStart = () => {
@@ -319,7 +292,6 @@ const onInstanceDragStart = () => {
 }
 const onInstanceDragEnd = () => {
   layout.persist()
-  // Keep the guard alive briefly so the trailing click is swallowed.
   suppressClickUntil = Date.now() + 150
 }
 
@@ -328,7 +300,6 @@ async function play(item: Instance) {
   mc.launch(item.id).catch(() => {})
 }
 
-/** Drops a desktop shortcut that opens `spectra://launch/<id>`. */
 async function createShortcut(item: Instance) {
   try {
     await invoke('create_desktop_shortcut', { id: item.id })
@@ -365,7 +336,6 @@ async function copyPath(item: Instance) {
   }
 }
 
-// --- context menu (dynamic: instance vs empty space) ---
 const contextTarget = ref<Instance | null>(null)
 
 function onContext(e: MouseEvent) {
@@ -401,7 +371,6 @@ const contextItems = computed(() =>
   contextTarget.value ? instanceMenu(contextTarget.value) : emptyMenu.value,
 )
 
-// --- create group ---
 const createGroupOpen = ref(false)
 const newGroupName = ref('')
 
@@ -417,7 +386,6 @@ function confirmCreateGroup() {
 </script>
 
 <style>
-/* Placeholder shown at the drop target while dragging. */
 .mk-card-ghost {
   opacity: 0.4;
   border-style: dashed;
@@ -428,9 +396,6 @@ function confirmCreateGroup() {
   opacity: 0.5;
 }
 
-/* The clone that follows the cursor (forceFallback). It is appended to <body>,
-   so it has no dark app background behind it — give it a solid, opaque surface
-   so the card underneath doesn't bleed through. */
 .sortable-fallback {
   opacity: 1 !important;
   background: var(--ui-bg-elevated, #1c1c1f) !important;

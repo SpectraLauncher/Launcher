@@ -7,38 +7,19 @@ mod store;
 use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
 
-/// Shared runtime state managed by Tauri.
 #[derive(Default)]
 pub struct AppState {
-    /// IDs of instances currently running, to prevent double launches.
     pub running: Mutex<HashSet<String>>,
-    /// Running instance id -> game process PID (for stop/kill).
     pub pids: Mutex<HashMap<String, u32>>,
-    /// Instances adopted from a previous launcher session (live lock files). They
-    /// have no owning wait-task, so stop/kill must clean their state up directly.
     pub adopted: Mutex<HashSet<String>>,
-    /// Lazily-connected Discord Rich Presence client.
+    pub stopping: Mutex<HashSet<String>>,
     pub discord: Mutex<Option<discord_rich_presence::DiscordIpcClient>>,
-    /// Running instance id -> (name, mc_version) for computing Discord presence
-    /// across multiple simultaneous instances.
     pub discord_playing: Mutex<HashMap<String, (String, String)>>,
-    /// Serializes the install/verify phase so two instances can't provision the
-    /// same shared Java runtime concurrently (which would corrupt it).
     pub install_lock: tokio::sync::Mutex<()>,
-    /// Share code from a `spectra://` link that arrived before the UI was ready.
-    /// The frontend drains it on mount (see `take_pending_share`).
     pub pending_share: Mutex<Option<String>>,
-    /// Instance a desktop shortcut asked to launch, when the click is what
-    /// started the launcher. Drained on mount (see `take_pending_launch`).
     pub pending_launch: Mutex<Option<String>>,
 }
 
-/// Routes an incoming `spectra://` URL to the UI. Three kinds arrive: a share
-/// code to open, a one-time token from signing in on the website, and an
-/// instance to launch (desktop shortcuts).
-///
-/// A share code is stashed for the frontend to drain on mount (cold start)
-/// *and* emitted (app already running).
 #[cfg(desktop)]
 fn handle_deep_link(app: &tauri::AppHandle, url: &str) {
     use tauri::{Emitter, Manager};
@@ -56,8 +37,6 @@ fn handle_deep_link(app: &tauri::AppHandle, url: &str) {
     }
 
     if let Some(id) = commands::launch::instance_id_from_url(url) {
-        // Parked as well as emitted: clicking the shortcut is usually what
-        // started the launcher, so no listener exists yet.
         if let Some(state) = app.try_state::<AppState>() {
             if let Ok(mut pending) = state.pending_launch.lock() {
                 *pending = Some(id.clone());
@@ -88,8 +67,6 @@ fn handle_deep_link(app: &tauri::AppHandle, url: &str) {
 pub fn run() {
     let builder = tauri::Builder::default();
 
-    // Must be the very first plugin: it hands a second launch's arguments (i.e.
-    // the clicked `spectra://` link) to the instance that's already running.
     #[cfg(desktop)]
     let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
         use tauri::Manager;
@@ -101,16 +78,12 @@ pub fn run() {
 
     builder
         .manage(AppState::default())
-        // Registered before `setup`, which reaches for `app.deep_link()`.
         .plugin(tauri_plugin_deep_link::init())
         .setup(|app| {
-            // Create the data layout up front so every command can assume it exists.
             if let Err(e) = paths::ensure_base_dirs() {
                 log::error!("failed to create data directories: {e}");
             }
 
-            // Adopt instances still running from a previous launcher session and
-            // clear stale run locks left by games that have since exited.
             commands::launch::reconcile_running(app.handle());
 
             if cfg!(debug_assertions) {
@@ -121,23 +94,16 @@ pub fn run() {
                 )?;
             }
 
-            // Background auto-update (desktop only).
             #[cfg(desktop)]
             {
                 let _ = app.handle().plugin(tauri_plugin_updater::Builder::new().build());
             }
 
-            // `spectra://share/<code>` links from the website.
             #[cfg(desktop)]
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
-                // Needed in dev and on Linux; a no-op once the installer has
-                // registered the scheme for real.
                 let _ = app.deep_link().register_all();
 
-                // The plugin names the scheme after the bundle identifier, so
-                // browsers ask to open "pl.makoto.spectra-launcher". Use the
-                // product name instead — this is the string the user reads.
                 #[cfg(windows)]
                 if let Ok(key) = windows_registry::CURRENT_USER.create("Software\\Classes\\spectra") {
                     let _ = key.set_string("", "URL:Spectra Launcher protocol");
@@ -149,7 +115,6 @@ pub fn run() {
                         handle_deep_link(&handle, url.as_str());
                     }
                 });
-                // Cold start: the launcher was *opened by* the link.
                 if let Ok(Some(urls)) = app.deep_link().get_current() {
                     for url in urls {
                         handle_deep_link(app.handle(), url.as_str());
@@ -166,11 +131,9 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
             paths::get_launcher_paths,
-            // Settings
             commands::settings::get_settings,
             commands::settings::save_settings,
             commands::settings::get_system_memory_mb,
-            // Instances
             commands::instances::list_instances,
             commands::instances::get_instance,
             commands::instances::create_instance,
@@ -192,7 +155,6 @@ pub fn run() {
             commands::instances::open_external,
             commands::instances::copy_file,
             commands::instances::duplicate_instance,
-            // Instance content (tabs)
             commands::content::list_screenshots,
             commands::content::list_worlds,
             commands::content::list_resource_packs,
@@ -209,7 +171,6 @@ pub fn run() {
             commands::content::list_log_files,
             commands::content::read_log_file,
             commands::content::upload_log_to_mclogs,
-            // Auth
             commands::auth::auth_login,
             commands::auth::auth_login_offline,
             commands::auth::auth_get_login_url,
@@ -218,20 +179,15 @@ pub fn run() {
             commands::auth::list_accounts,
             commands::auth::set_active_account,
             commands::auth::remove_account,
-            // Launch
             commands::launch::launch_instance,
             commands::launch::repair_instance,
             commands::launch::is_instance_running,
             commands::launch::stop_instance,
-            // Server ping
             commands::ping::ping_server,
-            // Version metadata (pickers)
             commands::meta::get_minecraft_versions,
             commands::meta::get_loader_versions,
-            // Java detection
             commands::java::detect_java_installations,
             commands::java::validate_java_path,
-            // Modrinth (browse + download content/modpacks)
             commands::modrinth::modrinth_search,
             commands::modrinth::modrinth_versions,
             commands::modrinth::check_mod_updates,
@@ -249,7 +205,6 @@ pub fn run() {
             commands::modrinth::export_mrpack,
             commands::modrinth::check_modpack_update,
             commands::modrinth::update_modpack,
-            // CurseForge
             commands::curseforge::cf_enabled,
             commands::curseforge::curseforge_search,
             commands::curseforge::curseforge_versions,
@@ -265,14 +220,12 @@ pub fn run() {
             commands::curseforge::get_blocked_mods,
             commands::curseforge::resolve_blocked_mods,
             commands::curseforge::default_downloads_dir,
-            // Import / export
             commands::import::detect_external_instances,
             commands::import::import_external_instance,
             commands::import::list_dir,
             commands::import::export_instance,
             commands::import::import_dropped,
             commands::import::write_text_file,
-            // Instance sharing (short codes)
             commands::share::share_preview,
             commands::share::share_instance,
             commands::share::import_share,
@@ -282,17 +235,20 @@ pub fn run() {
             commands::snapshots::restore_snapshot,
             commands::snapshots::delete_snapshot,
             commands::share::take_pending_share,
+            commands::content_window::open_content_window,
+            commands::content_window::content_window_config,
+            commands::content_window::close_content_window,
+            commands::content_window::content_installed,
             commands::spectra::spectra_login_url,
+            commands::spectra::spectra_profile_url,
             commands::spectra::spectra_session,
             commands::spectra::spectra_logout,
             commands::spectra::spectra_api,
             commands::spectra::spectra_link_minecraft,
-            // Mod management
             commands::mods::list_mods,
             commands::mods::list_content,
             commands::mods::set_mod_enabled,
             commands::mods::delete_mod,
-            // Skins
             commands::skins::list_skins,
             commands::skins::save_skin,
             commands::skins::set_skin_model,

@@ -1,6 +1,5 @@
 const KEY = 'spectra-onboarded'
 
-/** First-run wizard state. The completion flag lives in localStorage. */
 export const useOnboarding = () => {
   const open = useState('onboarding-open', () => false)
 

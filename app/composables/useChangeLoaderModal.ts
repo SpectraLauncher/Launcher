@@ -1,4 +1,3 @@
-/** Global state for the "change loader" dialog (instance page + settings). */
 export const useChangeLoaderModal = () => {
   const isOpen = useState('change-loader-open', () => false)
   const instanceId = useState<string | null>('change-loader-instance', () => null)

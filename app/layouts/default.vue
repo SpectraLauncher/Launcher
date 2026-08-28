@@ -1,7 +1,6 @@
 <template>
   <div class="app h-full w-full flex">
 
-
       <div class="flex flex-col w-64 px-4 h-full py-4 backdrop-blur-lg">
 
         <SelectedInstanceCard />
@@ -22,9 +21,7 @@
         </div>
 
         <div class="flex flex-1 min-h-0 flex-col gap-2 py-4 mt-4 border-t border-gray-800">
-          <!-- instances list -->
           <div class="flex-1 min-h-0 overflow-y-auto flex flex-col gap-1">
-            <!-- skeleton rows during the first load -->
             <template v-if="instances.loading && !instances.loaded">
               <div v-for="n in 6" :key="`inst-sk-${n}`" class="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5">
                 <div class="size-7 shrink-0 animate-pulse rounded-md bg-white/5" />
@@ -46,21 +43,18 @@
           </button>
         </div>
 
-
       </div>
       <div class="flex-1 w-full rounded-tl-xl border-t border-l border-[#13161d]">
         <slot />
       </div>
 
     <CreateInstanceModal />
-    <ModrinthBrowser />
     <ExportInstanceModal />
     <ExportModListModal />
     <LinkModsModal />
     <BlockedModsModal />
     <OnboardingModal />
 
-    <!-- drag & drop overlay -->
     <Transition name="fade">
       <div v-if="dragging" class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
         <div class="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-primary-500/60 bg-primary-500/10 px-12 py-10">
@@ -97,9 +91,7 @@ onMounted(() => {
   accounts.load()
 })
 
-// --- drag & drop ---
 const dragging = ref(false)
-// The instance currently being viewed (drops add content to it).
 const currentInstanceId = computed(() => (route.path.startsWith('/instance/') ? String(route.params.id) : null))
 const onInstance = computed(() => currentInstanceId.value !== null)
 
@@ -144,21 +136,15 @@ async function handleDrop(paths: string[]) {
   }
 }
 
-// Skins only apply to Microsoft accounts (Mojang skin API needs a real session).
 const isMicrosoft = computed(() => accounts.activeAccount?.kind === 'microsoft')
 
 interface MenuItem {
-  /** Route path. */
   to: string
-  /** i18n key for the label. */
   label: string
-  /** Inner SVG markup for the 24x24 icon (kept inline so icons work offline). */
   icon: string
-  /** Only show this item when the active account is a Microsoft account. */
   microsoftOnly?: boolean
 }
 
-// Sidebar menu. Add an entry here to add a sidebar item — no markup to repeat.
 const allMenu: MenuItem[] = [
   {
     to: '/',

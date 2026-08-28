@@ -1,7 +1,6 @@
-//! Tauri command modules, grouped by domain.
-
 pub mod auth;
 pub mod content;
+pub mod content_window;
 pub mod curseforge;
 pub mod import;
 pub mod instances;

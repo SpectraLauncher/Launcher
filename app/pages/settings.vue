@@ -4,7 +4,6 @@
       <h1 class="shrink-0 text-2xl font-bold tracking-tight">{{ t('settings.title') }}</h1>
 
       <div class="grid min-h-0 flex-1 grid-cols-1 gap-6 md:grid-cols-[220px_1fr]">
-        <!-- sub-nav -->
         <nav class="flex flex-col gap-1 relative">
           <button
             v-for="s in sections"
@@ -20,9 +19,7 @@
 
         </nav>
 
-        <!-- content -->
         <div class="min-w-0 min-h-0 space-y-6 overflow-y-auto px-2">
-          <!-- Appearance -->
           <template v-if="section === 'appearance'">
             <div>
               <p class="text-sm font-medium">{{ t('settings.appearance.theme') }}</p>
@@ -69,14 +66,12 @@
             </div>
           </template>
 
-          <!-- Language -->
           <template v-else-if="section === 'language'">
             <UFormField :label="t('settings.language.title')" :description="t('settings.language.auto')">
               <USelect :model-value="locale" :items="localeItems" value-key="value" class="w-56" @update:model-value="onLocaleChange" />
             </UFormField>
           </template>
 
-          <!-- Privacy -->
           <template v-else-if="section === 'privacy' && settings">
             <div
               v-for="opt in privacyOptions"
@@ -94,7 +89,6 @@
             </div>
           </template>
 
-          <!-- Java installations -->
           <template v-else-if="section === 'java'">
             <div class="flex items-start justify-between gap-3">
               <div>
@@ -135,7 +129,6 @@
             </UFormField>
           </template>
 
-          <!-- Default instance options -->
           <template v-else-if="section === 'defaults' && settings">
             <UFormField :label="t('settings.defaults.memory')" :description="t('settings.defaults.memoryDesc')">
               <div class="flex items-center gap-3 pt-1">
@@ -188,7 +181,6 @@
             </UFormField>
           </template>
 
-          <!-- Accounts -->
           <template v-else-if="section === 'accounts'">
             <p v-if="!accounts.accounts.length" class="text-sm text-muted">{{ t('settings.accounts.noAccounts') }}</p>
             <ul v-else class="space-y-2">
@@ -281,9 +273,10 @@ const sections: { key: Section; icon: string }[] = [
 ]
 const section = ref<Section>('appearance')
 
-type PrivacyKey = 'track_playtime' | 'discord_rpc' | 'crash_reports' | 'anonymous_stats'
+type PrivacyKey = 'track_playtime' | 'share_activity' | 'discord_rpc' | 'crash_reports' | 'anonymous_stats'
 const privacyOptions: { key: PrivacyKey; wip?: boolean }[] = [
   { key: 'track_playtime' },
+  { key: 'share_activity' },
   { key: 'discord_rpc' },
   { key: 'crash_reports', wip: true },
   { key: 'anonymous_stats' },
@@ -300,7 +293,7 @@ onMounted(async () => {
   getVersion().then((v) => { version.value = v })
   try {
     settings.value = await invoke<Settings>('get_settings')
-  } catch { /* keep null */ }
+  } catch {  }
 })
 
 const defJavaArgs = computed({
@@ -317,7 +310,6 @@ async function browseDefaultJava() {
   if (typeof p === 'string' && settings.value) settings.value.default_java_path = p
 }
 
-// Persist settings (debounced) on any change.
 let saveTimer: ReturnType<typeof setTimeout> | undefined
 watch(settings, () => {
   if (!settings.value) return
@@ -326,7 +318,6 @@ watch(settings, () => {
   saveTimer = setTimeout(() => invoke('save_settings', { settings: snapshot }).catch(() => {}), 500)
 }, { deep: true })
 
-// Toggle anonymous telemetry on/off the moment the user flips the switch.
 const telemetry = useTelemetry()
 watch(() => settings.value?.anonymous_stats, (on) => {
   if (on !== undefined) telemetry.setEnabled(on)
@@ -354,7 +345,7 @@ const avatarUrl = (acc: Account) =>
   acc.kind === 'microsoft' ? `https://crafatar.com/avatars/${acc.uuid}?overlay` : undefined
 
 const onMicrosoftLogin = async () => {
-  try { await accounts.login() } catch { /* error shown via store */ }
+  try { await accounts.login() } catch {  }
 }
 const onOfflineLogin = async () => {
   const name = offlineName.value.trim()
@@ -362,6 +353,6 @@ const onOfflineLogin = async () => {
   try {
     await accounts.loginOffline(name)
     offlineName.value = ''
-  } catch { /* error shown via store */ }
+  } catch {  }
 }
 </script>

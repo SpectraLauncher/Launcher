@@ -1,6 +1,4 @@
 <template>
-  <!-- Card from the Spectra design, showing the instance the player launched most
-       recently (last played). -->
   <div class="mb-6 rounded-[15px] border border-primary-500/25 bg-linear-[160deg] from-primary-500/15 to-primary-500/5 p-[13px]">
     <div class="mb-[9px] text-[10px] font-semibold tracking-[0.12em] text-primary-300">
       {{ $t('instanceCard.title') }}
@@ -44,8 +42,6 @@ onMounted(() => {
   if (!instances.instances.length) instances.load()
 })
 
-// The instance the player launched most recently. If nothing has been played
-// yet, there's no "last played" — show the empty state.
 const selected = computed<Instance | undefined>(() => {
   const played = instances.instances.filter(i => i.last_played)
   if (!played.length) return undefined
@@ -61,6 +57,6 @@ const play = async () => {
   if (!selected.value) return
   try {
     await mc.launch(selected.value.id)
-  } catch { /* error surfaced via useMinecraftLaunch().error */ }
+  } catch {  }
 }
 </script>

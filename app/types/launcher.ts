@@ -1,8 +1,5 @@
-// Mirrors the serde types in src-tauri/src/models.rs.
-
 export type LoaderType = 'vanilla' | 'fabric' | 'quilt' | 'forge' | 'neoforge'
 
-// serde tag = "type", content = "version". Vanilla has no version.
 export type Loader =
   | { type: 'vanilla' }
   | { type: 'fabric'; version: string }
@@ -22,10 +19,8 @@ export interface Instance {
   created_at: string
   last_played?: string | null
   playtime_seconds: number
-  /// Present when the instance came from a share code that belongs to someone.
   share_origin?: { code: string, revision: number, item_ids: string[] } | null
 
-  // per-instance launch overrides
   override_memory: boolean
   override_window: boolean
   fullscreen: boolean
@@ -79,12 +74,11 @@ export interface Settings {
   default_wrapper?: string
   default_post_exit?: string
   track_playtime: boolean
+  share_activity: boolean
   discord_rpc: boolean
   crash_reports: boolean
   anonymous_stats: boolean
-  /** Take a restore point before anything that rewrites an instance's content. */
   snapshot_before_updates: boolean
-  /** How many automatic restore points to keep per instance. */
   snapshot_keep: number
 }
 
@@ -96,9 +90,8 @@ export interface SavedSkin {
   created_at: string
 }
 
-// The logged-in player's current skin (mirrors PlayerSkin in skins.rs).
 export interface PlayerSkin {
-  skin: string // data: URL
+  skin: string
   slim: boolean
 }
 
@@ -111,8 +104,6 @@ export interface LauncherPaths {
   logs: string
 }
 
-// Payloads emitted from the Rust launch/install flow. All carry the instance_id
-// they belong to so concurrent activity can be attributed.
 export interface MultiProgress { instance_id: string; current: number; total: number }
 export interface FileProgress { instance_id: string; path: string; current: number; total: number }
 export interface ConsoleLine { instance_id: string; line: string }
@@ -121,16 +112,13 @@ export interface ExitInfo { instance_id: string; code: number | null }
 export interface CrashInfo {
   instance_id: string
   code: number | null
-  /** Relative path from the game dir, e.g. "crash-reports/crash-2026-06-22_13.21.01-client.txt" */
   crash_report_rel: string | null
 }
 
-/** Quick Play payload — mirrors QuickPlay in launch.rs. MC 1.20+ only. */
 export type QuickPlay =
   | { kind: 'Singleplayer'; world: string }
   | { kind: 'Multiplayer'; host: string; port?: number }
 
-/** Server ping result — mirrors PingResult in ping.rs. */
 export interface PingResult {
   latency_ms: number
   version: string
@@ -141,7 +129,6 @@ export interface PingResult {
   favicon: string | null
 }
 
-// Instance content (instance page tabs), mirrors src-tauri/src/commands/content.rs.
 export interface ScreenshotInfo { name: string; path: string; modified: number }
 export interface WorldInfo {
   folder: string
@@ -162,14 +149,12 @@ export interface PackInfo {
 }
 export interface ShaderInfo { name: string; filename: string; is_zip: boolean; enabled: boolean }
 export interface ServerInfo { name: string; ip: string; icon: string | null; hidden: boolean }
-// A child entry of a game-dir folder for the export file tree (import.rs).
 export interface DirChild {
   name: string
   is_dir: boolean
   size: number
 }
 
-// An instance discovered in another launcher's data dir (import.rs).
 export interface ExternalInstance {
   launcher: 'prism' | 'curseforge' | 'modrinth'
   name: string
@@ -180,7 +165,6 @@ export interface ExternalInstance {
   loader_version: string | null
 }
 
-// A CurseForge mod blocked from third-party download (mirrors BlockedMod in curseforge.rs).
 export interface BlockedMod {
   name: string
   filename: string
@@ -198,9 +182,6 @@ export interface LogFile {
   size: number
 }
 
-// --- instance sharing (mirrors share.rs) ---
-
-/** A content file with no provider behind it — shareable only as raw bytes. */
 export interface UnresolvedFile {
   path: string
   size: number
@@ -209,7 +190,6 @@ export interface UnresolvedFile {
 export interface SharePreview {
   modrinth: number
   curseforge: number
-  /** Content files that match no provider, each pickable on its own. */
   unresolved: UnresolvedFile[]
   unresolved_bytes: number
 }
@@ -217,7 +197,6 @@ export interface SharePreview {
 export interface ShareResult {
   code: string
   url: string
-  /** Unix ms when the code stops working. */
   expires: number
 }
 
@@ -225,11 +204,9 @@ export interface ShareImportResult {
   instance: Instance
   installed: number
   failed: string[]
-  /** CurseForge items skipped because there's no CurseForge API key. */
   needs_curseforge: number
 }
 
-// A mod in an instance's mods/ folder (mirrors ModEntry in mods.rs).
 export interface ModEntry {
   filename: string
   enabled: boolean

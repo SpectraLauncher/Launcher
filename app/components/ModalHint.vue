@@ -6,6 +6,4 @@
 </template>
 
 <script setup lang="ts">
-// A one-line footnote for a modal footer: says what the dialog is about to do
-// when that isn't obvious from the controls. Sits left of the buttons.
 </script>

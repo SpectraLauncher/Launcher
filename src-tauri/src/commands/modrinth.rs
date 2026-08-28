@@ -1,13 +1,3 @@
-//! Modrinth (https://modrinth.com) integration: search, version listing and
-//! downloading content into instances. Used by the in-app Modrinth browser to
-//! add mods/shaders/datapacks/resourcepacks to an instance, and to create an
-//! instance from a modpack (`.mrpack`).
-//!
-//! Modrinth API v2: https://docs.modrinth.com/api/. All HTTP goes through Rust
-//! (reqwest) so we can set a proper User-Agent and avoid CORS. Note: on Modrinth
-//! loaders are part of the `categories` facet, and datapacks are
-//! `project_type:mod` with `categories:datapack`.
-
 use std::collections::HashMap;
 use std::io::{Cursor, Read, Write};
 use std::path::{Component, Path, PathBuf};
@@ -22,9 +12,6 @@ use crate::{paths, store};
 const API: &str = "https://api.modrinth.com/v2";
 const USER_AGENT: &str = concat!("MakotoPD/Spectra-Launcher/", env!("CARGO_PKG_VERSION"), " (spectra launcher)");
 
-/// One shared client reused for every request, so connections are pooled instead
-/// of opening a fresh client (and TLS handshake) per call. Cloning is cheap — a
-/// `reqwest::Client` is an `Arc` internally.
 fn http() -> reqwest::Client {
     static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
     CLIENT
@@ -37,22 +24,15 @@ fn http() -> reqwest::Client {
         .clone()
 }
 
-/// Back-compat for the existing `client()?` call sites.
 fn client() -> Result<reqwest::Client, String> {
     Ok(http())
 }
 
-/// Bounds how many Modrinth requests are in flight at once so parallel callers
-/// (update checks, installed-state probes, dependency resolution, …) never burst
-/// past the API rate limit (~300/min). 6 keeps things responsive without 429s.
 fn rate_gate() -> &'static tokio::sync::Semaphore {
     static SEM: std::sync::OnceLock<tokio::sync::Semaphore> = std::sync::OnceLock::new();
     SEM.get_or_init(|| tokio::sync::Semaphore::new(6))
 }
 
-/// Sends a request through the concurrency gate, transparently retrying on HTTP
-/// 429 (rate limited). Honors the server's `Retry-After` header when present,
-/// otherwise backs off exponentially (1,2,4,8,16s, capped at 15s).
 async fn send(req: reqwest::RequestBuilder) -> Result<reqwest::Response, String> {
     let _permit = rate_gate().acquire().await.map_err(|e| e.to_string())?;
     let mut attempt: u32 = 0;
@@ -73,21 +53,16 @@ async fn send(req: reqwest::RequestBuilder) -> Result<reqwest::Response, String>
     }
 }
 
-// ===== Search =====
-
 #[derive(Deserialize)]
 pub struct SearchParams {
     query: String,
-    /// "mod" | "modpack" | "resourcepack" | "shader"
     project_type: String,
     #[serde(default)]
     loaders: Vec<String>,
     #[serde(default)]
     game_versions: Vec<String>,
-    /// Extra category facets (e.g. "datapack", genres). Each is AND-ed.
     #[serde(default)]
     categories: Vec<String>,
-    /// "relevance" | "downloads" | "follows" | "newest" | "updated"
     #[serde(default = "default_index")]
     index: String,
     #[serde(default)]
@@ -130,7 +105,6 @@ pub struct SearchResponse {
 
 #[tauri::command]
 pub async fn modrinth_search(params: SearchParams) -> Result<SearchResponse, String> {
-    // facets: AND between arrays, OR within an array.
     let mut facets: Vec<Vec<String>> = vec![vec![format!("project_type:{}", params.project_type)]];
 
     if !params.loaders.is_empty() {
@@ -159,8 +133,6 @@ pub async fn modrinth_search(params: SearchParams) -> Result<SearchResponse, Str
     }
     resp.json::<SearchResponse>().await.map_err(|e| e.to_string())
 }
-
-// ===== Versions =====
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct VersionFileHashes {
@@ -224,8 +196,6 @@ pub async fn modrinth_versions(
     resp.json::<Vec<Version>>().await.map_err(|e| e.to_string())
 }
 
-/// Matches a single local jar against Modrinth by sha1 and records it if found.
-/// Returns whether a match was recorded. Used by the provider-choice link dialog.
 #[tauri::command]
 pub async fn modrinth_match_file(instance_id: String, filename: String) -> Result<bool, String> {
     use sha1::{Digest, Sha1};
@@ -273,8 +243,6 @@ pub async fn modrinth_match_file(instance_id: String, filename: String) -> Resul
         dependencies: Vec::new(),
         installed_at: chrono::Utc::now().to_rfc3339(),
         provider: "modrinth".to_string(),
-        // COMPAT: the author needs a separate members call, so it stays empty
-        // until the backfill pass fetches it.
         author: None,
         env: project
             .as_ref()
@@ -289,13 +257,10 @@ pub async fn modrinth_match_file(instance_id: String, filename: String) -> Resul
 #[derive(Serialize)]
 pub struct ModUpdate {
     project_id: String,
-    /// Latest compatible version id (newer than what's installed).
     version_id: String,
     version_number: String,
 }
 
-/// sha1 of each Modrinth mod's on-disk jar, paired with its index entry. Used to
-/// query Modrinth's bulk update endpoint (one request for all mods).
 fn hash_modrinth_mods(instance_id: &str, index: &ContentIndex) -> Vec<(String, InstalledItem)> {
     use sha1::{Digest, Sha1};
     let dir = paths::instance_game_dir(instance_id).join("mods");
@@ -314,8 +279,6 @@ fn hash_modrinth_mods(instance_id: &str, index: &ContentIndex) -> Vec<(String, I
     out
 }
 
-/// Bulk "latest compatible version per file hash" via `POST /version_files/update`.
-/// One request resolves updates for every mod — avoids per-mod requests (429s).
 async fn bulk_latest_versions(
     hashes: &[String],
     loaders: &Option<Vec<String>>,
@@ -338,8 +301,6 @@ async fn bulk_latest_versions(
     resp.json::<HashMap<String, Version>>().await.map_err(|e| e.to_string())
 }
 
-/// For each installed mod, checks for a newer compatible version. Modrinth mods
-/// are resolved in a single bulk request; CurseForge mods per-project.
 #[tauri::command]
 pub async fn check_mod_updates(
     instance_id: String,
@@ -349,7 +310,6 @@ pub async fn check_mod_updates(
     let index = read_content_index(&instance_id);
     let mut out = Vec::new();
 
-    // Modrinth — one bulk request for all mods.
     let hashed = hash_modrinth_mods(&instance_id, &index);
     if !hashed.is_empty() {
         let hashes: Vec<String> = hashed.iter().map(|(h, _)| h.clone()).collect();
@@ -368,7 +328,6 @@ pub async fn check_mod_updates(
         }
     }
 
-    // CurseForge — one bulk request for all CF mods.
     let cf_items: Vec<&InstalledItem> =
         index.items.iter().filter(|i| i.kind == "mod" && i.provider == "curseforge").collect();
     if !cf_items.is_empty() {
@@ -389,9 +348,6 @@ pub async fn check_mod_updates(
     Ok(out)
 }
 
-/// Updates every Modrinth mod at once: one bulk version lookup, then concurrent
-/// CDN downloads — no per-mod API calls. Returns how many were updated.
-/// (CurseForge mods are updated individually by the frontend.)
 #[tauri::command]
 pub async fn update_all_mods(
     instance_id: String,
@@ -408,7 +364,6 @@ pub async fn update_all_mods(
     let hashes: Vec<String> = hashed.iter().map(|(h, _)| h.clone()).collect();
     let map = bulk_latest_versions(&hashes, &loaders, &game_versions).await?;
 
-    // Plan which mods actually have a newer version.
     let mut plan: Vec<(usize, Version)> = Vec::new();
     for (hash, item) in &hashed {
         if let Some(v) = map.get(hash) {
@@ -423,7 +378,6 @@ pub async fn update_all_mods(
         return Ok(0);
     }
 
-    // Download new files concurrently from the CDN.
     let sem = std::sync::Arc::new(tokio::sync::Semaphore::new(8));
     let mut set = tokio::task::JoinSet::new();
     for (pos, v) in plan {
@@ -453,7 +407,6 @@ pub async fn update_all_mods(
         item.filename = new_filename;
         item.game_versions = v.game_versions;
         item.loaders = v.loaders;
-        // Refresh required-dependency links in case the new version changed them.
         item.dependencies = v
             .dependencies
             .iter()
@@ -466,8 +419,6 @@ pub async fn update_all_mods(
     write_content_index(&instance_id, &index)?;
     Ok(updated)
 }
-
-// ===== Categories (for filter chips) =====
 
 #[derive(Deserialize)]
 struct RawCategory {
@@ -493,13 +444,10 @@ pub async fn modrinth_categories(project_type: String) -> Result<Vec<Category>, 
         .collect())
 }
 
-// ===== Installed-content index (instances/<id>/content.json) =====
-
 #[derive(Serialize, Deserialize, Clone, Default)]
 pub struct InstalledItem {
     pub project_id: String,
     pub version_id: String,
-    /// "mod" | "shader" | "datapack" | "resourcepack"
     pub kind: String,
     pub name: String,
     pub filename: String,
@@ -507,29 +455,15 @@ pub struct InstalledItem {
     pub icon_url: Option<String>,
     pub game_versions: Vec<String>,
     pub loaders: Vec<String>,
-    /// Was this auto-installed as a dependency of another project?
     pub dependency: bool,
-    /// Project ids this item requires (recorded at install time). Lets deletion
-    /// offer to remove orphaned dependencies. Empty for older installs.
     #[serde(default)]
     pub dependencies: Vec<String>,
     pub installed_at: String,
-    /// "modrinth" | "curseforge" — which provider this came from (for updates).
     #[serde(default = "default_provider")]
     pub provider: String,
 
-    // --- added in 0.6.4, for the content filters ---
-    //
-    // COMPAT(drop after 0.7): both are optional so an index written by an older
-    // launcher still parses — anything installed before this reads as `None`
-    // and shows up under "unknown" in the filters. Once nobody is carrying a
-    // pre-0.6.4 index, these can become plain fields and the "unknown" bucket
-    // can go with them.
-    /// Project author, as the provider reports it.
     #[serde(default)]
     pub author: Option<String>,
-    /// Where the project runs: "client", "server", "both", "singleplayer", or
-    /// `None` when the provider does not say — CurseForge often does not.
     #[serde(default)]
     pub env: Option<String>,
 }
@@ -554,16 +488,6 @@ pub fn write_content_index(instance_id: &str, index: &ContentIndex) -> Result<()
     store::write_json(&paths::instance_content_index(instance_id), index)
 }
 
-/// True when a *different* provider already supplies this project.
-///
-/// Project ids don't cross platforms — CurseForge says `238222` where Modrinth
-/// says `u6dRKJwZ` — so the `visited` set can't tell that a CurseForge dependency
-/// is the mod you already have from Modrinth. Two things do line up across both
-/// platforms: the project name and the jar filename (same build, same file), and
-/// either one is enough to stop a dependency from downloading a second copy and
-/// hijacking the index entry. Matching both covers projects listed under
-/// different names ("JEI" vs "Just Enough Items") and jars renamed per platform.
-/// Used by both providers' `install_rec`.
 pub fn installed_by_other_provider(
     index: &ContentIndex,
     name: &str,
@@ -579,35 +503,29 @@ pub fn installed_by_other_provider(
     })
 }
 
-/// The content currently recorded as installed in an instance.
 #[tauri::command]
 pub fn get_installed_content(instance_id: String) -> Result<Vec<InstalledItem>, String> {
     Ok(read_content_index(&instance_id).items)
 }
 
-/// A potential problem with an installed mod (e.g. wrong loader).
 #[derive(Serialize)]
 pub struct Conflict {
     filename: String,
     name: String,
-    /// "loader" | "duplicate"
     kind: String,
     detail: String,
 }
 
-/// Loaders a given instance loader can actually run.
 fn accepted_loaders(loader: &Loader) -> Vec<&'static str> {
     match loader {
         Loader::Fabric(_) => vec!["fabric"],
-        Loader::Quilt(_) => vec!["quilt", "fabric"], // Quilt runs Fabric mods
+        Loader::Quilt(_) => vec!["quilt", "fabric"],
         Loader::Forge(_) => vec!["forge"],
         Loader::NeoForge(_) => vec!["neoforge"],
         Loader::Vanilla => vec![],
     }
 }
 
-/// Scans an instance's recorded mods for likely problems: mods built for a
-/// different loader, or mods on a vanilla (loader-less) instance.
 #[tauri::command]
 pub fn check_conflicts(instance_id: String) -> Result<Vec<Conflict>, String> {
     let instance: Instance =
@@ -623,7 +541,6 @@ pub fn check_conflicts(instance_id: String) -> Result<Vec<Conflict>, String> {
     let index = read_content_index(&instance_id);
     let mut out = Vec::new();
 
-    // Check for compatibility mods (e.g. Sinytra Connector, Forgified Fabric API)
     let has_fabric_compat = index.items.iter().filter(|i| i.kind == "mod").any(|i| {
         let name = i.name.to_lowercase();
         let file = i.filename.to_lowercase();
@@ -635,7 +552,6 @@ pub fn check_conflicts(instance_id: String) -> Result<Vec<Conflict>, String> {
         accepted.push("fabric");
     }
 
-    // Duplicate project ids (the same mod recorded twice).
     let mut seen: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
     for item in &index.items {
         *seen.entry(item.project_id.as_str()).or_insert(0) += 1;
@@ -643,7 +559,6 @@ pub fn check_conflicts(instance_id: String) -> Result<Vec<Conflict>, String> {
 
     for item in index.items.iter().filter(|i| i.kind == "mod") {
         let loaders: Vec<String> = item.loaders.iter().map(|l| l.to_lowercase()).collect();
-        // loader-agnostic content carries these instead of a real loader
         let agnostic = loaders.iter().any(|l| l == "minecraft" || l == "datapack");
         if !loaders.is_empty() && !agnostic && !loaders.iter().any(|l| accepted.contains(&l.as_str())) {
             out.push(Conflict {
@@ -665,12 +580,10 @@ pub fn check_conflicts(instance_id: String) -> Result<Vec<Conflict>, String> {
     Ok(out)
 }
 
-/// Plain accessor for other command modules (e.g. mod management).
 pub fn installed_items(instance_id: &str) -> Vec<InstalledItem> {
     read_content_index(instance_id).items
 }
 
-/// Drops any content-index entry whose file matches `filename`.
 pub fn remove_index_entry(instance_id: &str, filename: &str) {
     let mut index = read_content_index(instance_id);
     let before = index.items.len();
@@ -680,7 +593,6 @@ pub fn remove_index_entry(instance_id: &str, filename: &str) {
     }
 }
 
-/// A dependency that would be orphaned by deleting a mod.
 #[derive(Serialize)]
 pub struct RemovableDep {
     pub project_id: String,
@@ -690,10 +602,6 @@ pub struct RemovableDep {
     pub kind: String,
 }
 
-/// Given a mod being deleted (by `filename`), returns the dependencies that
-/// would become orphaned: auto-installed deps that no *remaining* mod requires.
-/// Computed transitively (removing a dep can orphan its own deps) with reference
-/// counting, so shared dependencies are never offered for removal.
 #[tauri::command]
 pub fn get_removable_dependencies(
     instance_id: String,
@@ -711,7 +619,6 @@ pub fn get_removable_dependencies(
     let by_pid: HashMap<&str, &InstalledItem> =
         items.iter().map(|i| (i.project_id.as_str(), i)).collect();
 
-    // Project ids that will be gone: the deleted mod + confirmed orphans.
     let mut removing: HashSet<String> = HashSet::new();
     removing.insert(root.project_id.clone());
 
@@ -722,11 +629,10 @@ pub fn get_removable_dependencies(
         if removing.contains(&pid) {
             continue;
         }
-        let Some(dep) = by_pid.get(pid.as_str()) else { continue }; // not installed
+        let Some(dep) = by_pid.get(pid.as_str()) else { continue };
         if !dep.dependency {
-            continue; // installed explicitly by the user — keep it
+            continue;
         }
-        // Still required by something that is staying?
         let still_needed = items.iter().any(|i| {
             !removing.contains(&i.project_id)
                 && i.project_id != pid
@@ -751,13 +657,9 @@ pub fn get_removable_dependencies(
     Ok(result)
 }
 
-// ===== Full project (with markdown body) =====
-
 #[derive(Serialize, Deserialize)]
 pub struct GalleryItem {
-    /// Optimized (smaller) image — good for thumbnails.
     pub url: String,
-    /// Full-resolution original — used in the lightbox.
     #[serde(default)]
     pub raw_url: Option<String>,
     #[serde(default)]
@@ -773,7 +675,6 @@ pub struct ProjectFull {
     pub id: String,
     pub title: String,
     pub description: String,
-    /// Long markdown description.
     #[serde(default)]
     pub body: String,
     pub icon_url: Option<String>,
@@ -790,8 +691,6 @@ pub async fn modrinth_project(id: String) -> Result<ProjectFull, String> {
     resp.json::<ProjectFull>().await.map_err(|e| e.to_string())
 }
 
-// ===== Project info (for folder + index metadata) =====
-
 #[derive(Deserialize)]
 struct ProjectInfo {
     #[serde(default)]
@@ -801,18 +700,12 @@ struct ProjectInfo {
     project_type: String,
     #[serde(default)]
     categories: Vec<String>,
-    /// "required" | "optional" | "unsupported" — Modrinth says this for every
-    /// project, which is where the environment filter gets its answer.
     #[serde(default)]
     client_side: Option<String>,
     #[serde(default)]
     server_side: Option<String>,
 }
 
-/// Turns Modrinth's two sides into the one word the filter uses.
-///
-/// "unsupported" on both means the project only makes sense in a single-player
-/// world (a datapack, usually) rather than that it runs nowhere.
 pub(crate) fn env_from_sides(client: Option<&str>, server: Option<&str>) -> Option<String> {
     let needed = |v: Option<&str>| matches!(v, Some("required") | Some("optional"));
     match (needed(client), needed(server)) {
@@ -826,7 +719,6 @@ pub(crate) fn env_from_sides(client: Option<&str>, server: Option<&str>) -> Opti
     }
 }
 
-/// The content kind + target folder for a project's version.
 fn kind_and_folder(version: &Version, project: &ProjectInfo) -> (&'static str, &'static str) {
     match project.project_type.as_str() {
         "resourcepack" => ("resourcepack", "resourcepacks"),
@@ -859,7 +751,6 @@ async fn fetch_project(http: &reqwest::Client, project_id: &str) -> Result<Proje
     resp.json::<ProjectInfo>().await.map_err(|e| e.to_string())
 }
 
-/// Newest version id for a project compatible with the given loader/game version.
 async fn resolve_latest_version(
     http: &reqwest::Client,
     project_id: &str,
@@ -877,8 +768,6 @@ async fn resolve_latest_version(
     Ok(list.into_iter().next().map(|v| v.id))
 }
 
-/// Installs a version and (recursively) its required dependencies. Records each
-/// in the content index. Returns only the newly-added items.
 #[tauri::command]
 pub async fn modrinth_install_with_deps(
     instance_id: String,
@@ -913,9 +802,6 @@ fn install_rec<'a>(
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send + 'a>> {
     Box::pin(async move {
         let version = fetch_version(http, version_id).await?;
-        // Skip only *dependencies* that are already present. The explicitly
-        // requested top-level version must always (re)install, even when the mod
-        // is already installed — that's exactly the update / change-version case.
         if is_dependency && visited.contains(&version.project_id) {
             return Ok(());
         }
@@ -926,8 +812,6 @@ fn install_rec<'a>(
             return Ok(());
         };
 
-        // …and skip one the user already has from CurseForge, rather than
-        // downloading a second copy and taking over its index entry.
         if is_dependency
             && installed_by_other_provider(index, &project.title, &file.filename, "modrinth")
         {
@@ -941,8 +825,6 @@ fn install_rec<'a>(
         std::fs::write(dir.join(safe_name(&file.filename)), &bytes).map_err(|e| format!("write file: {e}"))?;
 
         visited.insert(version.project_id.clone());
-        // Record which projects this version requires, so deletion can later
-        // offer to remove orphaned dependencies.
         let dep_project_ids: Vec<String> = version
             .dependencies
             .iter()
@@ -966,12 +848,10 @@ fn install_rec<'a>(
             author: None,
             env: None,
         };
-        // Replace any existing record for this project, then add.
         index.items.retain(|i| i.project_id != item.project_id);
         index.items.push(item.clone());
         added.push(item);
 
-        // Required dependencies.
         for dep in version.dependencies.iter().filter(|d| d.dependency_type == "required") {
             let dep_version_id = if let Some(vid) = &dep.version_id {
                 Some(vid.clone())
@@ -987,8 +867,6 @@ fn install_rec<'a>(
         Ok(())
     })
 }
-
-// ===== Install a modpack (.mrpack) as a new instance =====
 
 #[derive(Deserialize)]
 struct MrIndex {
@@ -1028,14 +906,11 @@ struct ModpackProgress {
     name: String,
 }
 
-/// Downloads a `.mrpack`, parses it, creates a new instance and downloads all of
-/// its files + overrides. Emits `modrinth://modpack-progress` while downloading.
 #[tauri::command]
 pub async fn modrinth_install_modpack(
     app: AppHandle,
     url: String,
     name_override: Option<String>,
-    // `icon_url` is the modpack project's icon, downloaded and used as the instance icon.
     icon_url: Option<String>,
     project_id: Option<String>,
     version_id: Option<String>,
@@ -1057,7 +932,6 @@ pub async fn modrinth_install_modpack(
 
     let mut instance = instances::create_instance(name, mc_version, loader, None, None)?;
 
-    // Download + apply the modpack's icon, if any.
     if let Some(icon) = icon_url.filter(|u| !u.trim().is_empty()) {
         if let Ok(bytes) = download(&http, &icon).await {
             if std::fs::write(paths::instance_icon_file(&instance.id), &bytes).is_ok() {
@@ -1065,7 +939,6 @@ pub async fn modrinth_install_modpack(
             }
         }
     }
-    // Remember the pack identity for update checks.
     instance.modpack_project_id = project_id;
     instance.modpack_version_id = version_id;
     let _ = store::write_json(&paths::instance_config_file(&instance.id), &instance);
@@ -1074,10 +947,6 @@ pub async fn modrinth_install_modpack(
     Ok(instance)
 }
 
-/// Imports an instance from a local file. Handles three kinds, by content:
-///  - a Spectra backup `.zip` (restored verbatim, offline),
-///  - a Modrinth `.mrpack` (mods fetched from their CDN URLs; overrides bundled),
-///  - a CurseForge `.zip` (rejected, with a pointer to the launcher-import path).
 #[tauri::command]
 pub async fn import_file(
     app: AppHandle,
@@ -1086,7 +955,6 @@ pub async fn import_file(
 ) -> Result<Instance, String> {
     let pack_bytes = std::fs::read(&path).map_err(|e| format!("read file: {e}"))?;
 
-    // Spectra backup — fully offline restore.
     if crate::commands::import::is_backup_zip(&pack_bytes) {
         return crate::commands::import::restore_backup_from_bytes(&pack_bytes);
     }
@@ -1117,15 +985,12 @@ pub async fn import_file(
     Err("Unrecognized file — expected a Modrinth .mrpack or CurseForge .zip.".into())
 }
 
-/// True if a zip carries a CurseForge `manifest.json` (their modpack format).
 fn zip_has_curseforge_manifest(pack_bytes: &[u8]) -> bool {
     let Ok(mut archive) = zip::ZipArchive::new(Cursor::new(pack_bytes)) else { return false };
     let Ok(mut f) = archive.by_name("manifest.json") else { return false };
     let mut s = String::new();
     f.read_to_string(&mut s).is_ok() && (s.contains("minecraftModpack") || s.contains("\"manifestType\""))
 }
-
-// ===== Export instance to a Modrinth .mrpack =====
 
 #[derive(Serialize)]
 struct MrpackIndex {
@@ -1164,12 +1029,6 @@ struct MrpackEnv {
     server: String,
 }
 
-/// Exports an instance as a Modrinth `.mrpack`, ready to upload to Modrinth or
-/// open in any compatible launcher. Mods/resource packs/shaders that resolve to
-/// Modrinth (by sha1) go into the manifest's `files` with their CDN download URL;
-/// everything else is bundled under `overrides/`. `exclude` is the set of paths
-/// the user unchecked in the file tree. When `optional_disabled` is set, disabled
-/// (`.disabled`) mods are exported as optional files (enabled in the pack name).
 #[tauri::command]
 pub async fn export_mrpack(
     id: String,
@@ -1187,7 +1046,6 @@ pub async fn export_mrpack(
     let game_dir = paths::instance_game_dir(&id);
     let filter = crate::commands::import::ExportFilter::new(include, exclude);
 
-    // Hash candidate downloadable content from the content folders.
     struct Cand {
         rel: String,
         sha1: String,
@@ -1217,8 +1075,6 @@ pub async fn export_mrpack(
         }
     }
 
-    // Resolve which candidates are on Modrinth → manifest files; rest fall through
-    // to overrides.
     let mut files: Vec<MrpackFile> = Vec::new();
     let mut matched: std::collections::HashSet<String> = std::collections::HashSet::new();
     if !cands.is_empty() {
@@ -1235,11 +1091,9 @@ pub async fn export_mrpack(
                 let Some(version) = versions.get(&c.sha1) else { continue };
                 let Some(file) = version.files.iter().find(|f| f.hashes.sha1.as_deref() == Some(c.sha1.as_str())) else { continue };
                 let (Some(sha1), Some(sha512)) = (file.hashes.sha1.clone(), file.hashes.sha512.clone()) else { continue };
-                // Modrinth only accepts downloads from its CDN (+ a few git hosts).
                 if !file.url.starts_with("https://cdn.modrinth.com/") {
                     continue;
                 }
-                // Disabled mods become optional and lose the `.disabled` suffix.
                 let path_out = if c.disabled {
                     c.rel.strip_suffix(".disabled").unwrap_or(&c.rel).to_string()
                 } else {
@@ -1292,16 +1146,12 @@ pub async fn export_mrpack(
     zip.start_file("modrinth.index.json", opts).map_err(|e| e.to_string())?;
     zip.write_all(&json).map_err(|e| e.to_string())?;
 
-    // Everything not in the manifest (and within the selection) → overrides.
     add_overrides(&mut zip, &game_dir, "", &filter, &matched, optional_disabled, opts, &mut |_| {})?;
 
     zip.finish().map_err(|e| e.to_string())?;
     Ok(())
 }
 
-/// Recursively walks the game dir, adding files under `overrides/` while honoring
-/// the exclude set and skipping regenerable folders, junk, manifest files, and
-/// (unless `optional_disabled`) disabled mods.
 pub fn add_overrides(
     zip: &mut zip::ZipWriter<std::fs::File>,
     base: &Path,
@@ -1310,8 +1160,6 @@ pub fn add_overrides(
     matched: &std::collections::HashSet<String>,
     optional_disabled: bool,
     opts: zip::write::SimpleFileOptions,
-    // Called with each file's size once it is in the archive, so a caller can
-    // report progress. `&mut dyn` rather than a generic: this recurses.
     on_file: &mut dyn FnMut(u64),
 ) -> Result<(), String> {
     let dir = if rel.is_empty() { base.to_path_buf() } else { base.join(rel) };
@@ -1344,9 +1192,6 @@ pub fn add_overrides(
     Ok(())
 }
 
-/// Deflating a jar, a zip or a png buys about one percent and costs seconds per
-/// hundred megabytes — they are already compressed. Store those and spend the
-/// CPU on the configs, where it actually shrinks something.
 fn entry_opts(
     rel: &str,
     opts: zip::write::SimpleFileOptions,
@@ -1355,7 +1200,6 @@ fn entry_opts(
         ".jar", ".zip", ".png", ".jpg", ".jpeg", ".webp", ".ogg", ".mp3", ".gz", ".xz", ".7z",
     ];
     let name = rel.rsplit('/').next().unwrap_or(rel).to_lowercase();
-    // A disabled mod is still a jar underneath.
     let name = name.strip_suffix(".disabled").unwrap_or(&name);
     if ALREADY_COMPRESSED.iter().any(|ext| name.ends_with(ext)) {
         opts.compression_method(zip::CompressionMethod::Stored)
@@ -1364,13 +1208,11 @@ fn entry_opts(
     }
 }
 
-/// Junk that shouldn't ship in a shareable pack (OS cruft, packwiz metadata).
 fn is_junk(rel: &str) -> bool {
     let name = rel.rsplit('/').next().unwrap_or(rel);
     matches!(name, ".DS_Store" | "Thumbs.db" | "thumbs.db") || name.ends_with(".pw.toml")
 }
 
-/// Reads `modrinth.index.json` (raw + parsed) from a `.mrpack`.
 fn parse_mrpack(pack_bytes: &[u8]) -> Result<(String, MrIndex), String> {
     let mut archive =
         zip::ZipArchive::new(Cursor::new(pack_bytes)).map_err(|e| format!("open mrpack: {e}"))?;
@@ -1383,8 +1225,6 @@ fn parse_mrpack(pack_bytes: &[u8]) -> Result<(String, MrIndex), String> {
     Ok((raw, index))
 }
 
-/// Downloads a pack's declared files + overrides into an instance's game dir,
-/// persists the manifest and indexes the content. Used for install and update.
 async fn apply_mrpack_files(
     app: &AppHandle,
     http: &reqwest::Client,
@@ -1403,7 +1243,6 @@ async fn apply_mrpack_files(
         .collect();
     let total = downloadable.len() as u64;
 
-    // Download files concurrently (bounded) — sequential was the slow part.
     let sem = std::sync::Arc::new(tokio::sync::Semaphore::new(10));
     let done = std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0));
     let mut set = tokio::task::JoinSet::new();
@@ -1458,14 +1297,11 @@ async fn apply_mrpack_files(
 pub struct ModpackUpdate {
     version_id: String,
     version_number: String,
-    /// "release" | "beta" (alpha is never proposed).
     version_type: String,
     changelog: String,
     date_published: String,
 }
 
-/// Newest non-alpha modpack version targeting the same Minecraft version as the
-/// pack currently uses. `versions` must be newest-first (Modrinth's default).
 fn pick_modpack_candidate(versions: Vec<Version>, mc_version: &str) -> Option<Version> {
     versions
         .into_iter()
@@ -1473,7 +1309,6 @@ fn pick_modpack_candidate(versions: Vec<Version>, mc_version: &str) -> Option<Ve
         .find(|v| v.game_versions.iter().any(|g| g == mc_version))
 }
 
-/// Newest compatible modpack version, if newer than the installed one.
 #[tauri::command]
 pub async fn check_modpack_update(instance_id: String) -> Result<Option<ModpackUpdate>, String> {
     let instance: Instance =
@@ -1503,11 +1338,8 @@ pub async fn check_modpack_update(instance_id: String) -> Result<Option<ModpackU
     }))
 }
 
-/// Updates the instance's modpack to its newest version: removes the old pack's
-/// files, downloads + applies the new `.mrpack`, and records the new version id.
 #[tauri::command]
 pub async fn update_modpack(app: AppHandle, instance_id: String) -> Result<(), String> {
-    // A pack update rewrites mods and configs wholesale.
     crate::commands::snapshots::snapshot_before(&app, &instance_id, "before modpack update").await;
 
     let mut instance: Instance =
@@ -1529,7 +1361,6 @@ pub async fn update_modpack(app: AppHandle, instance_id: String) -> Result<(), S
         .or_else(|| latest.files.first())
         .ok_or("modpack version has no file")?;
 
-    // Remove the previous pack's declared files so removed mods don't linger.
     delete_pack_files(&instance_id);
 
     let pack_bytes = download(&http, &file.url).await?;
@@ -1541,7 +1372,6 @@ pub async fn update_modpack(app: AppHandle, instance_id: String) -> Result<(), S
     Ok(())
 }
 
-/// Deletes the files declared in the currently-saved `modrinth.index.json`.
 fn delete_pack_files(instance_id: &str) {
     let path = paths::instance_dir(instance_id).join("modrinth.index.json");
     let Ok(raw) = std::fs::read_to_string(&path) else { return };
@@ -1554,14 +1384,11 @@ fn delete_pack_files(instance_id: &str) {
     }
 }
 
-/// Records a modpack's bundled files in the content index by resolving their
-/// sha1 hashes to Modrinth versions/projects (two bulk requests).
 async fn index_modpack_content(
     http: &reqwest::Client,
     instance_id: &str,
     files: &[MrFile],
 ) -> Result<(), String> {
-    // sha1 -> file
     let mut by_hash: std::collections::HashMap<String, &MrFile> = std::collections::HashMap::new();
     for f in files {
         if let Some(h) = f.hashes.as_ref().and_then(|h| h.sha1.clone()) {
@@ -1572,7 +1399,6 @@ async fn index_modpack_content(
         return Ok(());
     }
 
-    // Bulk-resolve hashes to versions.
     let hashes: Vec<&String> = by_hash.keys().collect();
     let resp = send(
         http.post(format!("{API}/version_files"))
@@ -1585,7 +1411,6 @@ async fn index_modpack_content(
     let versions: std::collections::HashMap<String, Version> =
         resp.json().await.map_err(|e| e.to_string())?;
 
-    // Bulk-fetch the projects (for title/icon).
     let project_ids: Vec<String> = versions
         .values()
         .map(|v| v.project_id.clone())
@@ -1636,9 +1461,6 @@ async fn index_modpack_content(
     Ok(())
 }
 
-/// Matches local jars in `mods/` against Modrinth by sha1 file hash and records
-/// any matches in the content index, so manually-added mods gain
-/// update/version-switching features. Returns how many were newly matched.
 #[tauri::command]
 pub async fn match_local_mods(instance_id: String) -> Result<usize, String> {
     use sha1::{Digest, Sha1};
@@ -1647,7 +1469,6 @@ pub async fn match_local_mods(instance_id: String) -> Result<usize, String> {
     let known: std::collections::HashSet<String> =
         read_content_index(&instance_id).items.iter().map(|i| i.filename.clone()).collect();
 
-    // sha1 -> base jar filename (only jars not already linked).
     let mut by_hash: HashMap<String, String> = HashMap::new();
     let entries = match std::fs::read_dir(&dir) {
         Ok(e) => e,
@@ -1688,7 +1509,6 @@ pub async fn match_local_mods(instance_id: String) -> Result<usize, String> {
         return Ok(0);
     }
 
-    // Project metadata (title/icon) for the matches.
     let project_ids: Vec<String> = versions
         .values()
         .map(|v| v.project_id.clone())
@@ -1780,8 +1600,6 @@ fn extract_overrides(
     Ok(())
 }
 
-// ===== helpers =====
-
 async fn download(client: &reqwest::Client, url: &str) -> Result<Vec<u8>, String> {
     let resp = send(client.get(url)).await?;
     if !resp.status().is_success() {
@@ -1790,8 +1608,6 @@ async fn download(client: &reqwest::Client, url: &str) -> Result<Vec<u8>, String
     Ok(resp.bytes().await.map_err(|e| e.to_string())?.to_vec())
 }
 
-/// Like [`download`] but bypasses the API rate-gate — for CDN file downloads
-/// (modpack contents) we want high parallelism, not the 300/min API budget.
 async fn download_direct(client: &reqwest::Client, url: &str) -> Result<Vec<u8>, String> {
     let resp = client.get(url).send().await.map_err(|e| e.to_string())?;
     if !resp.status().is_success() {
@@ -1800,7 +1616,6 @@ async fn download_direct(client: &reqwest::Client, url: &str) -> Result<Vec<u8>,
     Ok(resp.bytes().await.map_err(|e| e.to_string())?.to_vec())
 }
 
-/// Strips any path components from a filename (defense against `../`).
 fn safe_name(name: &str) -> String {
     Path::new(name)
         .file_name()
@@ -1808,7 +1623,6 @@ fn safe_name(name: &str) -> String {
         .unwrap_or_else(|| "file".to_string())
 }
 
-/// Joins a relative archive path onto `base`, rejecting traversal outside it.
 #[cfg(test)]
 mod tests {
     use super::{installed_by_other_provider, ContentIndex, InstalledItem};
@@ -1840,18 +1654,11 @@ mod tests {
             installed_by_other_provider(&index, name, file, provider)
         };
 
-        // A CurseForge dependency for a mod already installed from Modrinth.
         assert!(hit("just enough items ", "Just Enough Items.jar", "curseforge"));
-        // Listed under a different name on the other platform — the jar still matches.
         assert!(hit("JEI", "just enough items.jar", "curseforge"));
-        // Same jar renamed per platform — the project name still matches.
         assert!(hit("Just Enough Items", "jei-neoforge-19.21.0.jar", "curseforge"));
-        // Same provider is not a cross-provider duplicate — that path already
-        // works via `visited`, and blocking it would break version changes.
         assert!(!hit("Just Enough Items", "Just Enough Items.jar", "modrinth"));
-        // Unrelated mod.
         assert!(!hit("Sodium", "sodium-0.6.jar", "curseforge"));
-        // Empty fields must never match everything.
         assert!(!hit("", "", "curseforge"));
     }
 }

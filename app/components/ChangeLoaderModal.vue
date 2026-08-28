@@ -4,7 +4,6 @@
       <div v-if="instance" class="space-y-4">
         <p class="text-sm text-muted">{{ $t('changeLoader.desc', { mc: instance.mc_version }) }}</p>
 
-        <!-- loader -->
         <div class="flex flex-wrap gap-2">
           <button
             v-for="l in loaderItems"
@@ -21,7 +20,6 @@
           </button>
         </div>
 
-        <!-- loader version (hidden for vanilla) -->
         <div v-if="loader !== 'vanilla'" class="space-y-3 rounded-lg border border-default p-3">
           <URadioGroup v-model="loaderMode" :items="loaderModeItems" orientation="horizontal" />
           <USelectMenu
@@ -90,8 +88,6 @@ const loaderModeItems = computed(() => [
   { label: t('create.custom.other'), value: 'other' },
 ])
 
-/** The loader version the instance runs now — only while the type is unchanged;
- *  a Fabric version means nothing in the Forge list. */
 const currentVersion = computed(() => {
   const l = instance.value?.loader
   return l && l.type === loader.value && 'version' in l ? l.version : null
@@ -122,7 +118,6 @@ async function loadVersions() {
   try {
     const list = await meta.getLoaderVersions(loader.value, instance.value.mc_version)
     loaderVersions.value = list.map(v => v.version)
-    // Open on the version already in use, so the list starts on a known-good pick.
     if (currentVersion.value && loaderVersions.value.includes(currentVersion.value)) {
       loaderExplicit.value = currentVersion.value
     }

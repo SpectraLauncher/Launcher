@@ -1,9 +1,6 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
-/* Fonts from the Spectra design. @nuxt/fonts detects these family names in the CSS
-   below and self-hosts them (works offline). Space Grotesk = UI, JetBrains Mono
-   = versions / monospace. */
 @theme {
 	--font-sans: 'Space Grotesk', system-ui, sans-serif;
 	--font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -20,8 +17,6 @@ body {
 	background: #0c0e12;
 }
 
-/* Make the `font-mono` utility (and version labels) use JetBrains Mono and let
-   @nuxt/fonts pick the family up. */
 .font-mono {
 	font-family: 'JetBrains Mono', ui-monospace, monospace;
 }
@@ -29,14 +24,11 @@ body {
 ::selection { background:#36a9e159; }
 input::placeholder, textarea::placeholder { color:#5b626d; }
 
-/* Floating background glows (see app.vue). */
 @keyframes mk-float {
 	0%,100% { transform:translate(0,0) }
 	50% { transform:translate(24px,-30px) }
 }
 
-/* OLED variant: pure black canvas + darker @nuxt/ui surface tokens. Toggled by
-   the `oled` class on <html> (see useThemeStore). */
 html.oled body {
 	background: #000000;
 }
@@ -46,9 +38,6 @@ html.oled {
 	--ui-bg-elevated: #0a0a0a;
 }
 
-/* "Squared" theme: the same palette with every corner squared off. Toggled by
-   the `squared` class on <html> (see useThemeStore). Corners only — colours and
-   the chosen accent are left untouched. */
 html.squared,
 html.squared *,
 html.squared *::before,

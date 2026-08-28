@@ -1,11 +1,4 @@
 <script setup lang="ts">
-// Restore points for one instance: take one, put one back, throw one away.
-//
-// A snapshot holds the content list, the configs and any local jars — not
-// worlds. That is worth saying out loud in the panel, because "restore point"
-// otherwise reads like "everything", and a rolled-back world would be a nasty
-// surprise.
-
 import { invoke } from '@tauri-apps/api/core'
 import type { Settings } from '~/types/launcher'
 
@@ -80,7 +73,6 @@ const remove = (s: Snapshot) => run(`delete-${s.file}`, async () => {
   await load()
 })
 
-/** Restoring throws away whatever is installed now, so it asks once. */
 function askRestore(s: Snapshot) {
   if (confirming.value === s.file) return restore(s)
   confirming.value = s.file
@@ -124,7 +116,6 @@ onMounted(load)
         />
       </div>
 
-      <!-- automation -->
       <div v-if="settings" class="mt-4 space-y-3 border-t border-default pt-4">
         <USwitch
           :model-value="settings.snapshot_before_updates"

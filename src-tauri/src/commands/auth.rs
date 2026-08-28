@@ -1,15 +1,3 @@
-//! Microsoft (online) authentication, wrapping `lyceris::auth::microsoft`.
-//!
-//! Flow (driven by the frontend):
-//!   1. `auth_get_login_url()` -> open it in a Tauri WebviewWindow.
-//!   2. Watch that window's navigation; when it reaches the redirect URI
-//!      (`https://login.live.com/oauth20_desktop.srf?code=...`), grab `code`.
-//!   3. `auth_login_with_code(code)` -> exchanges the code, stores the account,
-//!      makes it active, and returns it.
-//!
-//! Tokens are persisted in `accounts.json`; `auth_refresh_active()` renews the
-//! access token before launch when it's near expiry.
-
 use std::sync::{Arc, Mutex};
 
 use lyceris::auth::microsoft;
@@ -19,8 +7,6 @@ use tauri::{AppHandle, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 use crate::models::{Account, AccountKind, AccountsFile};
 use crate::{paths, store};
 
-/// Microsoft's fixed desktop redirect for this client id; the auth code arrives
-/// as a `?code=` query param on a page under this URL.
 const REDIRECT_PREFIX: &str = "https://login.live.com/oauth20_desktop.srf";
 
 impl From<microsoft::MinecraftAccount> for Account {
@@ -46,7 +32,6 @@ fn save_accounts(file: &AccountsFile) -> Result<(), String> {
     store::write_json(&paths::accounts_file(), file)
 }
 
-/// Inserts or replaces an account (matched by uuid) and marks it active.
 fn upsert_account(file: &mut AccountsFile, account: Account) {
     if let Some(existing) = file.accounts.iter_mut().find(|a| a.uuid == account.uuid) {
         *existing = account.clone();
@@ -56,18 +41,11 @@ fn upsert_account(file: &mut AccountsFile, account: Account) {
     file.active_uuid = Some(account.uuid);
 }
 
-/// Step 1: the Microsoft OAuth URL to present to the user.
 #[tauri::command]
 pub fn auth_get_login_url() -> Result<String, String> {
     microsoft::create_link().map_err(|e| e.to_string())
 }
 
-/// One-shot Microsoft login: opens an embedded webview at the OAuth URL,
-/// intercepts navigation to the redirect to grab the `code`, then exchanges it
-/// and persists the account. This is the flow the UI should call.
-///
-/// Note: building a webview from a command thread is reliable on Windows; if we
-/// later support macOS/Linux this may need to move onto the main thread.
 #[tauri::command]
 pub async fn auth_login(app: AppHandle) -> Result<Account, String> {
     let url = microsoft::create_link().map_err(|e| e.to_string())?;
@@ -105,7 +83,7 @@ pub async fn auth_login(app: AppHandle) -> Result<Account, String> {
                 }
                 if let Some(code) = code {
                     nav_send(Ok(code));
-                    return false; // stop here; we have what we need
+                    return false;
                 }
                 if let Some(error) = error {
                     nav_send(Err(error));
@@ -117,7 +95,6 @@ pub async fn auth_login(app: AppHandle) -> Result<Account, String> {
         .build()
         .map_err(|e| format!("failed to open login window: {e}"))?;
 
-    // If the user closes the window before finishing, treat it as cancellation.
     let close_send = take_send.clone();
     window.on_window_event(move |event| {
         if matches!(event, WindowEvent::Destroyed) {
@@ -140,8 +117,6 @@ pub async fn auth_login(app: AppHandle) -> Result<Account, String> {
     Ok(account)
 }
 
-/// Lower-level: exchange an already-obtained authorization `code`. Kept for
-/// custom auth flows / testing.
 #[tauri::command]
 pub async fn auth_login_with_code(code: String) -> Result<Account, String> {
     let client = Client::new();
@@ -156,7 +131,6 @@ pub async fn auth_login_with_code(code: String) -> Result<Account, String> {
     Ok(account)
 }
 
-/// Minecraft usernames: 3–16 chars, letters/digits/underscore.
 fn validate_username(name: &str) -> Result<(), String> {
     let len = name.chars().count();
     if !(3..=16).contains(&len) {
@@ -168,16 +142,12 @@ fn validate_username(name: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Creates (or re-activates) an offline account. No Microsoft login required;
-/// usable for singleplayer and offline-mode servers only. The uuid is generated
-/// once and persisted so the account keeps its identity (and worlds) across runs.
 #[tauri::command]
 pub fn auth_login_offline(username: String) -> Result<Account, String> {
     validate_username(&username)?;
 
     let mut file = load_accounts()?;
 
-    // Reuse an existing offline account with the same name instead of duplicating.
     let account = match file
         .accounts
         .iter()
@@ -222,8 +192,6 @@ pub fn remove_account(uuid: String) -> Result<(), String> {
     save_accounts(&file)
 }
 
-/// Returns the active account, refreshing its token first. Used internally by
-/// launch; also exposed so the UI can validate the session on startup.
 pub async fn refresh_active_account() -> Result<Account, String> {
     let mut file = load_accounts()?;
     let active_uuid = file
@@ -238,15 +206,12 @@ pub async fn refresh_active_account() -> Result<Account, String> {
         .cloned()
         .ok_or_else(|| "active account missing".to_string())?;
 
-    // Offline accounts have nothing to refresh.
     if current.kind == AccountKind::Offline {
         return Ok(current);
     }
 
     let client = Client::new();
 
-    // One retry: a refresh that fails because the network blinked is worth
-    // trying again before telling somebody to sign in, and it costs a second.
     let mut attempt = microsoft::refresh(current.refresh_token.clone(), &client).await;
     if matches!(&attempt, Err(e) if is_transient(e)) {
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
@@ -265,8 +230,6 @@ pub async fn auth_refresh_active() -> Result<Account, String> {
     refresh_active_account().await
 }
 
-/// Whether a failed refresh is worth retrying — the connection dropped or the
-/// request timed out, rather than Microsoft saying no.
 fn is_transient(e: &lyceris::error::Error) -> bool {
     match e {
         lyceris::error::Error::Reqwest(re) => re.is_connect() || re.is_timeout(),
@@ -275,13 +238,6 @@ fn is_transient(e: &lyceris::error::Error) -> bool {
     }
 }
 
-/// Turns a refresh failure into something a player can act on.
-///
-/// `lyceris` deserializes Microsoft's reply without looking at the status code,
-/// so a rejected refresh token — expired after a long break, or invalidated by
-/// a password change — surfaces as reqwest's "error decoding response body".
-/// That tells nobody anything; what it means, in practice, is that the saved
-/// session is dead and the account has to sign in again.
 fn explain_refresh_failure(account: &Account, e: lyceris::error::Error) -> String {
     let who = &account.username;
     match &e {
@@ -295,7 +251,6 @@ has been too long since the last sign-in, or the password changed. \
 Remove the account and add it again."
             )
         }
-        // XSTS says things like "this account has no Xbox profile" in plain words.
         lyceris::error::Error::Authentication(msg) => {
             format!("Microsoft refused the session for {who}: {msg}")
         }

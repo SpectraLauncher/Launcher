@@ -1,9 +1,3 @@
-//! Version-list metadata for the create-instance pickers.
-//!
-//! We do NOT download game files here — Lyceris' `install()` does that. These
-//! commands only return the *lists* of versions the UI lets the user pick from:
-//! Minecraft versions (Mojang) and mod-loader versions (Fabric/Quilt/NeoForge/Forge).
-
 use serde::{Deserialize, Serialize};
 
 use crate::paths;
@@ -11,7 +5,6 @@ use crate::paths;
 #[derive(Debug, Serialize)]
 pub struct MinecraftVersion {
     pub id: String,
-    /// "release", "snapshot", "old_beta", "old_alpha".
     pub kind: String,
     pub release_time: String,
 }
@@ -31,8 +24,6 @@ fn client() -> Result<reqwest::Client, String> {
         .map_err(|e| e.to_string())
 }
 
-// === Minecraft versions ===
-
 #[derive(Deserialize)]
 struct Manifest {
     versions: Vec<ManifestVersion>,
@@ -47,8 +38,6 @@ struct ManifestVersion {
     release_time: String,
 }
 
-/// Mojang's full version list, newest first. Cached to `cache/` so the picker
-/// still works offline after the first online fetch.
 #[tauri::command]
 pub async fn get_minecraft_versions(
     include_snapshots: bool,
@@ -79,10 +68,6 @@ pub async fn get_minecraft_versions(
         .collect())
 }
 
-// === Loader versions ===
-
-/// Loader versions for a given Minecraft version, newest first. Vanilla returns
-/// an empty list.
 #[tauri::command]
 pub async fn get_loader_versions(
     loader: String,
@@ -119,7 +104,6 @@ async fn fetch_fabric(client: &reqwest::Client, mc: &str) -> Result<Vec<LoaderVe
         .json()
         .await
         .map_err(|e| e.to_string())?;
-    // Already newest-first.
     Ok(entries
         .into_iter()
         .map(|e| LoaderVersion {
@@ -165,8 +149,6 @@ struct NeoForgeResponse {
     versions: Vec<String>,
 }
 
-/// NeoForge versions encode the MC version in the first two segments:
-/// MC `1.21.4` → `21.4.x`, MC `1.21` → `21.0.x`.
 fn neoforge_prefix(mc: &str) -> Result<String, String> {
     let parts: Vec<&str> = mc.split('.').collect();
     if parts.len() < 2 || parts[0] != "1" {
@@ -198,7 +180,7 @@ async fn fetch_neoforge(client: &reqwest::Client, mc: &str) -> Result<Vec<Loader
             LoaderVersion { version: v, stable }
         })
         .collect();
-    list.reverse(); // API is oldest-first
+    list.reverse();
     Ok(list)
 }
 
@@ -213,9 +195,6 @@ async fn fetch_forge(client: &reqwest::Client, mc: &str) -> Result<Vec<LoaderVer
         .await
         .map_err(|e| e.to_string())?;
 
-    // Forge maven versions look like "1.21.4-54.1.0"; we keep the whole string
-    // for display and strip the "{mc}-" prefix at launch (Lyceris re-adds it).
-    // Pull them out of the XML without an XML crate.
     let prefix = format!("{mc}-");
     let mut list: Vec<LoaderVersion> = xml
         .split("<version>")
@@ -228,6 +207,6 @@ async fn fetch_forge(client: &reqwest::Client, mc: &str) -> Result<Vec<LoaderVer
             stable: true,
         })
         .collect();
-    list.reverse(); // XML is oldest-first
+    list.reverse();
     Ok(list)
 }

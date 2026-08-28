@@ -4,14 +4,12 @@
       <div class="space-y-4">
         <p class="text-sm text-muted">{{ $t('blocked.desc') }}</p>
 
-        <!-- all done -->
         <div v-if="!blocked.length" class="flex flex-col items-center gap-2 py-8 text-center">
           <UIcon name="i-lucide-circle-check" class="size-9 text-emerald-400" />
           <p class="text-sm font-medium">{{ $t('blocked.allDone') }}</p>
         </div>
 
         <template v-else>
-          <!-- mod list -->
           <div class="max-h-60 space-y-1.5 overflow-y-auto">
             <div
               v-for="b in blocked"
@@ -34,7 +32,6 @@
             </div>
           </div>
 
-          <!-- scan folder -->
           <div class="space-y-1.5 rounded-lg border border-dashed border-default p-3">
             <div class="flex items-center justify-between gap-2">
               <span class="flex items-center gap-1.5 text-xs text-muted">
@@ -87,7 +84,6 @@ watch(isOpen, async (open) => {
     if (!scanDir.value) {
       scanDir.value = await invoke<string | null>('default_downloads_dir')
     }
-    // Poll the watched folder while open (approximates a live watcher).
     timer = setInterval(() => { if (blocked.value.length) rescan(true) }, 3000)
   } else if (timer) {
     clearInterval(timer)

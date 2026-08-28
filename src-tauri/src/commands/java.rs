@@ -1,12 +1,3 @@
-//! Detecting Java installations on the system (adapted from the VoidLink
-//! detector). We scan common vendor install dirs, `JAVA_HOME` and the launcher's
-//! own managed runtimes, run `java -version` on each candidate and parse the
-//! version/vendor/architecture.
-//!
-//! Note: the game engine (Lyceris) auto-provisions Java by Minecraft version, so
-//! these detections currently feed the UI / the optional custom Java path rather
-//! than overriding the launch JVM.
-
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -41,8 +32,6 @@ struct JavaVersionInfo {
     arch: Option<String>,
 }
 
-// === Commands ===
-
 #[tauri::command]
 pub fn detect_java_installations() -> Vec<JavaInstallation> {
     let mut installations = Vec::new();
@@ -58,7 +47,6 @@ pub fn detect_java_installations() -> Vec<JavaInstallation> {
         }
     }
 
-    // Newest major first.
     installations.sort_by(|a, b| match (b.major, a.major) {
         (Some(b_major), Some(a_major)) => b_major.cmp(&a_major),
         (Some(_), None) => std::cmp::Ordering::Less,
@@ -100,8 +88,6 @@ pub fn validate_java_path(path: String) -> JavaValidation {
         },
     }
 }
-
-// === Implementation ===
 
 fn validate_and_create_installation(path: &Path) -> Option<JavaInstallation> {
     get_java_version_info(path).ok().map(|info| JavaInstallation {
@@ -156,7 +142,6 @@ fn parse_major_version(version: &str) -> u32 {
     let parts: Vec<&str> = version.split('.').collect();
     if let Some(first) = parts.first() {
         if let Ok(n) = first.parse::<u32>() {
-            // Legacy "1.8.0" style → major 8.
             if n == 1 && parts.len() > 1 {
                 if let Ok(second) = parts[1].parse::<u32>() {
                     return second;
@@ -216,7 +201,6 @@ fn java_executable_name() -> &'static str {
 fn collect_java_candidates() -> Vec<PathBuf> {
     let mut candidates = Vec::new();
 
-    // Launcher-managed runtimes (Lyceris).
     let runtimes = paths::runtimes_dir();
     if let Ok(entries) = std::fs::read_dir(&runtimes) {
         for entry in entries.flatten() {
@@ -228,7 +212,6 @@ fn collect_java_candidates() -> Vec<PathBuf> {
         }
     }
 
-    // JAVA_HOME.
     if let Ok(java_home) = std::env::var("JAVA_HOME") {
         candidates.push(Path::new(&java_home).join("bin").join(java_executable_name()));
     }
@@ -294,7 +277,6 @@ fn collect_unix_candidates(candidates: &mut Vec<PathBuf>) {
     }
 }
 
-/// Finds `bin/java` directly under `dir` or one level deeper (e.g. `17/jdk-17.../bin/java`).
 fn find_java_executable(dir: &Path) -> Option<PathBuf> {
     let direct = dir.join("bin").join(java_executable_name());
     if direct.exists() {

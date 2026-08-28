@@ -1,7 +1,6 @@
 <template>
   <UModal v-model:open="isOpen" :title="$t('create.title')" :ui="{ content: 'max-w-xl' }">
     <template #body>
-      <!-- ===== Step: choose type ===== -->
       <div v-if="step === 'choice'" class="space-y-3">
         <p class="text-sm text-muted">{{ $t('create.chooseType') }}</p>
         <button
@@ -19,9 +18,7 @@
         </button>
       </div>
 
-      <!-- ===== Step: custom install ===== -->
       <form v-else-if="step === 'custom'" class="space-y-4" @submit.prevent="submit">
-        <!-- icon -->
         <div class="flex items-center gap-4">
           <div class="flex size-16 flex-none items-center justify-center overflow-hidden rounded-xl bg-white/5 ring-1 ring-white/10">
             <img v-if="form.iconPreview" :src="form.iconPreview" alt="" class="size-full object-cover" />
@@ -40,17 +37,13 @@
             />
           </div>
 
-          <!-- No instance yet, so the editor hands back the image and it is
-               applied once the instance has an id. -->
           <IconEditorModal v-model:open="iconEditorOpen" @saved="useDrawnIcon" />
         </div>
 
-        <!-- name -->
         <UFormField :label="$t('create.custom.name')">
           <UInput v-model="form.name" :placeholder="namePlaceholder" class="w-full" />
         </UFormField>
 
-        <!-- loader -->
         <UFormField :label="$t('create.custom.loader')">
           <div class="flex flex-wrap gap-2">
             <button
@@ -69,7 +62,6 @@
           </div>
         </UFormField>
 
-        <!-- game version -->
         <UFormField :label="$t('create.custom.gameVersion')">
           <USelectMenu
             v-model="form.mcVersion"
@@ -82,7 +74,6 @@
 
         <USwitch v-model="includeSnapshots" :label="$t('create.custom.snapshots')" />
 
-        <!-- loader version (hidden for vanilla) -->
         <div v-if="form.loader !== 'vanilla'" class="space-y-3 rounded-lg border border-default p-3">
           <UFormField :label="$t('create.custom.loaderVersion')">
             <URadioGroup v-model="form.loaderMode" :items="loaderModeItems" orientation="horizontal" />
@@ -100,9 +91,7 @@
         <p v-if="error" class="text-sm text-error">{{ error }}</p>
       </form>
 
-      <!-- ===== Step: import ===== -->
       <div v-else-if="step === 'import'" class="space-y-5">
-        <!-- from a share code -->
         <div>
           <p class="text-sm font-medium">{{ $t('create.import.fromCode') }}</p>
           <p class="mb-2 text-xs text-muted">{{ $t('create.import.fromCodeDesc') }}</p>
@@ -124,7 +113,6 @@
           </div>
         </div>
 
-        <!-- from a modpack file -->
         <div>
           <p class="text-sm font-medium">{{ $t('create.import.fromFile') }}</p>
           <p class="mb-2 text-xs text-muted">{{ $t('create.import.fromFileDesc') }}</p>
@@ -137,7 +125,6 @@
           />
         </div>
 
-        <!-- from another launcher -->
         <div>
           <div class="mb-2 flex items-center justify-between gap-2">
             <div>
@@ -214,14 +201,13 @@ const { isOpen, pendingCode, close } = useCreateInstanceModal()
 const toast = useToast()
 const instances = useInstancesStore()
 const meta = useMinecraftMeta()
-const browser = useModrinthBrowser()
+const browser = useContentWindow()
 const curseforge = useCurseforge()
 const blockedModal = useBlockedModsModal()
 const activity = useActivityCenter()
 const router = useRouter()
 const { t } = useI18n()
 
-// --- import step ---
 const external = ref<ExternalInstance[]>([])
 const scanning = ref(false)
 const importingFile = ref(false)
@@ -260,7 +246,6 @@ async function importFile() {
       await instances.load()
       close()
       router.push(`/instance/${instance.id}`)
-      // A CurseForge pack may include mods blocked from auto-download.
       const blocked = await curseforge.getBlocked(instance.id)
       if (blocked.length) blockedModal.open(instance.id)
     } finally {
@@ -272,7 +257,6 @@ async function importFile() {
   }
 }
 
-// --- share codes ---
 const shareCode = ref('')
 const redeeming = ref(false)
 
@@ -294,7 +278,6 @@ async function redeemCode() {
     if (res.failed.length) {
       toast.add({ title: t('share.someFailed', { n: res.failed.length }), description: res.failed.join(', '), color: 'warning' })
     }
-    // A CurseForge pack may include mods blocked from auto-download.
     const blocked = await curseforge.getBlocked(res.instance.id)
     if (blocked.length) blockedModal.open(res.instance.id)
   } catch (e) {
@@ -330,17 +313,10 @@ async function importExternal(ext: ExternalInstance) {
 }
 
 function browseModpacks() {
-  browser.open({
-    kind: 'modpack',
-    mode: 'createModpack',
-    onInstalled: (instance) => {
-      close()
-      if (instance) router.push(`/instance/${instance.id}`)
-    },
-  })
+  browser.open({ kind: 'modpack', mode: 'createModpack' })
+  close()
 }
 
-// "Install modpack" opens the Modrinth browser directly; other choices step in.
 function selectChoice(key: Step) {
   if (key === 'modpack') browseModpacks()
   else step.value = key
@@ -357,9 +333,9 @@ const choices = [
 
 const form = reactive({
   name: '',
-  iconPath: null as string | null, // source file, copied to icon.png on create
-  iconData: null as string | null, // PNG drawn in the editor, saved after create
-  iconPreview: null as string | null, // transient data URL just for the preview
+  iconPath: null as string | null,
+  iconData: null as string | null,
+  iconPreview: null as string | null,
   loader: 'vanilla' as LoaderType,
   mcVersion: '',
   loaderMode: 'stable' as LoaderVersionMode,
@@ -369,7 +345,6 @@ const includeSnapshots = ref(false)
 const error = ref<string | null>(null)
 const submitting = ref(false)
 
-// Loader order matches the design.
 const loaderItems: { label: string; value: LoaderType }[] = [
   { label: 'Vanilla', value: 'vanilla' },
   { label: 'Fabric', value: 'fabric' },
@@ -391,7 +366,6 @@ const loaderVersions = ref<string[]>([])
 const loadingLoader = ref(false)
 const loaderVersionItems = computed(() => loaderVersions.value)
 
-// Suggested name, e.g. "Fabric 1.21.4".
 const namePlaceholder = computed(() => `${loaderLabel(form.loader)} ${form.mcVersion}`.trim())
 
 const canSubmit = computed(() => {
@@ -402,7 +376,6 @@ const canSubmit = computed(() => {
 
 const iconEditorOpen = ref(false)
 
-/** Keeps the drawn PNG until there is an instance to hang it on. */
 function useDrawnIcon(dataUrl: string) {
   form.iconData = dataUrl
   form.iconPreview = dataUrl
@@ -418,7 +391,6 @@ async function chooseIcon() {
     })
     if (typeof selected !== 'string') return
     form.iconPath = selected
-    // Read the source file once just to preview it (it's not yet in asset scope).
     form.iconPreview = await invoke<string>('read_image_data_url', { path: selected })
   } catch (e) {
     error.value = String(e)
@@ -479,7 +451,6 @@ watch(
 
 watch(isOpen, (open) => {
   if (open) {
-    // Opened by a share link — land on the import step with the code ready.
     if (pendingCode.value) {
       shareCode.value = pendingCode.value
       pendingCode.value = null
@@ -529,7 +500,6 @@ async function submit() {
       loader,
       iconSourcePath: form.iconPath,
     })
-    // A drawn icon has no source file, so it goes in once the id exists.
     if (form.iconData) {
       await invoke('set_instance_icon_data', { id: created.id, dataUrl: form.iconData })
       created.icon = 'icon.png'

@@ -2,12 +2,10 @@
   <div class="h-full overflow-y-auto p-6 lg:p-8">
     <div class="mx-auto max-w-6xl space-y-8">
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-[320px_1fr]">
-        <!-- left: player preview -->
         <section class="flex flex-col items-center gap-3 rounded-2xl border border-default bg-linear-[160deg] from-primary-500/10 to-transparent p-5">
           <div class="text-lg font-bold tracking-tight">{{ nickname }}</div>
           <canvas ref="viewerCanvas" class="rounded-xl" />
 
-          <!-- arm model (classic = 4px, slim = 3px) -->
           <div v-if="selectedSavedSkin" class="flex w-full max-w-52 rounded-lg border border-default p-0.5 text-xs">
             <button
               v-for="m in (['classic', 'slim'] as const)"
@@ -38,13 +36,10 @@
           <p v-if="!isMicrosoft" class="text-center text-xs text-muted">{{ $t('skins.loginHint') }}</p>
         </section>
 
-        <!-- right: saved skins + defaults -->
         <div class="space-y-8">
-          <!-- saved skins + add -->
           <section>
             <h2 class="mb-3 text-sm font-semibold text-neutral-300">{{ $t('skins.saved') }}</h2>
             <div class="flex flex-wrap gap-3">
-              <!-- add tile (click or drag & drop) -->
               <button
                 type="button"
                 class="flex h-28 w-24 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-2 text-center transition"
@@ -55,7 +50,6 @@
                 <span class="text-[11px] leading-tight">{{ $t('skins.addHint') }}</span>
               </button>
 
-              <!-- skeleton tiles while the saved library loads -->
               <template v-if="savedLoading">
                 <div v-for="n in 4" :key="`sk-${n}`" class="w-24 rounded-xl border border-default bg-white/3 p-2">
                   <div class="mx-auto h-22 w-full animate-pulse rounded bg-white/5" />
@@ -63,7 +57,6 @@
                 </div>
               </template>
 
-              <!-- saved tiles -->
               <template v-else>
                 <div
                   v-for="s in saved"
@@ -99,7 +92,6 @@
             </div>
           </section>
 
-          <!-- default skins -->
           <section>
             <h2 class="mb-3 text-sm font-semibold text-neutral-300">{{ $t('skins.defaults') }}</h2>
             <div class="grid gap-3" style="grid-template-columns:repeat(auto-fill,minmax(96px,1fr))">
@@ -119,11 +111,9 @@
         </div>
       </div>
 
-      <!-- capes (Microsoft accounts) -->
       <section v-if="isMicrosoft && (capesLoading || capes.length)">
         <h2 class="mb-3 text-sm font-semibold text-neutral-300">{{ $t('skins.capes') }}</h2>
         <div class="flex flex-wrap gap-3">
-          <!-- skeleton tiles while capes load -->
           <template v-if="capesLoading">
             <div v-for="n in 3" :key="`cape-sk-${n}`" class="flex w-24 flex-col items-center gap-2 rounded-xl border border-default bg-white/3 p-2">
               <div class="h-16 w-10 animate-pulse rounded bg-white/5" />
@@ -175,7 +165,6 @@ const { t } = useI18n()
 const isMicrosoft = computed(() => account.activeAccount?.kind === 'microsoft')
 const nickname = computed(() => account.activeAccount?.username ?? '—')
 
-// --- capes (Microsoft accounts) ---
 interface Cape { id: string; url: string; alias: string; active: boolean }
 const capes = ref<Cape[]>([])
 const capesLoading = ref(false)
@@ -197,7 +186,6 @@ async function chooseCape(c: Cape | null) {
     toast.add({ title: String(e), color: 'error' })
   }
 }
-// Show the cape's front face cropped from its texture (2:1 layout).
 function capeStyle(url: string) {
   return {
     backgroundImage: `url(${url})`,
@@ -217,11 +205,11 @@ const defaults: DefaultSkin[] = [
 
 const bust = useSkinBust()
 const saved = ref<SavedSkin[]>([])
-const savedLoading = ref(true) // skeleton shown until the first load completes
-const savedRaw = reactive<Record<string, string>>({}) // saved id -> raw skin data URL
-const savedBust = reactive<Record<string, string>>({}) // saved id -> bust render
-const defaultRaw = reactive<Record<string, string>>({}) // default name -> raw skin data URL
-const defaultBust = reactive<Record<string, string>>({}) // default name -> bust render
+const savedLoading = ref(true)
+const savedRaw = reactive<Record<string, string>>({})
+const savedBust = reactive<Record<string, string>>({})
+const defaultRaw = reactive<Record<string, string>>({})
+const defaultBust = reactive<Record<string, string>>({})
 const selected = ref<{ kind: 'player' | 'saved' | 'default'; id?: string; name?: string }>({ kind: 'player' })
 const applying = ref(false)
 const dragOver = ref(false)
@@ -232,7 +220,6 @@ const selectedSavedSkin = computed(() =>
 const selectedSavedActive = computed(() => !!selectedSavedSkin.value?.active)
 const canApply = computed(() => isMicrosoft.value && selected.value.kind === 'saved' && !selectedSavedActive.value)
 
-/** Changes a saved skin's arm model and re-renders it everywhere. */
 async function setModel(model: 'classic' | 'slim') {
   const s = selectedSavedSkin.value
   if (!s || s.model === model) return
@@ -248,7 +235,6 @@ async function setModel(model: 'classic' | 'slim') {
   }
 }
 
-// --- skinview3d viewer (client-only) ---
 const viewerCanvas = ref<HTMLCanvasElement>()
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let viewer: any = null
@@ -274,8 +260,6 @@ async function showPlayer() {
   }
 }
 
-// On open, import the player's current skin into the library, mark it active,
-// and select it in the viewer.
 async function initPlayerSkin() {
   if (!isMicrosoft.value || !account.activeAccount) {
     await showPlayer()
@@ -313,7 +297,7 @@ async function loadDefaultBusts() {
       const data = await invoke<string>('fetch_skin_data_url', { url: d.url })
       defaultRaw[d.name] = data
       defaultBust[d.name] = await bust.render(data, d.model)
-    } catch { /* leave blank */ }
+    } catch {  }
   }
 }
 
@@ -333,7 +317,7 @@ async function applySelected() {
   try {
     await invoke('apply_skin', { id: selected.value.id })
     toast.add({ title: t('skins.applied'), color: 'success' })
-    await loadSaved() // refresh the "in use" marker
+    await loadSaved()
   } catch (e) {
     toast.add({ title: String(e), color: 'error' })
   } finally {
@@ -347,14 +331,13 @@ async function loadSaved() {
   } finally {
     savedLoading.value = false
   }
-  // Render a bust thumbnail for each saved skin.
   for (const s of saved.value) {
     if (savedBust[s.id]) continue
     try {
       const data = await invoke<string>('get_skin_data_url', { id: s.id })
       savedRaw[s.id] = data
       savedBust[s.id] = await bust.render(data, s.model)
-    } catch { /* leave blank */ }
+    } catch {  }
   }
 }
 
@@ -396,7 +379,6 @@ onMounted(async () => {
   if (!account.accounts.length) await account.load()
   loadDefaultBusts()
 
-  // Init the 3D viewer (client-only import).
   const { SkinViewer, IdleAnimation } = await import('skinview3d')
   viewer = new SkinViewer({ canvas: viewerCanvas.value!, width: 280, height: 380 })
   viewer.animation = new IdleAnimation()
@@ -407,7 +389,6 @@ onMounted(async () => {
   await initPlayerSkin()
   await loadCapes()
 
-  // Native file drag & drop onto the page adds skins.
   unlistenDrop = await getCurrentWebview().onDragDropEvent((event) => {
     const p = event.payload
     if (p.type === 'over' || p.type === 'enter') dragOver.value = true

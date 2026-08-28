@@ -3,14 +3,7 @@ import { getVersion } from '@tauri-apps/api/app'
 import { platform, arch } from '@tauri-apps/plugin-os'
 import type { Settings } from '~/types/launcher'
 
-// Anonymous, opt-in usage stats. Nothing is sent unless the user enabled
-// `anonymous_stats` in Settings → Privacy. No PII: just a random per-install
-// UUID, coarse environment info and event counts. Server: Spectra-Web
-// (server/api/telemetry.post.ts) → SQLite → /admin dashboard.
-
-// TODO: point this at your deployed Spectra-Web domain.
 const TELEMETRY_ENDPOINT = 'https://spectra.makoto.com.pl/api/telemetry'
-// Optional soft key — must match SPECTRA_INGEST_KEY on the server (or leave both empty).
 const INGEST_KEY = 'uaH8U5Gh1ecZdQQCRsvkGo2ARFByk641CYYy7YAYw'
 
 interface QueuedEvent {
@@ -26,7 +19,6 @@ interface Meta {
   locale: string
 }
 
-// Module-level singletons (one telemetry pipeline per app session).
 let enabled = false
 let meta: Meta | null = null
 let queue: QueuedEvent[] = []
@@ -55,7 +47,6 @@ async function flush() {
       body: JSON.stringify({ ...meta, events: batch }),
     })
   } catch {
-    // Telemetry must never disrupt the app — drop the batch on failure.
   }
 }
 
@@ -65,14 +56,12 @@ function scheduleFlush() {
 }
 
 export const useTelemetry = () => {
-  /** Records an event (no-op unless telemetry is enabled). */
   function track(event: QueuedEvent['event'], props?: Record<string, unknown>) {
     if (!enabled) return
     queue.push({ event, props })
     scheduleFlush()
   }
 
-  /** Reads the user's preference, gathers environment info, sends `app_start`. */
   async function init() {
     if (initialized) return
     initialized = true
@@ -97,7 +86,6 @@ export const useTelemetry = () => {
     }
   }
 
-  /** Lets the Settings toggle turn telemetry on/off at runtime. */
   function setEnabled(value: boolean) {
     enabled = value && meta !== null
     if (value && !initialized) init()

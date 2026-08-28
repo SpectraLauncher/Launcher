@@ -1,7 +1,4 @@
 <script setup lang="ts">
-// Right-hand panel: Spectra account, friends and the invites that arrive from
-// them. Collapsed it is gone entirely — no rail, no sliver, no reserved width.
-
 import { invoke } from '@tauri-apps/api/core'
 import type { SpectraFriend, FriendRequest, PresenceMode } from '~/composables/useSpectraAccount'
 import type { SpectraNotification } from '~/composables/useSpectraNotifications'
@@ -15,8 +12,6 @@ const instances = useInstancesStore()
 const activity = useActivityCenter()
 
 const friends = ref<SpectraFriend[]>([])
-// What this account shows to others. 'hidden' looks exactly like a closed
-// launcher to everyone else — that is the point of it.
 const presence = ref<PresenceMode>('visible')
 
 const STATUS_COLOUR: Record<string, string> = {
@@ -26,6 +21,12 @@ const STATUS_COLOUR: Record<string, string> = {
   offline: '#525252',
 }
 const MODES: PresenceMode[] = ['visible', 'dnd', 'hidden']
+
+async function openProfile() {
+  const username = account.user.value?.username
+  if (!username) return
+  await openExternal(await invoke<string>('spectra_profile_url', { username }))
+}
 
 const setPresence = (mode: PresenceMode) => run('presence', async () => {
   presence.value = mode
@@ -61,7 +62,6 @@ async function loadFriends() {
       outgoing: FriendRequest[]
       presence: PresenceMode
     }>('GET', '/api/friends')
-    // Whoever is around comes first — an offline list is not what you open this for.
     const rank = { in_game: 0, online: 1, dnd: 2, offline: 3 } as Record<string, number>
     friends.value = [...res.friends].sort((x, y) =>
       (rank[x.status] ?? 9) - (rank[y.status] ?? 9)
@@ -74,10 +74,6 @@ async function loadFriends() {
   }
 }
 
-// --- who am I actually inviting? -------------------------------------------
-// A Minecraft name and a Spectra name are often different, so typing one and
-// hoping is how a request ends up with a stranger. These are the people it
-// could be, with faces and both names, and you pick one.
 type Candidate = SpectraFriend & { relation: 'friend' | 'pending' | null }
 const results = ref<Candidate[]>([])
 const searching = ref(false)
@@ -90,7 +86,6 @@ watch(query, (value) => {
     results.value = []
     return
   }
-  // Debounced: this would fire on every keystroke otherwise.
   searchTimer = setTimeout(async () => {
     searching.value = true
     try {
@@ -105,7 +100,6 @@ watch(query, (value) => {
 })
 
 const invite = (candidate: Candidate) => run(`add-${candidate.id}`, async () => {
-  // By id, not by name — whoever is on that row is who gets the request.
   await account.api('POST', '/api/friends', { userId: candidate.id })
   query.value = ''
   results.value = []
@@ -113,11 +107,6 @@ const invite = (candidate: Candidate) => run(`add-${candidate.id}`, async () => 
   await loadFriends()
 })
 
-/**
- * Enter sends. If the list narrowed to one person, that is who it means;
- * otherwise the text is taken as an exact name or e-mail address — the server
- * matches all three, and says so when it matches nothing.
- */
 const addFriend = () => run('add', async () => {
   const q = query.value.trim()
   if (!q) return
@@ -132,8 +121,6 @@ const addFriend = () => run('add', async () => {
 
 const answer = (id: number, action: 'accept' | 'reject') => run(`req-${id}`, async () => {
   await account.api('PATCH', `/api/friends/${id}`, { action })
-  // The server drops the matching notification, so a re-poll is what makes it
-  // disappear here too.
   await Promise.all([loadFriends(), notifications.poll()])
 })
 
@@ -142,15 +129,12 @@ const removeFriend = (friendshipId: number) => run(`rm-${friendshipId}`, async (
   await loadFriends()
 })
 
-/** Same endpoint — either side of a friendship row may drop it. */
 const cancelRequest = (id: number) => run(`rm-${id}`, async () => {
   await account.api('DELETE', `/api/friends/${id}`)
-  // The candidate list should offer them again straight away.
   results.value = []
   await loadFriends()
 })
 
-/** An invite is just a share code — hand it to the importer we already have. */
 function install(n: SpectraNotification) {
   if (!n.shareCode) return
   notifications.markRead([n.id])
@@ -158,14 +142,9 @@ function install(n: SpectraNotification) {
   createModal.openWithCode(n.shareCode)
 }
 
-/** The local instance that came from this code, if it is still around. */
 const instanceFor = (code: string | null) =>
   code ? instances.instances.find(i => i.share_origin?.code === code) : undefined
 
-/**
- * Applies the author's new revision to the copy already installed. Without a
- * local copy there is nothing to update, so fall back to a fresh install.
- */
 const update = (n: SpectraNotification) => run(`upd-${n.id}`, async () => {
   const target = instanceFor(n.shareCode)
   if (!target) return install(n)
@@ -173,7 +152,6 @@ const update = (n: SpectraNotification) => run(`upd-${n.id}`, async () => {
   await activity.withTask(t('spectra.updating', { name: target.name }), () =>
     invoke('sync_share', { id: target.id, code: n.shareCode }))
   await instances.load()
-  // Downloading the pack is what clears it on the server; this just catches up.
   notifications.dismiss(n.id)
   await notifications.poll()
 })
@@ -187,7 +165,6 @@ function notificationText(n: SpectraNotification) {
   return t(`spectra.note.${n.kind}`, { who, name: what })
 }
 
-// Loading friends only matters while the panel is on screen.
 watch(() => panel.isOpen.value, (open) => {
   if (open && account.isSignedIn.value) {
     loadFriends()
@@ -209,7 +186,6 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
       v-if="panel.isOpen.value"
       class="absolute top-0 right-0 z-20 flex h-full w-[330px] flex-col border-l border-white/8 bg-[#0b0e14]/95 backdrop-blur-xl"
     >
-      <!-- header -->
       <div class="flex items-center gap-2 border-b border-white/8 px-4 py-3">
         <h2 class="flex-1 text-sm font-semibold text-neutral-200">{{ $t('spectra.title') }}</h2>
         <button
@@ -222,7 +198,6 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
         </button>
       </div>
 
-      <!-- signed out -->
       <div v-if="!account.isSignedIn.value" class="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
         <span class="flex size-14 items-center justify-center rounded-2xl border border-white/10 bg-primary-500/10 ">
           <UIcon name="i-lucide-users" class="size-6 text-primary-400" />
@@ -240,7 +215,6 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
       </div>
 
       <template v-else>
-        <!-- who -->
         <div class="flex items-center gap-3 border-b border-white/8 px-4 py-3">
           <img v-if="account.user.value?.image" :src="account.user.value.image" alt="" class="size-9 rounded-full object-cover">
           <span
@@ -255,6 +229,15 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
             </p>
           </div>
           <button
+            v-if="account.user.value?.username"
+            type="button"
+            class="rounded-lg p-1.5 text-neutral-500 transition hover:bg-white/5 hover:text-neutral-200 flex items-center justify-center"
+            :title="$t('spectra.viewProfile')"
+            @click="openProfile()"
+          >
+            <UIcon name="i-lucide-square-arrow-out-up-right" class="size-4" />
+          </button>
+          <button
             type="button"
             class="rounded-lg p-1.5 text-neutral-500 transition hover:bg-white/5 hover:text-neutral-200 flex items-center justify-center"
             :title="$t('spectra.signOut')"
@@ -264,7 +247,6 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
           </button>
         </div>
 
-        <!-- what everyone else sees -->
         <div class="flex gap-1 border-b border-white/8 px-4 py-2">
           <button
             v-for="m in MODES"
@@ -293,7 +275,6 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
             {{ notice }}
           </p>
 
-          <!-- invites and updates -->
           <section v-if="notifications.items.value.length">
             <p class="text-[10px] font-semibold tracking-[0.14em] text-neutral-500 uppercase">
               {{ $t('spectra.inbox') }}
@@ -342,7 +323,6 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
             </div>
           </section>
 
-          <!-- friend requests -->
           <section v-if="incoming.length">
             <p class="text-[10px] font-semibold tracking-[0.14em] text-neutral-500 uppercase">
               {{ $t('spectra.requests') }}
@@ -370,7 +350,6 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
             </div>
           </section>
 
-          <!-- friends -->
           <section>
             <p class="text-[10px] font-semibold tracking-[0.14em] text-neutral-500 uppercase">
               {{ $t('spectra.friends') }} <span v-if="friends.length" class="text-neutral-600">· {{ friends.length }}</span>
@@ -396,7 +375,6 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
               </button>
             </form>
 
-            <!-- who matches what is being typed -->
             <div v-if="query.trim().length >= 2" class="mt-1.5">
               <ul v-if="results.length" class="space-y-1">
                 <li
@@ -476,7 +454,6 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
               {{ $t('spectra.noFriends') }}
             </p>
 
-            <!-- requests you sent, and the way to take one back -->
             <div v-if="outgoing.length" class="mt-4">
               <p class="text-[10px] font-semibold tracking-[0.14em] text-neutral-500 uppercase">
                 {{ $t('spectra.outgoing', { n: outgoing.length }) }}

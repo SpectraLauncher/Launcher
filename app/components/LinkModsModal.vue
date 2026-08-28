@@ -4,7 +4,6 @@
       <div v-if="req" class="space-y-4">
         <p class="text-sm text-muted">{{ $t('link.desc') }}</p>
 
-        <!-- progress + current file -->
         <div>
           <div class="mb-1 flex items-center justify-between text-xs text-muted">
             <span>{{ $t('link.file', { i: index + 1, n: req.files.length }) }}</span>
@@ -18,7 +17,6 @@
           </div>
         </div>
 
-        <!-- provider choice -->
         <div class="space-y-2">
           <p class="text-sm font-medium">{{ $t('link.provider') }}</p>
           <div class="flex gap-2">
@@ -84,7 +82,6 @@ watch(isOpen, (open) => {
   skipped = 0
 })
 
-/** Tries to match one file with the chosen provider (then the other if allowed). */
 async function matchOne(file: string, prov: Provider, others: boolean): Promise<boolean> {
   const order: Provider[] = prov === 'curseforge' ? ['curseforge', 'modrinth'] : ['modrinth', 'curseforge']
   const chain = others ? order : [prov]
@@ -96,7 +93,7 @@ async function matchOne(file: string, prov: Provider, others: boolean): Promise<
         ? await curseforge.matchFile(id, file)
         : await modrinth.matchFile(id, file)
       if (ok) return true
-    } catch { /* try next */ }
+    } catch {  }
   }
   return false
 }

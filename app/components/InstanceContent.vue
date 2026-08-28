@@ -1,6 +1,5 @@
 <template>
   <div class="space-y-4">
-    <!-- kind selector: one list for mods, packs, shaders and datapacks -->
     <div class="flex flex-wrap items-center gap-1.5">
       <button
         v-for="k in kindTabs"
@@ -18,7 +17,6 @@
       </button>
     </div>
 
-    <!-- toolbar -->
     <div class="flex flex-wrap items-center gap-2">
       <UInput
         v-model="search"
@@ -81,7 +79,6 @@
 
     <p v-if="error" class="text-sm text-error">{{ error }}</p>
 
-    <!-- conflicts -->
     <div v-if="conflicts.length" class="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
       <div class="flex items-center gap-1.5 text-sm font-medium text-amber-300">
         <UIcon name="i-lucide-triangle-alert" class="size-4" />
@@ -94,8 +91,6 @@
       </ul>
     </div>
 
-    <!-- loading skeleton (the conflicts banner above is a sibling, not a branch:
-         a conflict must not hide the list) -->
     <div v-if="loading" class="overflow-hidden rounded-xl border border-default">
       <div v-for="n in 8" :key="`mod-sk-${n}`" class="flex items-center gap-3 border-b border-default/50 px-3 py-2.5 last:border-0">
         <div class="size-9 shrink-0 animate-pulse rounded-lg bg-white/5" />
@@ -107,22 +102,18 @@
       </div>
     </div>
 
-    <!-- empty: nothing of this kind installed -->
     <div v-else-if="!ofKind.length" class="flex flex-col items-center justify-center gap-3 py-16 text-center">
       <UIcon :name="kindIcon(browserKind)" class="size-10 text-neutral-600" />
       <p class="max-w-sm text-sm text-muted">{{ kind === 'mod' || kind === 'all' ? $t('instance.modsHint') : $t('content.empty') }}</p>
       <UButton icon="i-lucide-package-search" :label="$t('modrinth.add')" @click="openBrowser" />
     </div>
 
-    <!-- no search results -->
     <div v-else-if="!filtered.length" class="py-12 text-center text-sm text-muted">{{ $t('content.empty') }}</div>
 
-    <!-- table -->
     <template v-else>
       <p class="text-xs text-muted">{{ $t('content.count', { n: filtered.length }) }}</p>
 
       <div class="overflow-hidden rounded-xl border border-default">
-        <!-- header (click to sort: asc → desc → off) -->
         <div class="grid grid-cols-[auto_2.75rem_minmax(0,1fr)_8rem_7rem_4rem_auto] items-center gap-3 border-b border-default bg-white/4 px-3 py-2 text-[11px] font-medium tracking-wide text-neutral-500 uppercase">
           <span />
           <button type="button" class="flex items-center justify-center gap-1 transition hover:text-neutral-200" :class="{ 'text-primary-400': sortCol === 'state' }" @click="toggleSort('state')">
@@ -148,14 +139,12 @@
           <span />
         </div>
 
-        <!-- rows -->
         <div
           v-for="m in paged"
           :key="`${m.kind}/${m.filename}`"
           class="grid grid-cols-[auto_2.75rem_minmax(0,1fr)_8rem_7rem_4rem_auto] items-center gap-3 border-b border-default/50 px-3 py-2 transition last:border-0 hover:bg-white/3"
           :class="{ 'opacity-55': !m.enabled }"
         >
-          <!-- toggle -->
           <div class="flex justify-center">
             <USwitch
               :model-value="m.enabled"
@@ -163,13 +152,11 @@
               @update:model-value="toggle(m, $event)"
             />
           </div>
-          <!-- icon -->
           <img v-if="m.icon_url" :src="m.icon_url" class="size-9 rounded-lg object-cover" :alt="m.name ?? m.filename" />
           <div v-else class="flex size-9 items-center justify-center rounded-lg bg-white/5">
             <UIcon :name="kindIcon(m.kind)" class="size-4.5 text-neutral-500" />
           </div>
 
-          <!-- name + provider -->
           <div class="min-w-0">
             <div class="group/n flex items-center gap-1">
               <span class="truncate font-medium" :title="m.filename">{{ m.name ?? m.filename }}</span>
@@ -195,15 +182,10 @@
             </div>
           </div>
 
-          <!-- version -->
           <span class="truncate font-mono text-xs text-neutral-400" :title="m.version ?? ''">{{ m.version ?? '—' }}</span>
 
-          <!-- updated -->
           <span class="text-xs text-neutral-500">{{ formatDate(m.modified) }}</span>
 
-
-
-          <!-- actions -->
           <div class="flex items-center justify-end gap-0.5">
             <UButton
               v-if="!m.project_id && m.kind === 'mod'"
@@ -246,13 +228,11 @@
         </div>
       </div>
 
-      <!-- pagination -->
       <div v-if="filtered.length > perPage" class="flex justify-center pt-1">
         <UPagination v-model:page="page" :total="filtered.length" :items-per-page="perPage" />
       </div>
     </template>
 
-    <!-- change-version modal -->
     <UModal v-model:open="versionsOpen" :title="$t('mods.pickVersion')" :ui="{ content: 'max-w-lg' }">
       <template #footer>
         <ModalHint>{{ $t('mods.versionHint') }}</ModalHint>
@@ -289,7 +269,6 @@
       </template>
     </UModal>
 
-    <!-- delete dependencies modal -->
     <UModal v-model:open="depsOpen" :title="$t('mods.depsTitle', { name: depsTarget?.name ?? depsTarget?.filename ?? '' })" :ui="{ content: 'max-w-md' }">
       <template #body>
         <p class="mb-3 text-sm text-muted">{{ $t('mods.depsDesc') }}</p>
@@ -328,11 +307,11 @@
 
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core'
+import type { UnlistenFn } from '@tauri-apps/api/event'
 import { openExternal as openUrl } from '~/utils/openExternal'
 import type { ModEntry, Instance } from '~/types/launcher'
 import type { ModUpdate, ModrinthVersion, ContentKind } from '~/types/modrinth'
 
-/** The kinds that live side by side in this tab, in selector order. */
 const KINDS = ['mod', 'resourcepack', 'shader', 'datapack'] as const
 type Kind = typeof KINDS[number]
 type Entry = ModEntry & { kind: Kind }
@@ -340,7 +319,7 @@ type Entry = ModEntry & { kind: Kind }
 const props = defineProps<{ instanceId: string; initialKind?: Kind }>()
 const toast = useToast()
 const { t } = useI18n()
-const browser = useModrinthBrowser()
+const browser = useContentWindow()
 const modList = useModListModal()
 const linkModal = useLinkModsModal()
 const blockedModal = useBlockedModsModal()
@@ -353,7 +332,6 @@ const mods = ref<Entry[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 
-// --- kind selector ---
 const kind = ref<Kind | 'all'>(props.initialKind ?? 'all')
 
 const KIND_META: Record<Kind, { label: string; icon: string }> = {
@@ -377,11 +355,9 @@ const counts = computed(() => {
   return out
 })
 
-// What the "Add" button and the empty state target; "all" browses mods.
 const browserKind = computed<Kind>(() => (kind.value === 'all' ? 'mod' : kind.value))
 const hasMods = computed(() => mods.value.some(m => m.kind === 'mod'))
 
-// Target instance filters (loader + game version) for Modrinth lookups.
 const instance = computed(() => instances.instances.find((i: Instance) => i.id === props.instanceId))
 const filterLoaders = computed(() => {
   const lt = instance.value?.loader.type
@@ -389,13 +365,11 @@ const filterLoaders = computed(() => {
 })
 const filterGv = computed(() => (instance.value ? [instance.value.mc_version] : undefined))
 
-// --- available updates ---
 const updates = ref<Record<string, ModUpdate>>({})
-const updatingId = ref<string | null>(null) // filename being updated
+const updatingId = ref<string | null>(null)
 const updatingAll = ref(false)
 const updateCount = computed(() => mods.value.filter(m => m.project_id && updates.value[m.project_id]).length)
 
-/** Reads every kind off disk and tags each row with the kind it came from. */
 async function listAll(): Promise<Entry[]> {
   const lists = await Promise.all(KINDS.map(async k =>
     (await invoke<ModEntry[]>('list_content', { instanceId: props.instanceId, kind: k })).map(m => ({ ...m, kind: k })),
@@ -412,8 +386,6 @@ async function refreshUpdates() {
   }
 }
 
-/** Installs `versionId` for a mod and removes its previous jar. Routes to the
- *  right provider (CurseForge `versionId` is a fileId). */
 async function applyVersion(mod: Entry, versionId: string) {
   let added
   if (mod.provider === 'curseforge' && mod.project_id) {
@@ -455,7 +427,6 @@ async function updateAll() {
   updatingAll.value = true
   const tid = activity.startTask(t('activity.updatingMods'))
   try {
-    // Both providers update via bulk backend calls (no per-mod requests → no 429).
     await modrinth.updateAll(props.instanceId, filterLoaders.value, filterGv.value)
     await curseforge.updateAll(props.instanceId, filterLoaders.value, filterGv.value)
     await load()
@@ -467,7 +438,6 @@ async function updateAll() {
   }
 }
 
-// --- change version modal ---
 const versionsMod = ref<Entry | null>(null)
 const versionsOpen = computed({
   get: () => versionsMod.value !== null,
@@ -511,7 +481,6 @@ async function chooseVersion(versionId: string) {
   }
 }
 
-/** Opens a mod's page in the external browser. */
 function openModPage(mod: Entry) {
   if (!mod.project_id) return
   if (mod.provider === 'curseforge') {
@@ -521,18 +490,14 @@ function openModPage(mod: Entry) {
   }
 }
 
-// --- controls ---
 type SortCol = 'name' | 'version' | 'updated' | 'state' | 'update'
 const search = ref('')
 const perPage = ref(25)
 const page = ref(1)
 
-// Column-header sorting: click cycles asc → desc → off. Defaults to floating
-// mods with an available update to the top.
 const sortCol = ref<SortCol | null>('update')
 const sortDir = ref<'asc' | 'desc'>('asc')
 
-/** Whether a mod has an available update. */
 const hasUpdate = (m: Entry) => !!(m.project_id && updates.value[m.project_id])
 
 function toggleSort(col: SortCol) {
@@ -542,7 +507,7 @@ function toggleSort(col: SortCol) {
   } else if (sortDir.value === 'asc') {
     sortDir.value = 'desc'
   } else {
-    sortCol.value = null // off
+    sortCol.value = null
   }
 }
 const sortIcon = (col: SortCol) =>
@@ -559,14 +524,13 @@ const providerBadgeClass = (provider: string) => {
   return 'bg-neutral-500/10 text-neutral-400 ring-1 ring-inset ring-neutral-500/25'
 }
 
-// Ascending comparator per column; direction is applied afterwards.
 function compare(a: Entry, b: Entry, col: SortCol): number {
   switch (col) {
     case 'name': return nameOf(a).localeCompare(nameOf(b))
     case 'version': return (a.version ?? '').localeCompare(b.version ?? '', undefined, { numeric: true })
     case 'updated': return a.modified - b.modified
-    case 'state': return Number(b.enabled) - Number(a.enabled) // enabled first
-    case 'update': return Number(hasUpdate(b)) - Number(hasUpdate(a)) // updatable first
+    case 'state': return Number(b.enabled) - Number(a.enabled)
+    case 'update': return Number(hasUpdate(b)) - Number(hasUpdate(a))
   }
 }
 
@@ -586,7 +550,6 @@ const paged = computed(() => {
   return filtered.value.slice(start, start + perPage.value)
 })
 
-// Reset to page 1 when the view changes; clamp if the list shrinks.
 watch([search, sortCol, sortDir, perPage, kind], () => { page.value = 1 })
 watch(filtered, () => {
   const max = Math.max(1, Math.ceil(filtered.value.length / perPage.value))
@@ -608,18 +571,15 @@ async function load() {
   void loadConflicts()
 }
 
-// Whether a CurseForge API key is configured (enables CF linking).
 const cfEnabled = ref(false)
 curseforge.enabled().then(v => (cfEnabled.value = v)).catch(() => {})
 
-// Likely mod conflicts (wrong loader, duplicates).
 const conflicts = ref<{ filename: string, name: string, kind: string, detail: string }[]>([])
 async function loadConflicts() {
   try { conflicts.value = await invoke('check_conflicts', { instanceId: props.instanceId }) }
   catch { conflicts.value = [] }
 }
 
-// CurseForge mods blocked from auto-download, awaiting manual fetch.
 const blockedCount = ref(0)
 async function loadBlocked() {
   try { blockedCount.value = (await curseforge.getBlocked(props.instanceId)).length }
@@ -629,22 +589,19 @@ function openBlocked() {
   blockedModal.open(props.instanceId, () => { load(); loadBlocked() })
 }
 
-// Auto-link is a quiet best-effort Modrinth pass on load; the manual button
-// opens the per-file provider-choice dialog. Then check for updates.
 async function linkAndCheck() {
   try {
     const matched = await modrinth.matchLocal(props.instanceId)
     if (matched > 0) {
       mods.value = await listAll()
     }
-  } catch { /* offline / not found — ignore on auto-run */ }
+  } catch {  }
   refreshUpdates()
 }
 
 const hasLocal = computed(() => mods.value.some(m => m.kind === 'mod' && !m.project_id))
 const linking = ref(false)
 
-/** Manual: open the per-file provider-choice dialog for unmatched local jars. */
 function linkLocal() {
   const files = mods.value.filter(m => m.kind === 'mod' && !m.project_id).map(m => m.filename)
   if (!files.length) {
@@ -664,8 +621,6 @@ function linkLocal() {
 
 async function toggle(mod: Entry, enabled: boolean) {
   try {
-    // Mods keep their own command (it knows the mods/ folder); everything else
-    // goes through content.rs, which validates names and handles folder packs.
     if (mod.kind === 'mod') {
       await invoke('set_mod_enabled', { instanceId: props.instanceId, filename: mod.filename, enabled })
     } else {
@@ -677,7 +632,6 @@ async function toggle(mod: Entry, enabled: boolean) {
   }
 }
 
-// --- delete (with orphaned-dependency prompt) ---
 interface RemovableDep { project_id: string; name: string; filename: string; icon_url: string | null; kind: string }
 const depsOpen = ref(false)
 const depsTarget = ref<Entry | null>(null)
@@ -692,7 +646,6 @@ function toggleDep(filename: string, on: boolean) {
   depsChecked.value = next
 }
 
-/** Deletes the mod and the given dependency filenames, updating the list. */
 async function deleteMods(mod: Entry, depFilenames: string[]) {
   try {
     const all = [mod.filename, ...depFilenames]
@@ -707,7 +660,6 @@ async function deleteMods(mod: Entry, depFilenames: string[]) {
 }
 
 async function remove(mod: Entry) {
-  // Only mods carry dependencies worth asking about.
   if (mod.kind !== 'mod') {
     try {
       await invoke('delete_content', { id: props.instanceId, kind: mod.kind, filename: mod.filename })
@@ -758,9 +710,18 @@ function openBrowser() {
     instanceId: props.instanceId,
     gameVersion: instance?.mc_version,
     loader: instance?.loader.type,
-    onInstalled: () => load(),
   })
 }
 
 watch(() => props.instanceId, load, { immediate: true })
+
+let unlistenContent: UnlistenFn | null = null
+
+onMounted(async () => {
+  unlistenContent = await browser.onInstalled(({ instanceId }) => {
+    if (instanceId === props.instanceId) load()
+  })
+})
+
+onBeforeUnmount(() => unlistenContent?.())
 </script>

@@ -7,8 +7,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Read the version from tauri.conf.json and only continue if that version
-  # hasn't been released yet (so ordinary pushes to main don't spam releases).
   prepare:
     runs-on: ubuntu-latest
     outputs:
@@ -48,14 +46,11 @@ jobs:
           VERSION="v${{ steps.version.outputs.version }}"
           VERSION_NUM="${{ steps.version.outputs.version }}"
 
-          # Pull the changelog block for this version out of release.txt.
           CHANGELOG=$(awk "/^## Changes \(${VERSION}\)/{flag=1; next} /^## Changes \(v[0-9]/{if(flag) exit} flag" release.txt)
           if [ -z "$CHANGELOG" ]; then
             CHANGELOG="No specific changes documented for this version."
           fi
 
-          # GitHub replaces spaces in uploaded asset names with dots, so
-          # "Spectra Launcher_..." is served as "Spectra.Launcher_...".
           {
             echo "## 📥 Downloads"
             echo ""
@@ -134,9 +129,6 @@ jobs:
           node-version: 24
           cache: 'pnpm'
 
-      # rustup is preinstalled on every runner; wrapping the install in a retry
-      # guards against the transient DNS/connection failures that occasionally
-      # hit static.rust-lang.org (especially on the Intel macOS runners).
       - name: Install Rust stable
         uses: nick-fields/retry@v3
         with:
@@ -162,10 +154,8 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Updater signing — required so the launcher can verify auto-updates.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # Build-time secrets embedded via build.rs (process env wins over .env).
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
           DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
         with:

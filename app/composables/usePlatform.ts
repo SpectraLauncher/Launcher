@@ -3,8 +3,6 @@ import { platform } from '@tauri-apps/plugin-os'
 
 type OsPlatform = 'windows' | 'macos' | 'linux' | 'unknown'
 
-// Detected once and shared across the app so the titlebar layout and window
-// controls stay in sync.
 const current = ref<OsPlatform>('unknown')
 let detecting: Promise<void> | null = null
 

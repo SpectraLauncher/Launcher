@@ -1,8 +1,5 @@
 <template>
-  <!-- Full height with only the right side scrolling: the sub-nav stays put,
-       and switching section cannot change how tall the dialog is. -->
   <div v-if="form" class="grid h-full min-h-0 grid-cols-1 gap-6 md:grid-cols-[200px_1fr]">
-    <!-- sub-nav -->
     <nav class="flex flex-col gap-1 overflow-y-auto py-4 pl-4">
       <button
         v-for="s in sections"
@@ -17,9 +14,7 @@
       </button>
     </nav>
 
-    <!-- sections -->
     <div class="min-w-0 space-y-6 overflow-y-auto py-4 pr-4">
-      <!-- General -->
       <template v-if="section === 'general'">
         <div class="flex flex-wrap items-start gap-6">
           <UFormField
@@ -30,8 +25,6 @@
             <UInput v-model="form.name" class="w-full" />
           </UFormField>
 
-          <!-- The icon is edited here rather than on the instance page: it is a
-               setting, and the page header should not be a control. -->
           <UFormField :label="$t('instSettings.icon')">
             <UDropdownMenu :items="iconMenu">
               <button
@@ -54,8 +47,6 @@
             </UDropdownMenu>
           </UFormField>
 
-          <!-- Lives here, inside the settings modal, on purpose: its portal then
-               mounts after the modal's own and so draws on top of it. -->
           <IconEditorModal v-model:open="iconEditorOpen" :instance-id="props.instanceId" @saved="onIconChanged" />
         </div>
 
@@ -81,7 +72,6 @@
         </div>
       </template>
 
-      <!-- Install -->
       <template v-else-if="section === 'install'">
         <div class="rounded-xl border border-default bg-white/3 p-4 text-sm">
           <div class="flex justify-between py-1"><span class="text-muted">{{ $t('instSettings.platform') }}</span><span class="font-medium">{{ loaderLabel(form.loader.type) }}</span></div>
@@ -95,7 +85,6 @@
         </div>
       </template>
 
-      <!-- Window -->
       <template v-else-if="section === 'window'">
         <USwitch v-model="form.override_window" :label="$t('instSettings.customWindow')" :description="$t('instSettings.customWindowDesc')" />
         <fieldset :disabled="!form.override_window" class="space-y-4" :class="{ 'opacity-50': !form.override_window }">
@@ -115,9 +104,7 @@
         </fieldset>
       </template>
 
-      <!-- Java & memory -->
       <template v-else-if="section === 'java'">
-        <!-- auto-selected Java for this MC version -->
         <div class="flex items-start gap-3 rounded-xl border border-default bg-white/3 p-3">
           <UIcon name="i-lucide-coffee" class="mt-0.5 size-5 shrink-0 text-primary-400" />
           <div class="min-w-0 text-sm">
@@ -155,7 +142,6 @@
         <div class="space-y-2">
           <USwitch v-model="form.override_java_args" :label="$t('instSettings.customJavaArgs')" :description="$t('instSettings.customJavaArgsDesc')" />
           <fieldset :disabled="!form.override_java_args" :class="{ 'opacity-50': !form.override_java_args }" class="space-y-2">
-            <!-- JVM Preset selector -->
             <div class="flex items-center gap-2">
               <span class="shrink-0 text-xs text-muted">{{ $t('jvmPreset.label') }}</span>
               <div class="flex flex-wrap gap-1.5">
@@ -191,7 +177,6 @@
         </div>
       </template>
 
-      <!-- Hooks -->
       <template v-else-if="section === 'hooks'">
         <USwitch v-model="form.override_hooks" :label="$t('instSettings.customHooks')" :description="$t('instSettings.customHooksDesc')" />
         <fieldset :disabled="!form.override_hooks" class="space-y-4" :class="{ 'opacity-50': !form.override_hooks }">
@@ -216,10 +201,8 @@ import { open } from '@tauri-apps/plugin-dialog'
 import type { Instance } from '~/types/launcher'
 
 const props = defineProps<{ instanceId: string }>()
-// The instance page draws the same icon in its header, so it needs telling.
 const emit = defineEmits<{ (e: 'icon-changed'): void }>()
 const instances = useInstancesStore()
-/** The stored instance, for the icon preview — `form` is an unsaved copy. */
 const instance = computed(() => instances.instances.find(i => i.id === props.instanceId))
 
 const iconKey = ref(0)
@@ -239,14 +222,12 @@ const iconMenu = computed(() => [[
   },
 ]])
 
-/** Redraws the tile here and tells the instance page to redraw its header. */
 async function onIconChanged() {
   iconKey.value++
   await instances.load()
   emit('icon-changed')
 }
 
-/** The picked file is copied into the instance as `icon.png` by the backend. */
 async function changeIcon() {
   pickingIcon.value = true
   try {
@@ -277,7 +258,6 @@ onMounted(() => {
   if (!java.installations.value.length) java.scan()
 })
 
-// Which Java the instance's MC version needs, and whether the player has it.
 const requiredJava = computed(() => (form.value ? requiredJavaMajor(form.value.mc_version) : 21))
 const matchedJava = computed(() => matchJava(java.installations.value, requiredJava.value))
 
@@ -294,7 +274,6 @@ const section = ref<Section>('general')
 const busy = ref(false)
 const repairing = ref(false)
 
-// Editable local copy; saved (debounced) back to the instance.
 const form = ref<Instance | null>(null)
 
 watch(
@@ -320,7 +299,6 @@ const javaArgsText = computed({
   set: (v: string) => { if (form.value) form.value.java_args = v.split(/\s+/).filter(Boolean) },
 })
 
-// ── JVM Presets ──────────────────────────────────────────────────────────────
 const JVM_PRESET_FLAGS: Record<string, string[]> = {
   none: [],
   aikar: [
@@ -343,7 +321,6 @@ const jvmPresets = [
   { key: 'shenandoah', label: 'jvmPreset.shenandoah' },
 ]
 
-/** Detects which preset matches the current java_args (or 'custom'). */
 const activePreset = computed(() => {
   const current = form.value?.java_args ?? []
   if (current.length === 0) return 'none'
@@ -359,7 +336,6 @@ function applyPreset(key: string) {
   form.value.java_args = JVM_PRESET_FLAGS[key] ?? []
 }
 
-// Auto-save (debounced) whenever the form changes.
 let debounce: ReturnType<typeof setTimeout> | undefined
 watch(form, () => {
   if (!form.value) return

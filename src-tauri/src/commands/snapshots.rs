@@ -1,19 +1,3 @@
-//! Restore points for an instance.
-//!
-//! A snapshot is the same `.zip` a share is: the content index (every mod by
-//! provider and version id), the config folder, and the bytes of anything that
-//! matches no provider. That makes it small — a 150-mod instance is a couple of
-//! hundred kilobytes plus whatever local jars are in it — because the mods
-//! themselves are a list to re-download, not a copy.
-//!
-//! What it deliberately does not hold: worlds and screenshots. They are large,
-//! nothing here touches them, and a "restore point" that quietly rolled a world
-//! back would be worse than none.
-//!
-//! Restoring is authoritative: the snapshot *is* the wanted state, so content
-//! added afterwards is removed. That is the difference from applying a shared
-//! pack, which may only take back what it once installed.
-
 use std::collections::HashSet;
 use std::io::Read;
 
@@ -28,18 +12,13 @@ use crate::commands::{curseforge, import, modrinth, settings};
 use crate::models::Instance;
 use crate::{paths, store};
 
-/// One restore point, as the panel lists it.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Snapshot {
-    /// File name inside the instance's `snapshots/` folder — also its id.
     pub file: String,
     pub label: String,
-    /// Unix ms.
     pub created: i64,
     pub size: u64,
-    /// Taken by the launcher before an update, rather than by hand.
     pub auto: bool,
-    /// How many projects the instance had at the time.
     pub items: usize,
 }
 
@@ -49,7 +28,6 @@ struct SnapshotIndex {
     snapshots: Vec<Snapshot>,
 }
 
-/// What restoring changed.
 #[derive(Serialize)]
 pub struct RestoreResult {
     pub installed: usize,
@@ -77,15 +55,12 @@ fn write_index(id: &str, index: &SnapshotIndex) -> Result<(), String> {
 #[tauri::command]
 pub fn list_snapshots(id: String) -> Result<Vec<Snapshot>, String> {
     let mut list = read_index(&id).snapshots;
-    // Newest first, and only the ones whose file is still there — a folder can
-    // be cleaned out from underneath us.
     let dir = snapshots_dir(&id);
     list.retain(|s| dir.join(&s.file).exists());
     list.sort_by(|a, b| b.created.cmp(&a.created));
     Ok(list)
 }
 
-/// Takes a restore point. `auto` marks the ones the launcher took by itself.
 #[tauri::command]
 pub async fn create_snapshot(
     app: AppHandle,
@@ -98,8 +73,6 @@ pub async fn create_snapshot(
 
     let items = modrinth::read_content_index(&id).items;
     let (unresolved, _) = share::scan_unresolved(&id, &items);
-    // Everything provider-less goes in: a restore point that cannot put back a
-    // hand-dropped jar is not one.
     let paths_set: HashSet<String> = unresolved.iter().map(|u| u.path.clone()).collect();
 
     let manifest = ShareManifest {
@@ -140,10 +113,6 @@ pub async fn create_snapshot(
     Ok(snapshot)
 }
 
-/// Deletes the oldest automatic snapshots past the keep limit.
-///
-/// Only the automatic ones: a restore point somebody took by hand, before doing
-/// something they were unsure about, is not the launcher's to throw away.
 fn prune(id: &str, index: &mut SnapshotIndex) {
     let keep = settings::get_settings()
         .map(|s| s.snapshot_keep.max(1) as usize)
@@ -161,7 +130,6 @@ fn prune(id: &str, index: &mut SnapshotIndex) {
 
 #[tauri::command]
 pub fn delete_snapshot(id: String, file: String) -> Result<(), String> {
-    // The name comes from the UI, so it must not be able to point outside.
     if file.contains('/') || file.contains('\\') || file.contains("..") {
         return Err("bad snapshot name".into());
     }
@@ -171,10 +139,6 @@ pub fn delete_snapshot(id: String, file: String) -> Result<(), String> {
     write_index(&id, &index)
 }
 
-/// Puts the instance back to the state a snapshot describes.
-///
-/// Takes a snapshot of the current state first, labelled automatically: undoing
-/// a restore is exactly the moment somebody realises they wanted the other one.
 #[tauri::command]
 pub async fn restore_snapshot(
     app: AppHandle,
@@ -202,8 +166,6 @@ pub async fn restore_snapshot(
     };
 
     let installed_now = modrinth::read_content_index(&id).items;
-    // Authoritative: everything installed is fair game to remove, because the
-    // snapshot is the state being asked for.
     let owned: HashSet<String> = installed_now.iter().map(|i| i.project_id.clone()).collect();
     let SyncPlan { install: todo, remove } = plan_sync(&manifest.items, &installed_now, &owned);
 
@@ -227,8 +189,6 @@ pub async fn restore_snapshot(
         }
     }
 
-    // Configs and the local jars come back byte for byte; the player's own
-    // settings files are left alone, same as when a shared pack updates.
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i).map_err(|e| e.to_string())?;
         if entry.is_dir() {
@@ -288,7 +248,6 @@ pub async fn restore_snapshot(
             installed += 1;
         }
 
-        // Reuse the modpack channel so the titlebar shows progress as usual.
         let _ = app.emit(
             "modrinth://modpack-progress",
             serde_json::json!({
@@ -303,9 +262,6 @@ pub async fn restore_snapshot(
     Ok(RestoreResult { installed, removed, failed, needs_curseforge })
 }
 
-/// Takes an automatic snapshot before something that rewrites content, unless
-/// the setting is off. Never fails the operation it is protecting — a missing
-/// restore point is bad, refusing to update because of it is worse.
 pub async fn snapshot_before(app: &AppHandle, id: &str, reason: &str) {
     let enabled = settings::get_settings().map(|s| s.snapshot_before_updates).unwrap_or(true);
     if !enabled {
@@ -332,8 +288,6 @@ mod tests {
         }
     }
 
-    /// The same decision `prune` makes, without touching the disk: keep the
-    /// newest `keep` automatic points, and never touch a hand-made one.
     fn survivors(index: &SnapshotIndex, keep: usize) -> Vec<i64> {
         let mut autos: Vec<&Snapshot> = index.snapshots.iter().filter(|s| s.auto).collect();
         autos.sort_by_key(|s| s.created);
@@ -352,7 +306,7 @@ mod tests {
         let index = SnapshotIndex {
             snapshots: vec![
                 snap(1, true),
-                snap(2, false), // taken by hand before something risky
+                snap(2, false),
                 snap(3, true),
                 snap(4, true),
             ],

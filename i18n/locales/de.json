@@ -144,7 +144,8 @@
     "close": "Schließen",
     "copy": "Kopieren",
     "copied": "In Zwischenablage kopiert",
-    "loading": "Wird geladen…"
+    "loading": "Wird geladen…",
+    "retry": "Erneut versuchen"
   },
   "logs": {
     "none": "Noch keine gespeicherten Logs.",
@@ -366,6 +367,8 @@
     "privacy": {
       "track_playtime": "Spielzeit erfassen",
       "track_playtimeDesc": "Gesamte Spielzeit pro Instanz messen und speichern.",
+      "share_activity": "Aktivität im Profil anzeigen",
+      "share_activityDesc": "Sendet Startanzahl und Spielzeit an dein öffentliches Spectra-Profil, für den Aktivitätsgraphen und die Statistiken. Erfordert eine Anmeldung.",
       "discord_rpc": "Discord Rich Presence",
       "discord_rpcDesc": "Zeige auf Discord, was du spielst.",
       "crash_reports": "Absturzberichte",
@@ -404,7 +407,8 @@
     "importingModpack": "Importiere Modpack…",
     "importingInstance": "Importiere: {name}",
     "exportingInstance": "Exportiere: {name}",
-    "uninstallingMod": "{name} wird entfernt"
+    "uninstallingMod": "{name} wird entfernt",
+    "installingMods": "Installiere {n} Einträge"
   },
   "content": {
     "all": "Alle",
@@ -478,7 +482,15 @@
     "tabDescription": "Beschreibung",
     "tabGallery": "Galerie",
     "noGallery": "Keine Galeriebilder",
-    "uninstalled": "{name} entfernt"
+    "uninstalled": "{name} entfernt",
+    "viewGrid": "Raster",
+    "viewList": "Liste",
+    "density": "Dichte",
+    "recent": "Zuletzt",
+    "picked": "{n} ausgewählt",
+    "clearPicked": "Leeren",
+    "installPicked": "Auswahl installieren",
+    "installedMany": "{n} installiert"
   },
   "mods": {
     "manual": "manuell",
@@ -658,6 +670,7 @@
   "spectra": {
     "title": "Spectra-Konto",
     "signIn": "Anmelden",
+    "viewProfile": "Mein Profil auf der Website öffnen",
     "signOut": "Abmelden",
     "signedOutTitle": "Spiel mit deinen Freunden",
     "signedOutHint": "Melde dich an, um eine Freundesliste zu führen und Modpacks direkt in ihren Launcher zu schicken.",

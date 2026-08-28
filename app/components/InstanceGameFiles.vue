@@ -1,6 +1,5 @@
 <template>
   <div class="space-y-4">
-    <!-- toolbar -->
     <div class="flex items-center justify-between">
       <p class="text-xs text-muted">
         {{ loading ? $t('common.loading') : $t('content.count', { n: count }) }}
@@ -27,13 +26,11 @@
 
     <p v-if="error" class="text-sm text-error">{{ error }}</p>
 
-    <!-- empty -->
     <div v-else-if="!loading && count === 0" class="flex flex-col items-center justify-center gap-3 py-16 text-center">
       <UIcon :name="emptyIcon" class="size-10 text-neutral-600" />
       <p class="text-sm text-muted">{{ $t('content.empty') }}</p>
     </div>
 
-    <!-- loading skeletons (grid for screenshots, rows for everything else) -->
     <div
       v-else-if="loading"
       :class="tab === 'screenshots' ? 'grid gap-3' : 'space-y-2'"
@@ -56,7 +53,6 @@
       </template>
     </div>
 
-    <!-- screenshots: image grid -->
     <div
       v-else-if="tab === 'screenshots'"
       class="grid gap-3"
@@ -74,7 +70,6 @@
       </button>
     </div>
 
-    <!-- worlds -->
     <div v-else-if="tab === 'worlds'" class="space-y-2">
       <div
         v-for="w in worlds"
@@ -98,7 +93,6 @@
             <span v-if="w.last_played">· {{ formatDate(w.last_played) }}</span>
           </div>
         </div>
-        <!-- Quick Play button (MC 1.20+) -->
         <UButton
           v-if="instanceSupportsQuickPlay"
           icon="i-lucide-play"
@@ -132,7 +126,6 @@
       </div>
     </div>
 
-    <!-- servers -->
     <div v-else-if="tab === 'servers'" class="space-y-2">
       <div
         v-for="(s, i) in servers"
@@ -140,7 +133,6 @@
         class="flex items-center gap-3 rounded-xl border border-default bg-white/3 p-3"
         :class="{ 'opacity-55': s.hidden }"
       >
-        <!-- Favicon: from ping result > server NBT > placeholder -->
         <div class="relative size-11 shrink-0">
           <img
             v-if="pingFor(s.ip)?.favicon || s.icon"
@@ -153,33 +145,26 @@
           </div>
         </div>
 
-        <!-- Info -->
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-2">
             <span class="truncate font-medium">{{ s.name || s.ip }}</span>
             <UBadge v-if="s.hidden" color="neutral" variant="subtle" size="xs" :label="$t('content.hidden')" />
           </div>
-          <!-- MOTD from ping -->
           <div v-if="pingFor(s.ip)?.motd" class="mt-0.5 truncate text-[11px] text-neutral-400" :title="pingFor(s.ip)!.motd">
             {{ pingFor(s.ip)!.motd }}
           </div>
           <div v-else class="truncate font-mono text-[11px] text-neutral-500">{{ s.ip }}</div>
         </div>
 
-        <!-- Ping status (right side) -->
         <div class="flex shrink-0 items-center gap-2">
-          <!-- Loading -->
           <UIcon v-if="pingStatus(s.ip) === 'loading'" name="i-lucide-loader-circle" class="size-3.5 animate-spin text-neutral-500" />
-          <!-- Online -->
           <template v-else-if="pingFor(s.ip)">
             <span :class="latencyClass(pingFor(s.ip)!.latency_ms)" class="font-mono text-[11px]">{{ pingFor(s.ip)!.latency_ms }}ms</span>
             <span class="text-[11px] text-neutral-500">{{ pingFor(s.ip)!.online }}/{{ pingFor(s.ip)!.max }}</span>
           </template>
-          <!-- Offline -->
           <span v-else-if="pingStatus(s.ip) === 'offline'" class="text-[11px] text-neutral-600">{{ $t('server.offline') }}</span>
         </div>
 
-        <!-- Actions -->
         <div class="flex shrink-0 items-center gap-1">
           <UButton
             v-if="instanceSupportsQuickPlay"
@@ -204,7 +189,6 @@
       </div>
     </div>
 
-    <!-- add server modal -->
     <UModal v-model:open="addServerOpen" :title="$t('content.addServer')">
       <template #body>
         <div class="space-y-3">
@@ -224,7 +208,6 @@
       </template>
     </UModal>
 
-    <!-- screenshot lightbox -->
     <UModal v-model:open="lightboxOpen" :ui="{ content: 'max-w-5xl w-[92vw]' }">
       <template #content>
         <div v-if="lightbox" class="flex flex-col">
@@ -269,7 +252,6 @@ import { invoke, convertFileSrc } from '@tauri-apps/api/core'
 import { save, confirm } from '@tauri-apps/plugin-dialog'
 import type { ScreenshotInfo, WorldInfo, ServerInfo, PingResult } from '~/types/launcher'
 
-/** Worlds, screenshots and servers — mods and packs live in <InstanceContent>. */
 type GameFileTab = 'screenshots' | 'worlds' | 'servers'
 
 const props = defineProps<{ instanceId: string; tab: GameFileTab }>()
@@ -317,7 +299,6 @@ async function load() {
       case 'worlds': worlds.value = result as WorldInfo[]; break
       case 'servers':
         servers.value = result as ServerInfo[]
-        // Reset pings for the new server list and start pinging.
         pings.value = {}
         pingAll()
         break
@@ -332,10 +313,8 @@ async function load() {
 const assetUrl = (path: string) => convertFileSrc(path)
 const formatDate = (ms: number) => new Date(ms).toLocaleDateString()
 
-// --- Quick Play helpers ---
 const instance = computed(() => instances.instances.find(i => i.id === props.instanceId))
 
-/** MC 1.20+ supports --quickPlay* args */
 function supportsQuickPlay(ver: string): boolean {
   const [, minorStr = '0'] = ver.split('.')
   return parseInt(minorStr) >= 20
@@ -344,7 +323,6 @@ const instanceSupportsQuickPlay = computed(() =>
   !!instance.value && supportsQuickPlay(instance.value.mc_version),
 )
 
-// Whether the instance is currently running (disables quick play buttons).
 const mc = useMinecraftLaunch(computed(() => props.instanceId))
 const isRunning = computed(() => mc.stage.value !== 'idle')
 
@@ -357,13 +335,11 @@ function quickPlayServer(ip: string) {
   emit('quickPlay', { kind: 'Multiplayer', host: host ?? ip, port: Number.isFinite(port) ? port : undefined })
 }
 
-// --- servers: add / remove ---
 const toast = useToast()
 const addServerOpen = ref(false)
 const addingServer = ref(false)
 const newServer = reactive({ name: '', ip: '' })
 
-// --- server pings ---
 type PingStatus = PingResult | 'loading' | 'offline'
 const pings = ref<Record<string, PingStatus>>({})
 
@@ -420,8 +396,6 @@ async function removeServer(index: number) {
   }
 }
 
-
-// --- worlds: backup / delete ---
 const busyWorld = ref<string | null>(null)
 
 async function backupWorld(w: WorldInfo) {
@@ -449,7 +423,6 @@ async function deleteWorld(w: WorldInfo) {
   }
 }
 
-// --- screenshots: delete ---
 async function deleteScreenshot(s: ScreenshotInfo) {
   const ok = await confirm(t('content.deleteScreenshotConfirm'), { title: t('content.deleteScreenshotTitle'), kind: 'warning' })
   if (!ok) return
@@ -462,7 +435,6 @@ async function deleteScreenshot(s: ScreenshotInfo) {
   }
 }
 
-// --- screenshots: lightbox / navigation / download / reveal ---
 const lightboxIndex = ref<number | null>(null)
 const lightbox = computed<ScreenshotInfo | null>({
   get: () => (lightboxIndex.value !== null ? screenshots.value[lightboxIndex.value] ?? null : null),
@@ -473,7 +445,6 @@ const lightboxOpen = computed({
   set: (v: boolean) => { if (!v) lightboxIndex.value = null },
 })
 
-/** Moves through the gallery, wrapping around. */
 function step(delta: number) {
   if (lightboxIndex.value === null || !screenshots.value.length) return
   const n = screenshots.value.length

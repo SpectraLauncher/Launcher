@@ -67,7 +67,6 @@ watch(isOpen, async (open) => {
   }
 })
 
-// Per-mod fields.
 const nameOf = (m: ModEntry) => m.name ?? m.filename
 const urlOf = (m: ModEntry) => (m.project_id ? `https://modrinth.com/mod/${m.project_id}` : '')
 const verOf = (m: ModEntry) => m.version ?? ''

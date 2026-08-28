@@ -1,7 +1,6 @@
 <template>
   <div class="h-full overflow-y-auto p-6 lg:p-8">
     <div class="mx-auto max-w-6xl space-y-6">
-      <!-- header -->
       <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 class="text-2xl font-bold tracking-tight">{{ $t('screenshotsPage.title') }}</h1>
@@ -20,7 +19,6 @@
         />
       </div>
 
-      <!-- skeletons (first load) -->
       <div v-if="loading" class="space-y-8">
         <div v-for="g in 2" :key="`g-sk-${g}`" class="space-y-3">
           <div class="flex items-center gap-2.5">
@@ -36,16 +34,13 @@
         </div>
       </div>
 
-      <!-- empty -->
       <div v-else-if="!groups.length" class="flex flex-col items-center justify-center gap-3 py-24 text-center">
         <UIcon name="i-lucide-camera" class="size-12 text-neutral-600" />
         <p class="text-sm text-muted">{{ $t('screenshotsPage.empty') }}</p>
       </div>
 
-      <!-- screenshots grouped by instance -->
       <template v-else>
         <section v-for="group in groups" :key="group.instance.id">
-          <!-- instance header -->
           <button
             type="button"
             class="group/h mb-3 flex w-full items-center gap-2.5 text-left"
@@ -58,7 +53,6 @@
             <span class="text-xs text-neutral-500">{{ $t('screenshotsPage.instanceShots', { n: group.shots.length }) }}</span>
           </button>
 
-          <!-- screenshot grid -->
           <div class="grid gap-3" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">
             <button
               v-for="s in group.shots"
@@ -75,7 +69,6 @@
       </template>
     </div>
 
-    <!-- lightbox -->
     <UModal v-model:open="lightboxOpen" :ui="{ content: 'max-w-5xl w-[92vw]' }">
       <template #content>
         <div v-if="lightbox" class="flex flex-col">
@@ -131,7 +124,6 @@ const groups = ref<ShotGroup[]>([])
 const loading = ref(true)
 
 const totalShots = computed(() => groups.value.reduce((n, g) => n + g.shots.length, 0))
-// Flat list (with the owning instance) so the lightbox can page across groups.
 const flatShots = computed(() =>
   groups.value.flatMap(g => g.shots.map(shot => ({ shot, instance: g.instance }))),
 )
@@ -158,7 +150,6 @@ async function load() {
   }
 }
 
-// --- lightbox ---
 const lightboxIndex = ref<number | null>(null)
 const lightbox = computed(() => (lightboxIndex.value !== null ? flatShots.value[lightboxIndex.value] ?? null : null))
 const lightboxOpen = computed({

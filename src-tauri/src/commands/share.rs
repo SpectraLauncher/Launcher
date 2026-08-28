@@ -1,18 +1,3 @@
-//! Sharing an instance with a short code.
-//!
-//! The wire format is a small `.zip` holding `spectra-share.json` (the instance's
-//! content index — every mod recorded with **its own** provider and exact version
-//! id — plus MC version and loader) and an `overrides/` tree with everything that
-//! isn't a downloadable project: `servers.dat`, `config/`, `options.txt`, …
-//!
-//! Deliberately *not* a `.mrpack`: an mrpack can only reference Modrinth, so a
-//! CurseForge-heavy pack would balloon into hundreds of megabytes of bundled jars
-//! and then show up on the receiving end as if it came from Modrinth. Here every
-//! item keeps its origin, so a 150-mod pack travels as ~200 KB and the receiver's
-//! update checks keep working.
-//!
-//! Server: Spectra-Web (`server/api/share.post.ts`) → SQLite → code valid 7 days.
-
 use std::collections::{HashMap, HashSet};
 use std::io::{Read, Write};
 
@@ -26,28 +11,17 @@ use crate::models::{Instance, Loader};
 use crate::{paths, store};
 
 const SHARE_API: &str = "https://spectra.makoto.com.pl/api/share";
-/// Soft anti-spam key — must match `SPECTRA_INGEST_KEY` on the server. Not a secret.
 const INGEST_KEY: &str = "uaH8U5Gh1ecZdQQCRsvkGo2ARFByk641CYYy7YAYw";
 
 pub(crate) const MANIFEST: &str = "spectra-share.json";
 pub(crate) const FORMAT: &str = "spectra-share";
 
-/// Overrides that are never overwritten when *updating* an instance someone
-/// else shared. They are the player's own settings, not the author's content.
 pub(crate) const KEEP_ON_SYNC: &[&str] = &["options.txt", "servers.dat", "servers.dat_old"];
 
-/// Folders scanned for content that could be recorded as a project instead of
-/// being shipped byte-for-byte.
 const CONTENT_DIRS: &[&str] = &["mods", "resourcepacks", "shaderpacks", "datapacks"];
 
-/// The only folders a share carries. A whitelist rather than a list of things
-/// to skip: mods invent their own caches constantly (one instance had 910 MB of
-/// generated terrain and 7 930 files of datapack cache), and a pack that ships
-/// what the receiver cannot regenerate is exactly these five plus the manifest.
 const SHARED_DIRS: &[&str] = &["mods", "resourcepacks", "shaderpacks", "datapacks", "config"];
 
-/// The instance icon travels beside the manifest, so a shared pack arrives
-/// looking like the original instead of a blank tile.
 pub(crate) const ICON: &str = "icon.png";
 
 #[derive(Serialize, Deserialize)]
@@ -57,31 +31,22 @@ pub(crate) struct ShareManifest {
     pub(crate) name: String,
     pub(crate) mc_version: String,
     pub(crate) loader: Loader,
-    /// One entry per installed project, each keeping its own `provider`.
     pub(crate) items: Vec<InstalledItem>,
-    /// Files that matched no provider, by game-dir path (for display only —
-    /// their bytes are in `overrides/` if the sharer opted in).
     #[serde(default)]
     pub(crate) unresolved: Vec<String>,
 }
 
-/// A content file that matches no provider — it can only travel as raw bytes,
-/// so the sharer picks these one by one.
 #[derive(Serialize, Clone)]
 pub struct UnresolvedFile {
-    /// Game-dir relative path, e.g. `mods/my-private.jar`.
     pub path: String,
     pub size: u64,
 }
 
-/// What the share dialog shows before anything is uploaded.
 #[derive(Serialize)]
 pub struct SharePreview {
     pub modrinth: usize,
     pub curseforge: usize,
-    /// Game-dir paths of content files that resolve to no provider.
     pub unresolved: Vec<UnresolvedFile>,
-    /// Combined size of those files — the cost of including them.
     pub unresolved_bytes: u64,
 }
 
@@ -89,14 +54,9 @@ pub struct SharePreview {
 pub struct ShareResult {
     pub code: String,
     pub url: String,
-    /// Unix ms when the code stops working.
     pub expires: i64,
-    /// Which revision of this instance the code now points at. Only meaningful
-    /// for account-owned shares; anonymous codes are always revision 1.
     #[serde(default = "one")]
     pub revision: u32,
-    /// True when this replaced an earlier upload of the same instance — i.e.
-    /// friends who already have it were told there is an update.
     #[serde(default)]
     pub pushed: bool,
 }
@@ -105,15 +65,11 @@ fn one() -> u32 {
     1
 }
 
-/// Outcome of redeeming a code. The instance always exists; the counters tell
-/// the UI what still needs the user's attention.
 #[derive(Serialize)]
 pub struct ShareImportResult {
     pub instance: Instance,
     pub installed: usize,
-    /// Names of projects that could not be downloaded.
     pub failed: Vec<String>,
-    /// CurseForge items skipped because this install has no CurseForge API key.
     pub needs_curseforge: usize,
 }
 
@@ -136,8 +92,6 @@ pub(crate) fn loader_str(loader: &Loader) -> Option<String> {
     }
 }
 
-/// Pulls hand-dropped jars into the content index so they travel as project ids
-/// instead of raw bytes. Best-effort: failures just mean more overrides.
 async fn link_local_files(id: &str) {
     let _ = modrinth::match_local_mods(id.to_string()).await;
     if curseforge::cf_enabled() {
@@ -145,7 +99,6 @@ async fn link_local_files(id: &str) {
     }
 }
 
-/// Content files that aren't in the index, with their combined size.
 pub(crate) fn scan_unresolved(id: &str, items: &[InstalledItem]) -> (Vec<UnresolvedFile>, u64) {
     let known: HashSet<&str> = items.iter().map(|i| i.filename.as_str()).collect();
     let game_dir = paths::instance_game_dir(id);
@@ -185,12 +138,6 @@ pub async fn share_preview(id: String) -> Result<SharePreview, String> {
     })
 }
 
-/// Packs the instance and uploads it, returning the code to hand out.
-///
-/// `include` lists the unresolved files (game-dir paths, as `share_preview`
-/// reports them) that should travel as raw bytes. Everything else provider-less
-/// is left behind — that is what keeps a share small, and it is the sharer's
-/// call file by file, since these are the ones nobody can re-download.
 #[tauri::command]
 pub async fn share_instance(
     app: AppHandle,
@@ -204,8 +151,6 @@ pub async fn share_instance(
         store::read_json(&paths::instance_config_file(&id))?.ok_or("instance not found")?;
     let items = modrinth::read_content_index(&id).items;
     let (unresolved, _) = scan_unresolved(&id, &items);
-    // Only paths that really are unresolved can be picked; anything else in the
-    // list would just be ignored by the packer anyway.
     let unresolved_paths: HashSet<String> = unresolved.iter().map(|u| u.path.clone()).collect();
     let include: HashSet<String> =
         include.into_iter().filter(|p| unresolved_paths.contains(p)).collect();
@@ -218,8 +163,6 @@ pub async fn share_instance(
         mc_version: instance.mc_version.clone(),
         loader: instance.loader.clone(),
         items: items.clone(),
-        // Records what actually shipped, so the receiver's warning lists the
-        // files it is really about to install and nothing else.
         unresolved: include.iter().cloned().collect(),
     };
 
@@ -233,8 +176,6 @@ pub async fn share_instance(
         })?;
     }
 
-    // Signed in, the pack goes straight to storage — that is the only path that
-    // can carry more than the proxy in front of the site allows.
     if let Some(token) = crate::commands::spectra::stored_token() {
         let result = upload_to_storage(&app, &tmp, &instance, &id, items.len(), &token).await;
         let _ = std::fs::remove_file(&tmp);
@@ -242,7 +183,6 @@ pub async fn share_instance(
         return result;
     }
 
-    // Signed out: the older route, through the server, with the smaller cap.
     let bytes = std::fs::read(&tmp).map_err(|e| format!("read pack: {e}"))?;
     let _ = std::fs::remove_file(&tmp);
     let size = bytes.len() as u64;
@@ -274,10 +214,6 @@ pub async fn share_instance(
     result
 }
 
-/// Progress for one phase of sharing, as the UI reads it.
-///
-/// `total` of 0 means "no idea yet" — the bar shows movement without a
-/// percentage rather than pretending to know.
 fn emit_progress(app: &AppHandle, stage: &str, current: u64, total: u64) {
     let _ = app.emit(
         "share://progress",
@@ -285,8 +221,6 @@ fn emit_progress(app: &AppHandle, stage: &str, current: u64, total: u64) {
     );
 }
 
-/// Bytes that will end up in `overrides/`, so packing can show a percentage.
-/// Metadata only — no file is opened twice.
 fn overrides_bytes(game_dir: &std::path::Path, handled: &HashSet<String>) -> u64 {
     fn walk(dir: &std::path::Path, rel: &str, handled: &HashSet<String>, total: &mut u64) {
         let Ok(entries) = std::fs::read_dir(dir) else { return };
@@ -309,13 +243,6 @@ fn overrides_bytes(game_dir: &std::path::Path, handled: &HashSet<String>) -> u64
     total
 }
 
-/// Uploads the finished pack straight to R2 and tells the site it landed.
-///
-/// Three requests: ask for a signed URL, PUT the file, confirm. The bytes never
-/// touch the Spectra server — it is behind a proxy that rejects bodies over
-/// 100 MB, and a gigabyte of pack has no business being buffered there anyway.
-/// The file is streamed off disk, so the launcher does not hold it in memory
-/// either.
 async fn upload_to_storage(
     app: &AppHandle,
     path: &std::path::Path,
@@ -361,15 +288,12 @@ async fn upload_to_storage(
         resp.json().await.map_err(|e| format!("bad server reply: {e}"))?
     };
 
-    // Stream the file, counting bytes as they go out so the bar means something
-    // on a slow connection.
     let file = tokio::fs::File::open(path).await.map_err(|e| format!("open pack: {e}"))?;
     let handle = app.clone();
     let mut sent = 0u64;
     let mut last_emit = 0u64;
     let stream = tokio_util::io::ReaderStream::new(file).map_ok(move |chunk| {
         sent += chunk.len() as u64;
-        // Every 2 MB: often enough to look live, rare enough not to flood the UI.
         if sent - last_emit >= 2 * 1024 * 1024 || sent == size {
             last_emit = sent;
             emit_progress(&handle, "uploading", sent, size);
@@ -421,9 +345,6 @@ async fn upload_to_storage(
     })
 }
 
-
-/// Content files the manifest already describes (so they travel as project ids,
-/// not bytes) plus the unresolved ones the sharer left unticked.
 fn handled_files(
     manifest: &ShareManifest,
     unresolved: &HashSet<String>,
@@ -439,10 +360,6 @@ fn handled_files(
     handled
 }
 
-/// Writes the share zip: manifest + everything the manifest doesn't already
-/// describe. Content files already recorded as projects, and the unresolved
-/// ones the sharer left unticked, are marked as handled so they never reach
-/// `overrides/`.
 pub(crate) fn write_pack(
     dest: &std::path::Path,
     manifest: &ShareManifest,
@@ -462,7 +379,6 @@ pub(crate) fn write_pack(
     zip.start_file(MANIFEST, opts).map_err(|e| e.to_string())?;
     zip.write_all(&json).map_err(|e| e.to_string())?;
 
-    // The icon is not an override — it belongs to the instance, not the game dir.
     let icon_path = paths::instance_icon_file(id);
     if let Ok(bytes) = std::fs::read(&icon_path) {
         zip.start_file(ICON, opts).map_err(|e| e.to_string())?;
@@ -478,7 +394,7 @@ pub(crate) fn write_pack(
             sub,
             &filter,
             &handled,
-            true, // keep `.disabled` files — they're part of the instance
+            true,
             opts,
             on_file,
         )?;
@@ -487,7 +403,6 @@ pub(crate) fn write_pack(
     Ok(())
 }
 
-/// Pulls the human-readable part out of an h3 error body.
 fn extract_message(body: &str) -> Option<String> {
     let v: serde_json::Value = serde_json::from_str(body).ok()?;
     v.get("statusMessage")
@@ -496,13 +411,8 @@ fn extract_message(body: &str) -> Option<String> {
         .map(|s| s.to_string())
 }
 
-/// Redeems a share code into a brand-new instance: creates it, unpacks the
-/// overrides, then downloads every recorded project from **its own** provider.
 #[tauri::command]
 pub async fn import_share(app: AppHandle, code: String) -> Result<ShareImportResult, String> {
-    // CurseForge profile codes look nothing like ours (8 mixed-case chars) and are
-    // resolved by an account-gated service only their own app can talk to. Say so
-    // instead of mangling the input into a lookup that always fails.
     if code.to_lowercase().contains("curseforge.com") {
         return Err("That's a CurseForge profile link. Spectra can't redeem those — \
                     ask the sender to use the CurseForge app's \"Export profile\" \
@@ -524,8 +434,6 @@ pub async fn import_share(app: AppHandle, code: String) -> Result<ShareImportRes
     )?;
 
     let mut instance = instance;
-    // The icon first — it is the one thing that makes the new instance look
-    // like the one that was shared.
     if let Ok(mut entry) = archive.by_name(ICON) {
         let mut buf = Vec::new();
         if entry.read_to_end(&mut buf).is_ok()
@@ -536,7 +444,6 @@ pub async fn import_share(app: AppHandle, code: String) -> Result<ShareImportRes
         }
     }
 
-    // Overrides next, so configs are in place before the mods land.
     let game_dir = paths::instance_game_dir(&instance.id);
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i).map_err(|e| e.to_string())?;
@@ -561,9 +468,6 @@ pub async fn import_share(app: AppHandle, code: String) -> Result<ShareImportRes
     let mut failed: Vec<String> = Vec::new();
     let mut needs_curseforge = 0usize;
 
-    // ponytail: sequential installs — reuses the existing per-provider commands
-    // verbatim (dependency resolution, blocked-mod handling, content index all
-    // come for free). Parallelise if 150-mod packs start feeling slow.
     for (i, item) in manifest.items.iter().enumerate() {
         let result = if item.provider == "curseforge" {
             if !cf_enabled {
@@ -598,7 +502,6 @@ pub async fn import_share(app: AppHandle, code: String) -> Result<ShareImportRes
             }
         }
 
-        // Reuse the modpack progress channel so the activity indicator just works.
         let _ = app.emit(
             "modrinth://modpack-progress",
             serde_json::json!({
@@ -610,8 +513,6 @@ pub async fn import_share(app: AppHandle, code: String) -> Result<ShareImportRes
         );
     }
 
-    // Remember the origin so the author's next push updates this instance
-    // instead of arriving as a second copy of the same pack.
     if let Ok(revision) = revision_of(&code).await {
         instance.share_origin = Some(crate::models::ShareOrigin {
             code: code.clone(),
@@ -624,7 +525,6 @@ pub async fn import_share(app: AppHandle, code: String) -> Result<ShareImportRes
     Ok(ShareImportResult { instance, installed, failed, needs_curseforge })
 }
 
-/// Trims user input ("spectra.../s/ab-cd12", " abcd12 ") down to a code.
 fn normalize_code(raw: &str) -> Result<String, String> {
     let code: String = raw
         .trim()
@@ -639,7 +539,6 @@ fn normalize_code(raw: &str) -> Result<String, String> {
     Ok(code)
 }
 
-/// Which revision the code currently points at.
 async fn revision_of(code: &str) -> Result<u32, String> {
     let resp = reqwest::Client::new()
         .get(format!("{SHARE_API}/{code}"))
@@ -655,7 +554,6 @@ async fn revision_of(code: &str) -> Result<u32, String> {
     Ok(meta.revision)
 }
 
-/// What a pull of a newer revision changed locally.
 #[derive(Serialize)]
 pub struct ShareSyncResult {
     pub revision: u32,
@@ -665,19 +563,12 @@ pub struct ShareSyncResult {
     pub needs_curseforge: usize,
 }
 
-/// Metadata the server keeps next to a code (`?meta=1`).
 #[derive(Deserialize)]
 struct ShareMeta {
     #[serde(default = "one")]
     revision: u32,
 }
 
-/// Downloads a code and returns its manifest plus the raw archive.
-///
-/// Two hops for packs in storage: the site is asked for a signed address (with
-/// our bearer token, which is also how it records that this account now has
-/// this revision), then the bytes come from storage **without** that header —
-/// S3 refuses a request carrying two different signatures.
 async fn fetch_pack(code: &str) -> Result<(ShareManifest, Vec<u8>), String> {
     let client = reqwest::Client::new();
     let mut req = client
@@ -715,7 +606,6 @@ async fn fetch_pack(code: &str) -> Result<(ShareManifest, Vec<u8>), String> {
         }
         stored.bytes().await.map_err(|e| e.to_string())?.to_vec()
     } else {
-        // A code from before packs moved to storage still answers with the zip.
         resp.bytes().await.map_err(|e| e.to_string())?.to_vec()
     };
 
@@ -735,20 +625,11 @@ async fn fetch_pack(code: &str) -> Result<(ShareManifest, Vec<u8>), String> {
     Ok((manifest, bytes))
 }
 
-/// What a sync has to change, worked out before anything is touched on disk.
 pub(crate) struct SyncPlan<'a> {
-    /// Missing entirely, or installed at a different version.
     pub(crate) install: Vec<&'a InstalledItem>,
-    /// Dropped by the author — and originally came from them.
     pub(crate) remove: Vec<&'a InstalledItem>,
 }
 
-/// The three-way comparison at the heart of an update: what the author ships
-/// now, what is on disk, and what this instance last took from the share.
-///
-/// Anything the player installed themselves appears in none of the share lists,
-/// so it is never removed — that is the whole reason the previous item ids are
-/// stored alongside the instance.
 pub(crate) fn plan_sync<'a>(
     wanted: &'a [InstalledItem],
     installed: &'a [InstalledItem],
@@ -772,13 +653,6 @@ pub(crate) fn plan_sync<'a>(
     }
 }
 
-/// Applies a newer revision of a shared pack **on top of an instance that is
-/// already installed**, rather than importing it as a second copy.
-///
-/// Three-way in spirit: the author's new list, what is installed now, and the
-/// list this instance last took from the share. Anything the player installed
-/// themselves is not in that last list, so it survives; anything the author
-/// dropped is, so it goes.
 #[tauri::command]
 pub async fn sync_share(app: AppHandle, id: String, code: String) -> Result<ShareSyncResult, String> {
     let code = normalize_code(&code)?;
@@ -790,10 +664,8 @@ pub async fn sync_share(app: AppHandle, id: String, code: String) -> Result<Shar
 
     let (manifest, bytes) = fetch_pack(&code).await?;
 
-    // The author's update can delete mods; this is the only thing that undoes it.
     crate::commands::snapshots::snapshot_before(&app, &id, "before update").await;
 
-    // Only what the share itself installed may be taken away again.
     let owned: HashSet<String> = instance
         .share_origin
         .as_ref()
@@ -818,7 +690,6 @@ pub async fn sync_share(app: AppHandle, id: String, code: String) -> Result<Shar
     let mut archive =
         zip::ZipArchive::new(std::io::Cursor::new(bytes)).map_err(|e| format!("open pack: {e}"))?;
 
-    // A re-iconed pack should look right after the update as well.
     if let Ok(mut entry) = archive.by_name(ICON) {
         let mut buf = Vec::new();
         if entry.read_to_end(&mut buf).is_ok()
@@ -828,8 +699,6 @@ pub async fn sync_share(app: AppHandle, id: String, code: String) -> Result<Shar
         }
     }
 
-    // Overrides, minus the files that are the player's own business. `KEEP_ON_SYNC`
-    // still matters for packs made before shares were limited to content folders.
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i).map_err(|e| e.to_string())?;
         if entry.is_dir() {
@@ -911,9 +780,6 @@ pub async fn sync_share(app: AppHandle, id: String, code: String) -> Result<Shar
     Ok(ShareSyncResult { revision, installed, removed, failed, needs_curseforge })
 }
 
-// ===== deep link (`spectra://share/<code>`) =====
-
-/// Extracts the code from a `spectra://share/ABC123` URL.
 pub fn code_from_url(url: &str) -> Option<String> {
     let rest = url.strip_prefix("spectra://")?.trim_start_matches('/');
     let rest = rest.strip_prefix("share/").or_else(|| rest.strip_prefix("share"))?;
@@ -921,8 +787,6 @@ pub fn code_from_url(url: &str) -> Option<String> {
     (code.len() == 6).then(|| code.to_uppercase())
 }
 
-/// Hands the frontend a code that arrived via deep link before the UI was ready
-/// (cold start). Returns `None` once consumed.
 #[tauri::command]
 pub fn take_pending_share(state: tauri::State<'_, crate::AppState>) -> Option<String> {
     state.pending_share.lock().ok()?.take()
@@ -948,8 +812,6 @@ mod tests {
 
     #[test]
     fn a_sync_leaves_the_players_own_mods_alone() {
-        // The author shipped A and B last time; A is now gone and B moved on a
-        // version. The player added C themselves.
         let wanted = vec![item("b", "v2")];
         let installed = vec![item("a", "v1"), item("b", "v1"), item("c", "v1")];
         let from_share: HashSet<String> = ["a".to_string(), "b".to_string()].into_iter().collect();
@@ -978,7 +840,6 @@ mod tests {
     fn parses_deep_links() {
         assert_eq!(code_from_url("spectra://share/ABC123"), Some("ABC123".into()));
         assert_eq!(code_from_url("spectra://share/abc123/"), Some("ABC123".into()));
-        // Windows hands the URL over with the host slot filled by the path.
         assert_eq!(code_from_url("spectra://share?x=1"), None);
         assert_eq!(code_from_url("spectra://share/AB"), None);
         assert_eq!(code_from_url("https://spectra.makoto.com.pl/s/ABC123"), None);

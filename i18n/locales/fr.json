@@ -144,7 +144,8 @@
     "close": "Fermer",
     "copy": "Copier",
     "copied": "Copié dans le presse-papiers",
-    "loading": "Chargement…"
+    "loading": "Chargement…",
+    "retry": "Réessayer"
   },
   "logs": {
     "none": "Aucun journal enregistré pour l'instant.",
@@ -366,6 +367,8 @@
     "privacy": {
       "track_playtime": "Suivre le temps de jeu",
       "track_playtimeDesc": "Mesurer et enregistrer le temps de jeu total de chaque instance.",
+      "share_activity": "Afficher l'activité sur mon profil",
+      "share_activityDesc": "Envoie le nombre de lancements et le temps de jeu vers votre profil public Spectra, pour le graphique d'activité et les statistiques. Nécessite d'être connecté.",
       "discord_rpc": "Discord Rich Presence",
       "discord_rpcDesc": "Afficher ce à quoi tu joues sur Discord.",
       "crash_reports": "Rapports de plantage",
@@ -404,7 +407,8 @@
     "importingModpack": "Importation du modpack…",
     "importingInstance": "Importation : {name}",
     "exportingInstance": "Exportation : {name}",
-    "uninstallingMod": "Suppression de {name}"
+    "uninstallingMod": "Suppression de {name}",
+    "installingMods": "Installation de {n} éléments"
   },
   "content": {
     "all": "Tout",
@@ -478,7 +482,15 @@
     "tabDescription": "Description",
     "tabGallery": "Galerie",
     "noGallery": "Aucune image dans la galerie",
-    "uninstalled": "{name} supprimé"
+    "uninstalled": "{name} supprimé",
+    "viewGrid": "Grille",
+    "viewList": "Liste",
+    "density": "Densité",
+    "recent": "Récents",
+    "picked": "{n} sélectionnés",
+    "clearPicked": "Effacer",
+    "installPicked": "Installer la sélection",
+    "installedMany": "{n} installés"
   },
   "mods": {
     "manual": "manuel",
@@ -658,6 +670,7 @@
   "spectra": {
     "title": "Compte Spectra",
     "signIn": "Se connecter",
+    "viewProfile": "Ouvrir mon profil sur le site",
     "signOut": "Se déconnecter",
     "signedOutTitle": "Joue avec tes amis",
     "signedOutHint": "Connecte-toi pour avoir une liste d’amis et leur envoyer des packs directement dans leur launcher.",

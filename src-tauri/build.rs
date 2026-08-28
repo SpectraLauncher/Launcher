@@ -1,8 +1,5 @@
 use std::collections::HashMap;
 
-/// Reads `.env` literally (no `$` interpolation). dotenvy expands `$VAR`, which
-/// corrupts secrets that contain `$` — e.g. CurseForge keys look like
-/// `$2a$10$...` (bcrypt). Parsing by hand keeps them intact.
 fn load_env_file() -> HashMap<String, String> {
     let mut map = HashMap::new();
     let Ok(contents) = std::fs::read_to_string(".env") else { return map };
@@ -13,7 +10,6 @@ fn load_env_file() -> HashMap<String, String> {
         }
         if let Some((k, v)) = line.split_once('=') {
             let mut v = v.trim();
-            // Strip a matching pair of surrounding quotes, if present.
             if v.len() >= 2
                 && ((v.starts_with('"') && v.ends_with('"')) || (v.starts_with('\'') && v.ends_with('\'')))
             {
@@ -26,7 +22,6 @@ fn load_env_file() -> HashMap<String, String> {
 }
 
 fn main() {
-    // Embed secrets at build time. Process env wins (CI), else the .env file.
     let file_env = load_env_file();
     let get = |key: &str| std::env::var(key).ok().filter(|s| !s.is_empty())
         .or_else(|| file_env.get(key).cloned())

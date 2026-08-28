@@ -1,6 +1,5 @@
 import type { Instance } from '~/types/launcher'
 
-/** A group as shown in the library. `name === null` is the implicit "ungrouped" bucket. */
 export interface DisplayGroup {
   id: string
   name: string | null
@@ -27,10 +26,6 @@ function loadRaw(): RawGroup[] {
   }
 }
 
-/**
- * Persisted (localStorage) ordering + grouping of instances for the home page.
- * It's a UI preference, so it lives client-side rather than in launcher.json.
- */
 export const useLibraryLayout = () => {
   const groups = useState<DisplayGroup[]>('library-layout', () => [])
 
@@ -45,7 +40,6 @@ export const useLibraryLayout = () => {
     localStorage.setItem(KEY, JSON.stringify(raw))
   }
 
-  /** Moves the "ungrouped" bucket to the end of the list (in place). */
   function pinUngroupedLast() {
     const idx = groups.value.findIndex(g => g.name === null)
     if (idx !== -1 && idx !== groups.value.length - 1) {
@@ -54,8 +48,6 @@ export const useLibraryLayout = () => {
     }
   }
 
-  /** Rebuilds the display from saved layout + current instances (adds new ones
-   *  to "ungrouped", drops deleted ones), preserving the user's arrangement. */
   function reconcile(instances: Instance[]) {
     const byId = new Map(instances.map(i => [i.id, i]))
     const used = new Set<string>()
@@ -82,7 +74,6 @@ export const useLibraryLayout = () => {
       if (!used.has(inst.id)) ungrouped.items.push(inst)
     }
 
-    // Keep "ungrouped" last.
     const idx = next.indexOf(ungrouped)
     if (idx !== next.length - 1) {
       next.splice(idx, 1)
@@ -103,7 +94,6 @@ export const useLibraryLayout = () => {
     persist()
   }
 
-  /** Deletes a named group; its instances fall back to "ungrouped". */
   function removeGroup(id: string) {
     const i = groups.value.findIndex(g => g.id === id)
     if (i === -1 || groups.value[i].name === null) return
@@ -124,7 +114,6 @@ export const useLibraryLayout = () => {
     persist()
   }
 
-  /** Called after the groups themselves are reordered via drag. */
   function onGroupsReordered() {
     pinUngroupedLast()
     persist()

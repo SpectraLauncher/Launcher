@@ -80,7 +80,6 @@ const runningOptions = computed(() =>
     .map(a => ({ value: a.instanceId, label: instances.instances.find(i => i.id === a.instanceId)?.name ?? a.instanceId })),
 )
 
-// Keep a valid selection even as instances start/stop.
 watch([open, runningOptions], () => {
   if (!open.value) return
   if (!selected.value || !runningOptions.value.some(o => o.value === selected.value)) {
@@ -95,7 +94,6 @@ const title = computed(() => {
 
 const lines = computed(() => (selected.value ? ac.logsFor(selected.value).value : []))
 
-// Color each line by detected log level.
 function levelClass(line: string): string {
   const m = line.match(/\b(FATAL|ERROR|SEVERE|WARN(?:ING)?|INFO|DEBUG|TRACE)\b/)
   switch (m?.[1]) {
@@ -112,14 +110,12 @@ function levelClass(line: string): string {
     case 'INFO':
       return 'text-neutral-300'
   }
-  // Unmatched continuation lines (e.g. stack traces) — dim, but red if it looks like one.
   if (/^\s*at\s|Exception|Caused by:|\bError\b/.test(line)) return 'text-red-400/80'
   return 'text-neutral-400'
 }
 
 const colored = computed(() => lines.value.map(text => ({ text, cls: levelClass(text) })))
 
-// --- autoscroll ---
 const scroller = ref<HTMLElement | null>(null)
 const autoscroll = ref(true)
 
@@ -134,7 +130,6 @@ function toggleAutoscroll() {
 function onScroll() {
   const el = scroller.value
   if (!el) return
-  // Disable autoscroll if the user scrolls up; re-enable near the bottom.
   autoscroll.value = el.scrollHeight - el.scrollTop - el.clientHeight < 40
 }
 

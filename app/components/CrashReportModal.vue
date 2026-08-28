@@ -2,9 +2,7 @@
   <UModal v-model:open="open" :ui="{ content: 'max-w-4xl' }" :dismissible="false">
     <template #content>
       <div class="flex flex-col">
-        <!-- Header -->
         <div class="flex items-start gap-4 border-b border-default px-5 py-4">
-          <!-- Animated crash icon -->
           <div class="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl bg-red-500/15">
             <UIcon name="i-lucide-triangle-alert" class="size-5 text-red-400" />
           </div>
@@ -14,7 +12,6 @@
               {{ subtitle }}
             </p>
           </div>
-          <!-- Exit code badge -->
           <UBadge
             v-if="crash?.code != null"
             color="error"
@@ -24,20 +21,16 @@
           />
         </div>
 
-        <!-- Crash report content -->
         <div class="min-h-0 flex-1 px-5 py-4">
-          <!-- File name -->
           <div v-if="crash?.crash_report_rel" class="mb-2 flex items-center gap-2">
             <UIcon name="i-lucide-file-text" class="size-3.5 shrink-0 text-red-400" />
             <span class="truncate font-mono text-[11px] text-neutral-500">{{ crash.crash_report_rel }}</span>
           </div>
 
-          <!-- Loading -->
           <div v-if="contentLoading" class="flex items-center justify-center py-10">
             <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin text-neutral-500" />
           </div>
 
-          <!-- No report generated -->
           <div
             v-else-if="!crash?.crash_report_rel"
             class="flex flex-col items-center gap-2 py-10 text-center"
@@ -46,7 +39,6 @@
             <p class="text-sm text-neutral-500">{{ $t('crash.noReport') }}</p>
           </div>
 
-          <!-- Load error -->
           <div
             v-else-if="loadError"
             class="flex flex-col items-center gap-2 py-10 text-center"
@@ -55,9 +47,7 @@
             <p class="text-sm text-neutral-500">{{ $t('crash.loadError') }}</p>
           </div>
 
-          <!-- Report text with coloring -->
           <div v-else class="overflow-hidden rounded-xl border border-default bg-black/40">
-            <!-- Toolbar -->
             <div class="flex items-center justify-between gap-2 border-b border-default px-3 py-1.5">
               <span class="truncate font-mono text-[11px] text-neutral-500">
                 {{ crash.crash_report_rel?.split('/').at(-1) }}
@@ -72,7 +62,6 @@
                 @click="copyReport"
               />
             </div>
-            <!-- Scrollable content -->
             <pre
               class="max-h-[42vh] overflow-auto px-3 py-2.5 font-mono text-[11px] leading-relaxed"
             ><span
@@ -84,10 +73,8 @@
           </div>
         </div>
 
-        <!-- Footer actions -->
         <div class="flex items-center justify-between gap-2 border-t border-default px-5 py-3">
           <div class="flex items-center gap-2">
-            <!-- Share on mclo.gs -->
             <UButton
               v-if="crash?.crash_report_rel"
               icon="i-lucide-share-2"
@@ -98,7 +85,6 @@
               :label="$t('crash.share')"
               @click="share"
             />
-            <!-- Open in Logs tab -->
             <UButton
               v-if="crash?.crash_report_rel"
               icon="i-lucide-scroll-text"
@@ -135,7 +121,6 @@ const { t } = useI18n()
 const open = ac.crashOpen
 const instanceId = ac.crashInstance
 
-// The current crash info (driven by ac.crashFor, reactive on instanceId).
 const crash = computed(() => (instanceId.value ? ac.crashFor(instanceId.value).value : null))
 
 const instanceName = computed(
@@ -150,7 +135,6 @@ const subtitle = computed(() => {
     : t('crash.subtitleNoCode', { name })
 })
 
-// --- Report content ---
 const reportContent = ref('')
 const contentLoading = ref(false)
 const loadError = ref(false)
@@ -177,7 +161,6 @@ watch(
   { immediate: true },
 )
 
-// --- Line coloring (mirrors LiveLogsModal logic + crash report specifics) ---
 function lineClass(line: string): string {
   if (/^-- (Head|Affected levels|Suspected Mods|Stack Trace|System Details)/.test(line))
     return 'text-amber-300 font-semibold'
@@ -193,7 +176,6 @@ const coloredLines = computed(() =>
   reportContent.value.split('\n').map(text => ({ text, cls: lineClass(text) })),
 )
 
-// --- Actions ---
 const uploading = ref(false)
 
 async function share() {
@@ -204,7 +186,7 @@ async function share() {
       id: instanceId.value,
       rel: crash.value.crash_report_rel,
     })
-    try { await navigator.clipboard.writeText(paste.url) } catch { /* clipboard optional */ }
+    try { await navigator.clipboard.writeText(paste.url) } catch {  }
     toast.add({
       title: t('logs.shared'),
       description: paste.url,

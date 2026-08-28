@@ -1,6 +1,5 @@
 <template>
   <div class="grid grid-cols-1 gap-4 md:grid-cols-[240px_1fr]">
-    <!-- file list -->
     <div class="space-y-2">
       <div class="flex items-center justify-between">
         <p class="text-xs text-muted">{{ $t('content.count', { n: files.length }) }}</p>
@@ -24,7 +23,6 @@
       </div>
     </div>
 
-    <!-- content -->
     <div class="min-w-0">
       <div v-if="contentLoading" class="py-10 text-center text-sm text-muted">{{ $t('common.loading') }}</div>
       <div v-else-if="!selected" class="py-10 text-center text-sm text-muted">{{ $t('logs.selectHint') }}</div>
@@ -74,8 +72,6 @@ async function load() {
   loading.value = true
   try {
     files.value = await invoke<LogFile[]>('list_log_files', { id: props.instanceId })
-    // If an initial file was requested (e.g. from the crash modal), open it;
-    // otherwise fall back to the first file in the list.
     const wantRel = props.initialRel || null
     const target = wantRel && files.value.some(f => f.rel === wantRel)
       ? wantRel
@@ -104,7 +100,6 @@ async function open(rel: string) {
 async function reveal() {
   if (!selected.value) return
   try {
-    // The rel path is under the game dir; reveal needs an absolute path.
     const base = await invoke<string>('get_instance_path', { id: props.instanceId })
     await invoke('reveal_in_explorer', { path: `${base}/minecraft/${selected.value}` })
   } catch (e) {
@@ -120,7 +115,7 @@ async function share() {
       id: props.instanceId,
       rel: selected.value,
     })
-    try { await navigator.clipboard.writeText(paste.url) } catch { /* clipboard optional */ }
+    try { await navigator.clipboard.writeText(paste.url) } catch {  }
     toast.add({
       title: t('logs.shared'),
       description: paste.url,

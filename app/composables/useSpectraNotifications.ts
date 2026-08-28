@@ -1,11 +1,3 @@
-/**
- * Friend requests and instance invites, polled from the website.
- *
- * Polling rather than a socket: the launcher is a desktop app that is open for
- * hours, and one indexed query every half minute costs less than keeping a
- * connection alive through sleep, VPN switches and flaky Wi-Fi.
- */
-
 export type NotificationKind = 'friend_request' | 'friend_accepted' | 'instance_invite' | 'instance_update'
 
 export interface SpectraNotification {
@@ -25,14 +17,11 @@ export const useSpectraNotifications = () => {
   const items = useState<SpectraNotification[]>('spectra-notifications', () => [])
   const unread = useState('spectra-unread', () => 0)
 
-  // Module-level would survive HMR badly; a state key keeps one timer per app.
   const timer = useState<ReturnType<typeof setInterval> | null>('spectra-poll', () => null)
 
   async function poll() {
     if (!account.isSignedIn.value) return
     try {
-      // The same request doubles as the presence heartbeat — friends see this
-      // account as online, and as in game while an instance is running.
       const playing = Object.values(useActivityCenter().activities.value)
         .some(a => a.kind === 'running')
       const res = await account.api<{ unread: number, notifications: SpectraNotification[] }>(
@@ -41,7 +30,6 @@ export const useSpectraNotifications = () => {
       items.value = res.notifications
       unread.value = res.unread
     } catch {
-      // Offline or signed out — the next tick tries again.
     }
   }
 
@@ -57,7 +45,6 @@ export const useSpectraNotifications = () => {
     timer.value = null
   }
 
-  /** Marks everything (or the given ids) read, and drops the badge. */
   async function markRead(ids?: number[]) {
     const target = ids ?? items.value.filter(n => !n.read).map(n => n.id)
     if (!target.length) return
@@ -66,17 +53,12 @@ export const useSpectraNotifications = () => {
     await account.api('POST', '/api/notifications/read', { ids: target }).catch(() => {})
   }
 
-  /** Drops a notification from the list once it has been acted on. */
   function dismiss(id: number) {
     const gone = items.value.find(n => n.id === id)
     items.value = items.value.filter(n => n.id !== id)
     if (gone && !gone.read) unread.value = Math.max(0, unread.value - 1)
   }
 
-  /**
-   * Throws one away for good. Local-only removal would not last: the next poll
-   * fetches it again, because the server is what decides the list.
-   */
   async function remove(id: number) {
     dismiss(id)
     await account.api('DELETE', `/api/notifications/${id}`).catch(() => {})

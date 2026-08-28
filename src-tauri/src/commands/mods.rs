@@ -1,8 +1,3 @@
-//! Managing the mods in an instance's `mods/` folder: listing, enabling/disabling
-//! (the Minecraft convention is a `.disabled` suffix, honoured by all loaders)
-//! and deleting. Metadata (name/version/icon) is enriched from the Modrinth
-//! content index when available; manually-added jars still show up by filename.
-
 use std::collections::HashMap;
 use std::io::Read;
 use std::path::Path;
@@ -15,16 +10,13 @@ use crate::paths;
 
 type Jar = zip::ZipArchive<std::fs::File>;
 
-/// Metadata pulled from a local mod jar.
 #[derive(Default)]
 struct JarMeta {
     name: Option<String>,
     version: Option<String>,
-    icon: Option<String>, // data: URL
+    icon: Option<String>,
 }
 
-/// Reads name/version/icon from a local mod jar's loader metadata
-/// (Fabric, Quilt, Forge, NeoForge, or legacy mcmod.info).
 fn read_local_mod_meta(jar_path: &Path) -> JarMeta {
     let Ok(file) = std::fs::File::open(jar_path) else { return JarMeta::default() };
     let Ok(mut zip) = zip::ZipArchive::new(file) else { return JarMeta::default() };
@@ -50,7 +42,6 @@ fn read_entry_string(zip: &mut Jar, name: &str) -> Option<String> {
     Some(s)
 }
 
-/// Fabric/Quilt icon: a string path, or a `{ size: path }` map (pick the largest).
 fn icon_from_json(v: Option<&serde_json::Value>) -> Option<String> {
     match v {
         Some(serde_json::Value::String(s)) => Some(s.clone()),
@@ -63,7 +54,6 @@ fn icon_from_json(v: Option<&serde_json::Value>) -> Option<String> {
     }
 }
 
-/// Drops build-time placeholder versions like `${file.jarVersion}`.
 fn clean_version(v: Option<&str>) -> Option<String> {
     v.filter(|s| !s.contains("${") && !s.is_empty()).map(String::from)
 }
@@ -88,8 +78,6 @@ fn quilt_meta(zip: &mut Jar) -> Option<MetaTuple> {
     Some((name, version, icon_from_json(meta.and_then(|m| m.get("icon")))))
 }
 
-/// Forge/NeoForge `mods.toml`: `[[mods]]` → `displayName`, `version`, `logoFile`
-/// (logoFile may also be a global top-level key).
 fn toml_meta(zip: &mut Jar, path: &str) -> Option<MetaTuple> {
     let s = read_entry_string(zip, path)?;
     let doc: toml::Value = toml::from_str(&s).ok()?;
@@ -104,7 +92,6 @@ fn toml_meta(zip: &mut Jar, path: &str) -> Option<MetaTuple> {
     Some((name, version, logo))
 }
 
-/// Legacy Forge (≤1.12) `mcmod.info`: a JSON array (or `{ modList: [...] }`).
 fn mcmod_meta(zip: &mut Jar) -> Option<MetaTuple> {
     let s = read_entry_string(zip, "mcmod.info")?;
     let v: serde_json::Value = serde_json::from_str(&s).ok()?;
@@ -139,7 +126,6 @@ fn read_zip_image(zip: &mut Jar, path: &str) -> Option<String> {
 
 #[derive(Serialize)]
 pub struct ModEntry {
-    /// The enabled jar file name (without the `.disabled` suffix).
     filename: String,
     enabled: bool,
     name: Option<String>,
@@ -147,20 +133,15 @@ pub struct ModEntry {
     version_id: Option<String>,
     icon_url: Option<String>,
     project_id: Option<String>,
-    /// "local" | "modrinth" (| "curseforge" later).
     provider: String,
-    /// File modification time (ms since epoch), for "last updated" sorting.
     modified: u64,
 }
 
 #[tauri::command]
 pub fn list_mods(instance_id: String) -> Result<Vec<ModEntry>, String> {
-    // COMPAT(drop after 0.7): kept so the old mods-only tab keeps working while
-    // the merged content tab lands. `list_content` is the real one now.
     list_content(instance_id, "mod".into())
 }
 
-/// The folder and file extension a content kind lives in.
 fn kind_layout(kind: &str) -> (&'static str, &'static str) {
     match kind {
         "resourcepack" => ("resourcepacks", ".zip"),
@@ -170,12 +151,6 @@ fn kind_layout(kind: &str) -> (&'static str, &'static str) {
     }
 }
 
-/// Everything of one kind installed in an instance: the files on disk, married
-/// to what the content index knows about them.
-///
-/// One listing for mods, resource packs, shaders and datapacks, so the content
-/// tab can show them side by side with the same toggles and update checks —
-/// they only differ by folder and extension.
 #[tauri::command]
 pub fn list_content(instance_id: String, kind: String) -> Result<Vec<ModEntry>, String> {
     let (folder, ext) = kind_layout(&kind);
@@ -199,7 +174,6 @@ pub fn list_content(instance_id: String, kind: String) -> Result<Vec<ModEntry>, 
             Some(base) => (base.to_string(), false),
             None => (raw.clone(), true),
         };
-        // Packs may be unzipped folders; a folder inside mods/ is never a mod.
         if is_dir {
             if ext == ".jar" {
                 continue;
@@ -216,8 +190,6 @@ pub fn list_content(instance_id: String, kind: String) -> Result<Vec<ModEntry>, 
             .map(|d| d.as_millis() as u64)
             .unwrap_or(0);
 
-        // For local mods (no provider record), read name/version/icon out of the
-        // jar. Only mods carry that metadata; a resource pack is just a zip.
         let local = if meta.is_none() && !is_dir && ext == ".jar" {
             read_local_mod_meta(&path)
         } else {
@@ -244,12 +216,8 @@ pub fn list_content(instance_id: String, kind: String) -> Result<Vec<ModEntry>, 
     Ok(out)
 }
 
-/// Enables/disables a mod by toggling the `.disabled` suffix. `filename` is the
-/// enabled (suffix-free) jar name.
 #[tauri::command]
 pub fn set_mod_enabled(instance_id: String, filename: String, enabled: bool) -> Result<(), String> {
-    // Toggling is the same rename whatever the folder, and `content.rs` already
-    // does it with name validation — the content tab can call that directly.
     let dir = paths::instance_game_dir(&instance_id).join("mods");
     let on = dir.join(&filename);
     let off = dir.join(format!("{filename}.disabled"));

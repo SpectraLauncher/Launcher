@@ -1,18 +1,15 @@
 import { invoke } from '@tauri-apps/api/core'
 
-/** The signed-in Spectra user, as the website reports it. */
 export interface SpectraUser {
   id: string
   name: string | null
   username: string | null
   image: string | null
   email?: string
-  /** The Minecraft profile linked to this account, once verified. */
   mcUsername?: string | null
   mcUuid?: string | null
 }
 
-/** What a friend is allowed to see. 'hidden' never reaches anyone as itself. */
 export type FriendStatus = 'online' | 'in_game' | 'dnd' | 'offline'
 export type PresenceMode = 'visible' | 'dnd' | 'hidden'
 
@@ -32,13 +29,6 @@ export interface FriendRequest {
   user: Omit<SpectraFriend, 'friendshipId'>
 }
 
-/**
- * The launcher's Spectra account (friends, shared instances) — not to be
- * confused with `useAccountStore`, which holds Minecraft/Microsoft accounts.
- *
- * Every request goes through the Rust side, which owns the session token; the
- * frontend never sees it.
- */
 export const useSpectraAccount = () => {
   const user = useState<SpectraUser | null>('spectra-user', () => null)
   const loading = useState('spectra-loading', () => false)
@@ -46,7 +36,6 @@ export const useSpectraAccount = () => {
 
   const isSignedIn = computed(() => user.value != null)
 
-  /** Calls the Spectra API with the stored session token attached. */
   async function api<T>(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', path: string, body?: unknown) {
     return invoke<T>('spectra_api', { method, path, body: body ?? null })
   }
@@ -62,18 +51,12 @@ export const useSpectraAccount = () => {
     }
   }
 
-  /**
-   * Tells the site which Minecraft profile this account plays as, so friends can
-   * be found by their in-game name. The token never passes through here — Rust
-   * reads it from the account file and posts it straight to the site.
-   */
   async function linkMinecraft() {
     const linked = await invoke<{ username: string } | null>('spectra_link_minecraft').catch(() => null)
     if (linked && user.value) user.value = { ...user.value, mcUsername: linked.username }
     return linked
   }
 
-  /** Opens the browser; the session arrives back through the deep link. */
   async function login() {
     error.value = null
     const url = await invoke<string>('spectra_login_url')
@@ -90,7 +73,6 @@ export const useSpectraAccount = () => {
   return { user, loading, error, isSignedIn, displayName, api, refresh, login, logout, linkMinecraft }
 }
 
-/** Colour + letter for someone without a picture, stable per name. */
 export function spectraInitial(name?: string | null) {
   const label = (name || '?').trim()
   let hue = 0

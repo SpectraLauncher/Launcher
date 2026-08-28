@@ -1,17 +1,3 @@
-//! Reading an instance's on-disk content for the instance page tabs:
-//! screenshots, worlds (saves), resource packs, datapacks and shaders.
-//!
-//! Formats (see the Minecraft wiki):
-//!   - screenshots: plain image files in `screenshots/`
-//!   - worlds:      `saves/<dir>/level.dat` (gzipped NBT) + optional `icon.png`
-//!   - packs:       `pack.mcmeta` (JSON: pack.pack_format + pack.description) and
-//!                  optional `pack.png`, either as a folder or zipped
-//!   - shaders:     zip or folder, no standard manifest — just names
-//!
-//! Big images (screenshots, world icons) are returned as absolute paths for the
-//! frontend to load via the asset protocol; small embedded pack icons are
-//! returned inline as `data:` URLs.
-
 use std::io::Read;
 use std::path::Path;
 
@@ -21,8 +7,6 @@ use serde::{Deserialize, Serialize};
 use crate::paths;
 
 const IMAGE_EXTS: [&str; 5] = ["png", "jpg", "jpeg", "webp", "gif"];
-
-// ---------- screenshots ----------
 
 #[derive(Serialize)]
 pub struct ScreenshotInfo {
@@ -50,12 +34,9 @@ pub fn list_screenshots(id: String) -> Result<Vec<ScreenshotInfo>, String> {
             modified: modified_millis(&entry),
         });
     }
-    // Newest first.
     out.sort_by(|a, b| b.modified.cmp(&a.modified));
     Ok(out)
 }
-
-// ---------- worlds ----------
 
 #[derive(Serialize)]
 pub struct WorldInfo {
@@ -128,7 +109,6 @@ pub fn list_worlds(id: String) -> Result<Vec<WorldInfo>, String> {
 
 fn read_level_dat(path: &Path) -> Option<LevelData> {
     let bytes = std::fs::read(path).ok()?;
-    // level.dat is gzip-compressed NBT.
     let mut decoder = flate2::read::GzDecoder::new(&bytes[..]);
     let mut raw = Vec::new();
     decoder.read_to_end(&mut raw).ok()?;
@@ -146,20 +126,14 @@ fn game_mode_name(t: i32) -> String {
     .to_string()
 }
 
-// ---------- resource packs / datapacks ----------
-
 #[derive(Serialize)]
 pub struct PackInfo {
-    /// Display name (folder name, or file name without `.zip`).
     name: String,
-    /// Raw file/folder name on disk (used for deletion).
     filename: String,
     description: Option<String>,
     pack_format: Option<i64>,
-    /// Small icon as a `data:` URL (read from `pack.png`), if present.
     icon: Option<String>,
     is_zip: bool,
-    /// False when the pack is suffixed `.disabled` (Minecraft ignores it).
     enabled: bool,
 }
 
@@ -190,8 +164,6 @@ fn list_packs(dir: &Path) -> Result<Vec<PackInfo>, String> {
 }
 
 fn read_pack(path: &Path) -> Option<PackInfo> {
-    // A `.disabled` suffix marks a pack the game ignores. `base` is the
-    // suffix-free name the frontend uses to toggle/delete.
     let (base, enabled) = strip_disabled(&file_name(path));
 
     if path.is_dir() {
@@ -208,7 +180,6 @@ fn read_pack(path: &Path) -> Option<PackInfo> {
             enabled,
         })
     } else if path.is_file() && base.to_lowercase().ends_with(".zip") {
-        // zip crate reads by content, so a `*.zip.disabled` file still opens.
         let (mcmeta, icon) = read_zip_pack_assets(path);
         let (description, pack_format) = parse_mcmeta(mcmeta.as_deref());
         Some(PackInfo {
@@ -225,7 +196,6 @@ fn read_pack(path: &Path) -> Option<PackInfo> {
     }
 }
 
-/// Reads `pack.mcmeta` (as text) and `pack.png` (as bytes) from a zip pack.
 fn read_zip_pack_assets(path: &Path) -> (Option<String>, Option<Vec<u8>>) {
     let file = match std::fs::File::open(path) {
         Ok(f) => f,
@@ -247,7 +217,6 @@ fn read_zip_pack_assets(path: &Path) -> (Option<String>, Option<Vec<u8>>) {
     (mcmeta, icon)
 }
 
-/// Pulls `pack.pack_format` and a flattened `pack.description` out of a mcmeta.
 fn parse_mcmeta(text: Option<&str>) -> (Option<String>, Option<i64>) {
     let Some(text) = text else {
         return (None, None);
@@ -267,7 +236,6 @@ fn parse_mcmeta(text: Option<&str>) -> (Option<String>, Option<i64>) {
     (description, pack_format)
 }
 
-/// Flattens a Minecraft text component (string | object | array) to plain text.
 fn flatten_text(v: &serde_json::Value) -> String {
     match v {
         serde_json::Value::String(s) => s.clone(),
@@ -283,13 +251,10 @@ fn flatten_text(v: &serde_json::Value) -> String {
     }
 }
 
-// ---------- servers (servers.dat) ----------
-
 #[derive(Serialize)]
 pub struct ServerInfo {
     name: String,
     ip: String,
-    /// Favicon as a `data:` URL, if the server set one.
     icon: Option<String>,
     hidden: bool,
 }
@@ -305,12 +270,10 @@ struct ServersFile {
 struct ServerEntry {
     name: Option<String>,
     ip: Option<String>,
-    /// base64-encoded PNG (no `data:` prefix).
     icon: Option<String>,
     hidden: Option<i8>,
 }
 
-/// Reads the saved multiplayer server list (`servers.dat`, uncompressed NBT).
 #[tauri::command]
 pub fn list_servers(id: String) -> Result<Vec<ServerInfo>, String> {
     let path = paths::instance_game_dir(&id).join("servers.dat");
@@ -331,7 +294,6 @@ pub fn list_servers(id: String) -> Result<Vec<ServerInfo>, String> {
         .collect())
 }
 
-/// Appends a server to `servers.dat`, preserving existing entries/fields.
 #[tauri::command]
 pub fn add_server(id: String, name: String, ip: String) -> Result<(), String> {
     use fastnbt::Value;
@@ -359,7 +321,6 @@ pub fn add_server(id: String, name: String, ip: String) -> Result<(), String> {
     std::fs::write(&path, bytes).map_err(|e| format!("write servers.dat: {e}"))
 }
 
-/// Removes the server at `index` (matching `list_servers` order) from `servers.dat`.
 #[tauri::command]
 pub fn delete_server(id: String, index: usize) -> Result<(), String> {
     use fastnbt::Value;
@@ -378,14 +339,11 @@ pub fn delete_server(id: String, index: usize) -> Result<(), String> {
     std::fs::write(&path, out).map_err(|e| format!("write servers.dat: {e}"))
 }
 
-// ---------- shaders ----------
-
 #[derive(Serialize)]
 pub struct ShaderInfo {
     name: String,
     filename: String,
     is_zip: bool,
-    /// False when suffixed `.disabled`.
     enabled: bool,
 }
 
@@ -410,9 +368,6 @@ pub fn list_shaders(id: String) -> Result<Vec<ShaderInfo>, String> {
     Ok(out)
 }
 
-// ---------- delete content (packs/shaders/datapacks) ----------
-
-/// Maps a content kind to its game-dir subfolder.
 fn content_folder(kind: &str) -> Result<&'static str, String> {
     match kind {
         "resourcepack" => Ok("resourcepacks"),
@@ -422,8 +377,6 @@ fn content_folder(kind: &str) -> Result<&'static str, String> {
     }
 }
 
-/// Deletes a resource pack / shader / datapack (file or folder). `filename` is the
-/// suffix-free name; both the enabled and `.disabled` variants are removed.
 #[tauri::command]
 pub fn delete_content(id: String, kind: String, filename: String) -> Result<(), String> {
     let folder = content_folder(&kind)?;
@@ -439,8 +392,6 @@ pub fn delete_content(id: String, kind: String, filename: String) -> Result<(), 
     Ok(())
 }
 
-/// Enables/disables a resource pack / shader / datapack by toggling the
-/// `.disabled` suffix (file or folder). `filename` is the suffix-free name.
 #[tauri::command]
 pub fn set_content_enabled(id: String, kind: String, filename: String, enabled: bool) -> Result<(), String> {
     let folder = content_folder(&kind)?;
@@ -458,9 +409,6 @@ pub fn set_content_enabled(id: String, kind: String, filename: String, enabled: 
     Ok(())
 }
 
-// ---------- worlds: delete / backup ----------
-
-/// Deletes a world folder (`saves/<folder>`).
 #[tauri::command]
 pub fn delete_world(id: String, folder: String) -> Result<(), String> {
     let safe = safe_name(&folder)?;
@@ -472,7 +420,6 @@ pub fn delete_world(id: String, folder: String) -> Result<(), String> {
     }
 }
 
-/// Zips a world folder to `dest` (a user-chosen `.zip` path).
 #[tauri::command]
 pub fn backup_world(id: String, folder: String, dest: String) -> Result<(), String> {
     let safe = safe_name(&folder)?;
@@ -483,9 +430,6 @@ pub fn backup_world(id: String, folder: String, dest: String) -> Result<(), Stri
     zip_dir(&src, &safe, Path::new(&dest)).map_err(|e| format!("backup: {e}"))
 }
 
-// ---------- screenshots: delete ----------
-
-/// Deletes a screenshot file (`screenshots/<name>`).
 #[tauri::command]
 pub fn delete_screenshot(id: String, name: String) -> Result<(), String> {
     let safe = safe_name(&name)?;
@@ -500,21 +444,15 @@ pub fn delete_screenshot(id: String, name: String) -> Result<(), String> {
     }
 }
 
-// ---------- saved logs (logs/ + crash-reports/) ----------
-
 #[derive(Serialize)]
 pub struct LogFile {
     name: String,
-    /// "latest" | "log" | "archived" | "crash"
     kind: String,
-    /// Path relative to the game dir (e.g. "logs/latest.log").
     rel: String,
     modified: u64,
     size: u64,
 }
 
-/// Lists saved game logs: `logs/latest.log`, rotated `logs/*.log(.gz)` and
-/// `crash-reports/*.txt`. Newest first.
 #[tauri::command]
 pub fn list_log_files(id: String) -> Result<Vec<LogFile>, String> {
     let game = paths::instance_game_dir(&id);
@@ -567,7 +505,6 @@ pub fn list_log_files(id: String) -> Result<Vec<LogFile>, String> {
     Ok(out)
 }
 
-/// Reads a saved log file's text (decompressing `.gz`). Capped to the last ~1 MB.
 #[tauri::command]
 pub fn read_log_file(id: String, rel: String) -> Result<String, String> {
     let text = read_log_text(&id, &rel)?;
@@ -579,8 +516,6 @@ pub fn read_log_file(id: String, rel: String) -> Result<String, String> {
     }
 }
 
-/// Reads and decodes a saved log file's full text (gzip-aware), with the same
-/// path validation as [`read_log_file`].
 fn read_log_text(id: &str, rel: &str) -> Result<String, String> {
     if (!rel.starts_with("logs/") && !rel.starts_with("crash-reports/")) || rel.contains("..") {
         return Err("invalid log path".into());
@@ -598,7 +533,6 @@ fn read_log_text(id: &str, rel: &str) -> Result<String, String> {
     }
 }
 
-/// Result of sharing a log to mclo.gs (https://api.mclo.gs/).
 #[derive(Serialize)]
 pub struct MclogsPaste {
     pub id: String,
@@ -619,13 +553,10 @@ struct MclogsResponse {
     error: Option<String>,
 }
 
-/// Uploads a saved log file to mclo.gs and returns the shareable links.
-/// mclo.gs caps logs at 10 MiB / 25,000 lines, so the content is trimmed to fit.
 #[tauri::command]
 pub async fn upload_log_to_mclogs(id: String, rel: String) -> Result<MclogsPaste, String> {
     let mut content = read_log_text(&id, &rel)?;
 
-    // Respect mclo.gs limits: keep the most recent lines/bytes.
     const MAX_LINES: usize = 25_000;
     const MAX_BYTES: usize = 10 * 1024 * 1024;
     let line_count = content.lines().count();
@@ -658,8 +589,6 @@ pub async fn upload_log_to_mclogs(id: String, rel: String) -> Result<MclogsPaste
     })
 }
 
-// ---------- helpers ----------
-
 fn file_name(path: &Path) -> String {
     path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default()
 }
@@ -668,7 +597,6 @@ fn strip_zip(name: &str) -> String {
     name.strip_suffix(".zip").unwrap_or(name).to_string()
 }
 
-/// Splits a `.disabled` suffix off a name, returning (suffix-free name, enabled).
 fn strip_disabled(name: &str) -> (String, bool) {
     match name.strip_suffix(".disabled") {
         Some(base) => (base.to_string(), false),
@@ -676,7 +604,6 @@ fn strip_disabled(name: &str) -> (String, bool) {
     }
 }
 
-/// Reduces an untrusted name to a bare file name (defends against path traversal).
 fn safe_name(name: &str) -> Result<String, String> {
     Path::new(name)
         .file_name()
@@ -685,7 +612,6 @@ fn safe_name(name: &str) -> Result<String, String> {
         .ok_or_else(|| "invalid name".into())
 }
 
-/// Recursively zips `src` into `dest`, nesting everything under `root_name/`.
 fn zip_dir(src: &Path, root_name: &str, dest: &Path) -> std::io::Result<()> {
     use std::io::Write;
     let file = std::fs::File::create(dest)?;

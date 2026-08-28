@@ -1,5 +1,3 @@
-// @nuxt/ui theme defaults. `primary` is the accent color and is overridden at
-// runtime by the theme store (useThemeStore) so the user can change it live.
 export default defineAppConfig({
   ui: {
     colors: {

@@ -14,10 +14,6 @@ export interface CfInstallResult {
   blocked: BlockedMod[]
 }
 
-/**
- * Thin typed wrappers around the Rust CurseForge commands. Results are
- * normalized to the same shapes the Modrinth browser consumes.
- */
 export const useCurseforge = () => {
   const enabled = () => invoke<boolean>('cf_enabled')
 
@@ -33,11 +29,9 @@ export const useCurseforge = () => {
 
   const project = (id: string) => invoke<ModrinthProjectFull>('curseforge_project', { id })
 
-  /** Categories for the kind's classId ({ name, header=numeric id }). */
   const categories = (projectType: string) =>
     invoke<ModrinthCategory[]>('curseforge_categories', { projectType })
 
-  /** Installs a mod (+ required deps); returns added items and any blocked mods. */
   const installWithDeps = (
     instanceId: string,
     projectId: string,
@@ -53,19 +47,15 @@ export const useCurseforge = () => {
       loader: loader ?? null,
     })
 
-  /** Links local jars to CurseForge by fingerprint; returns how many matched. */
   const matchLocal = (instanceId: string) =>
     invoke<number>('curseforge_match_local', { instanceId })
 
-  /** Matches one local jar by fingerprint; returns whether it matched. */
   const matchFile = (instanceId: string, filename: string) =>
     invoke<boolean>('curseforge_match_file', { instanceId, filename })
 
-  /** Mods blocked from third-party download, awaiting manual fetch. */
   const getBlocked = (instanceId: string) =>
     invoke<BlockedMod[]>('get_blocked_mods', { instanceId })
 
-  /** Updates all CurseForge mods in two bulk requests; returns how many changed. */
   const updateAll = (instanceId: string, loaders?: string[], gameVersions?: string[]) =>
     invoke<number>('curseforge_update_all', {
       instanceId,
@@ -73,7 +63,6 @@ export const useCurseforge = () => {
       gameVersions: gameVersions ?? null,
     })
 
-  /** Creates a new instance from a CurseForge modpack (by project + file id). */
   const installModpack = (projectId: string, fileId: string, nameOverride?: string | null) =>
     invoke<Instance>('curseforge_install_modpack', {
       projectId,

@@ -22,7 +22,6 @@ export const useInstancesStore = defineStore('instances', {
       try {
         this.instances = await invoke<Instance[]>('list_instances')
         this.loaded = true
-        // Keep a valid selection.
         if (!this.instances.some(i => i.id === this.selectedId)) {
           this.selectedId = this.instances[0]?.id ?? null
         }
@@ -33,7 +32,6 @@ export const useInstancesStore = defineStore('instances', {
       }
     },
 
-    /** Loads instances only once (for app startup). */
     async ensureLoaded() {
       if (!this.loaded) await this.load()
     },

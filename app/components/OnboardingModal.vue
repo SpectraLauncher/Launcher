@@ -2,7 +2,6 @@
   <UModal v-model:open="open" :dismissible="false" :ui="{ content: 'max-w-lg' }">
     <template #content>
       <div class="flex flex-col">
-        <!-- progress dots -->
         <div class="flex items-center justify-center gap-1.5 border-b border-default py-3">
           <span
             v-for="i in steps"
@@ -13,7 +12,6 @@
         </div>
 
         <div class="min-h-[300px] px-6 py-6">
-          <!-- 0: welcome -->
           <div v-if="step === 0" class="flex flex-col items-center gap-4 text-center">
             <img src="/logo.png" alt="" class="size-16 rounded-2xl" >
             <div>
@@ -22,7 +20,6 @@
             </div>
           </div>
 
-          <!-- 1: account -->
           <div v-else-if="step === 1" class="space-y-4">
             <div>
               <h2 class="text-lg font-semibold">{{ $t('onboarding.accountTitle') }}</h2>
@@ -41,7 +38,6 @@
             </template>
           </div>
 
-          <!-- 2: appearance -->
           <div v-else-if="step === 2" class="space-y-4">
             <div>
               <h2 class="text-lg font-semibold">{{ $t('onboarding.themeTitle') }}</h2>
@@ -73,7 +69,6 @@
             </div>
           </div>
 
-          <!-- 3: java + ram -->
           <div v-else-if="step === 3" class="space-y-5">
             <div>
               <h2 class="text-lg font-semibold">{{ $t('onboarding.javaTitle') }}</h2>
@@ -95,7 +90,6 @@
             </div>
           </div>
 
-          <!-- 4: privacy -->
           <div v-else-if="step === 4" class="space-y-4">
             <div>
               <h2 class="text-lg font-semibold">{{ $t('onboarding.privacyTitle') }}</h2>
@@ -117,7 +111,6 @@
             </div>
           </div>
 
-          <!-- 5: done -->
           <div v-else class="flex flex-col items-center gap-4 py-6 text-center">
             <UIcon name="i-lucide-party-popper" class="size-12 text-primary-400" />
             <div>
@@ -127,7 +120,6 @@
           </div>
         </div>
 
-        <!-- footer -->
         <div class="flex items-center justify-between border-t border-default px-6 py-3">
           <UButton v-if="step > 0 && step < steps - 1" variant="ghost" color="neutral" :label="$t('create.back')" @click="step--" />
           <UButton v-else variant="ghost" color="neutral" :label="$t('onboarding.skip')" @click="finish" />
@@ -159,9 +151,10 @@ const loggingIn = ref(false)
 const ram = ref(4096)
 const settings = ref<Settings | null>(null)
 
-type PrivacyKey = 'track_playtime' | 'discord_rpc' | 'crash_reports' | 'anonymous_stats'
+type PrivacyKey = 'track_playtime' | 'share_activity' | 'discord_rpc' | 'crash_reports' | 'anonymous_stats'
 const privacyOptions: { key: PrivacyKey; wip?: boolean }[] = [
   { key: 'track_playtime' },
+  { key: 'share_activity' },
   { key: 'discord_rpc' },
   { key: 'anonymous_stats' },
   { key: 'crash_reports', wip: true },
@@ -186,16 +179,14 @@ onMounted(async () => {
   try {
     settings.value = await invoke<Settings>('get_settings')
     ram.value = settings.value.default_memory_mb || 4096
-    // Ensure privacy options are all true by default for first-run onboarding.
-    // (Rust default already sets anonymous_stats=true; mirror that for the rest.)
     settings.value.track_playtime = settings.value.track_playtime ?? true
-    settings.value.discord_rpc = settings.value.discord_rpc ?? false
-    settings.value.crash_reports = settings.value.crash_reports ?? false
+    settings.value.discord_rpc = settings.value.discord_rpc ?? true
+    settings.value.crash_reports = settings.value.crash_reports ?? true
     settings.value.anonymous_stats = settings.value.anonymous_stats ?? true
-  } catch { /* keep default */ }
+    settings.value.share_activity = settings.value.share_activity ?? true
+  } catch {  }
 })
 
-// Detect Java + reload settings when the wizard is (re)opened.
 watch(open, (v) => {
   if (v) {
     step.value = 0
@@ -217,11 +208,10 @@ async function offlineLogin() {
 }
 
 async function complete() {
-  // Persist all onboarding choices (RAM + privacy settings).
   if (settings.value) {
     try {
       await invoke('save_settings', { settings: { ...settings.value, default_memory_mb: ram.value } })
-    } catch { /* non-fatal */ }
+    } catch {  }
   }
   finish()
 }

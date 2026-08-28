@@ -2,13 +2,11 @@
   <UModal v-model:open="open" :title="$t('iconEditor.title')" :ui="{ content: 'max-w-3xl' }">
     <template #body>
       <div class="grid gap-4 sm:grid-cols-[13rem_minmax(0,1fr)]">
-        <!-- preview + randomize -->
         <div class="space-y-3">
           <div class="flex flex-col items-center gap-4 rounded-xl border border-default bg-white/3 p-4">
             <div class="size-28 overflow-hidden rounded-2xl" :style="tileStyle">
               <img :src="symbolUrl" alt="" class="size-full object-contain" :style="symbolStyle" />
             </div>
-            <!-- the sizes it actually shows up in: card, sidebar, list row -->
             <div class="flex items-end gap-2">
               <div v-for="n in [40, 28, 20]" :key="n" class="overflow-hidden rounded-lg" :style="[tileStyle, { width: `${n}px`, height: `${n}px` }]">
                 <img :src="symbolUrl" alt="" class="size-full object-contain" :style="symbolStyle" />
@@ -25,7 +23,6 @@
           />
         </div>
 
-        <!-- pickers -->
         <div class="min-w-0 space-y-4">
           <section>
             <p class="mb-2 text-sm font-medium">{{ $t('iconEditor.background') }}</p>
@@ -68,7 +65,6 @@
                 >
                   <img :src="s.url" :alt="s.id" class="size-full object-contain" loading="lazy" />
                 </button>
-                <!-- only the user's own can go; the bundled ones are read-only -->
                 <UButton
                   v-if="s.path"
                   icon="i-lucide-x"
@@ -102,8 +98,6 @@
 import { invoke, convertFileSrc } from '@tauri-apps/api/core'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
 
-// Without an `instanceId` (creating an instance, which has no id yet) the
-// composed PNG is only handed back, for the caller to apply once it has one.
 const props = defineProps<{ instanceId?: string }>()
 const emit = defineEmits<{ (e: 'saved', dataUrl: string): void }>()
 const open = defineModel<boolean>('open', { default: false })
@@ -113,19 +107,14 @@ const { t } = useI18n()
 
 const SYMBOL_DIR = '/instance-symbols'
 
-/** `path` is set for the user's own symbols, which live in the data folder. */
 interface SymbolItem { id: string, url: string, path?: string }
 
-// The folder is the source of truth: globbing it at build time means dropping a
-// new PNG in there is all it takes to add a symbol. Only the names are used —
-// the files are served from `public/`, not bundled a second time.
 const BUILT_IN: SymbolItem[] = Object.keys(import.meta.glob('../../public/instance-symbols/*.png'))
   .map(path => path.split('/').pop()!)
   .sort()
   .map(id => ({ id, url: `${SYMBOL_DIR}/${id}` }))
 
 const custom = ref<SymbolItem[]>([])
-// The user's own come first — they are the ones being looked for.
 const symbols = computed<SymbolItem[]>(() => [...custom.value, ...BUILT_IN])
 
 async function loadCustom() {
@@ -137,7 +126,6 @@ async function loadCustom() {
   }
 }
 
-/** Two stops each, drawn top-left → bottom-right in both CSS and the canvas. */
 const GRADIENTS: [string, string][] = [
   ['#f43f5e', '#e11d48'],
   ['#fb7185', '#f97316'],
@@ -160,7 +148,6 @@ const symbol = ref<SymbolItem | null>(BUILT_IN[0] ?? null)
 
 const css = (g: [string, string]) => `linear-gradient(135deg, ${g[0]}, ${g[1]})`
 
-/** Share of the tile the symbol covers; the canvas uses the same number. */
 const SYMBOL_SCALE = 0.72
 const PAD = `${((1 - SYMBOL_SCALE) / 2) * 100}%`
 
@@ -175,14 +162,12 @@ function randomize() {
   symbol.value = pick(symbols.value)
 }
 
-// Open on something other than the first swatch every time.
 watch(open, async (isOpen) => {
   if (!isOpen) return
   await loadCustom()
   randomize()
 }, { immediate: true })
 
-// --- the user's own symbols ---
 const adding = ref(false)
 
 async function addSymbol() {
@@ -223,7 +208,6 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   })
 }
 
-/** Draws what the preview shows into a 512² PNG data URL. */
 async function compose(): Promise<string> {
   const size = 512
   const canvas = document.createElement('canvas')
@@ -238,8 +222,6 @@ async function compose(): Promise<string> {
   ctx.fillStyle = gradient
   ctx.fillRect(0, 0, size, size)
 
-  // Drawing an asset-protocol image would taint the canvas and make toDataURL
-  // throw, so the user's own symbols are read as a data: URL first.
   const src = symbol.value?.path
     ? await invoke<string>('read_image_data_url', { path: symbol.value.path })
     : symbolUrl.value
