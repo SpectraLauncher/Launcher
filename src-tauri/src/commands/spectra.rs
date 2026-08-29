@@ -23,7 +23,7 @@ pub fn stored_token() -> Option<String> {
 }
 
 fn save_token(token: Option<String>) -> Result<(), String> {
-    store::write_json(&paths::spectra_account_file(), &AccountFile { token })
+    store::write_json_private(&paths::spectra_account_file(), &AccountFile { token })
 }
 
 fn client() -> reqwest::Client {
@@ -104,7 +104,7 @@ pub async fn report_activity(launched: bool, seconds: u64) {
     }
 
     if let Err(e) = call("POST", "/api/me/activity", Some(Value::Object(body))).await {
-        log::debug!("could not report activity: {e}");
+        log::warn!("could not report activity: {e}");
     }
 }
 

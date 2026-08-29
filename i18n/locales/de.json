@@ -288,6 +288,7 @@
     "title": "Manuell herunterzuladende Mods",
     "desc": "Die Autoren dieser Mods erlauben keine Drittanbieter-Downloads. Lade jeden herunter und lege ihn in deinen Downloads-Ordner — er wird automatisch hinzugefügt.",
     "download": "Herunterladen",
+    "openAll": "Alle öffnen ({n})",
     "watching": "Überwache Downloads…",
     "chooseFolder": "Ordner wählen",
     "rescan": "Erneut suchen",

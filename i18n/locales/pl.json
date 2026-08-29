@@ -288,6 +288,7 @@
     "title": "Mody do pobrania ręcznie",
     "desc": "Autorzy tych modów nie zezwalają na pobieranie w aplikacjach trzecich. Pobierz każdy, a po zapisaniu w folderze pobierania zostanie dodany automatycznie.",
     "download": "Pobierz",
+    "openAll": "Otwórz wszystkie ({n})",
     "watching": "Obserwuję pobierania…",
     "chooseFolder": "Wybierz folder",
     "rescan": "Skanuj ponownie",

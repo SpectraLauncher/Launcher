@@ -2,7 +2,19 @@
   <UModal v-model:open="isOpen" :title="$t('blocked.title')" :ui="{ content: 'max-w-xl' }">
     <template #body>
       <div class="space-y-4">
-        <p class="text-sm text-muted">{{ $t('blocked.desc') }}</p>
+        <div class="flex items-start justify-between gap-3">
+          <p class="text-sm text-muted">{{ $t('blocked.desc') }}</p>
+          <UButton
+            v-if="blocked.length > 1"
+            size="xs"
+            color="primary"
+            variant="soft"
+            icon="i-lucide-external-link"
+            class="shrink-0"
+            :label="$t('blocked.openAll', { n: blocked.length })"
+            @click="openAll"
+          />
+        </div>
 
         <div v-if="!blocked.length" class="flex flex-col items-center gap-2 py-8 text-center">
           <UIcon name="i-lucide-circle-check" class="size-9 text-emerald-400" />
@@ -91,6 +103,12 @@ watch(isOpen, async (open) => {
   }
 })
 onBeforeUnmount(() => { if (timer) clearInterval(timer) })
+
+async function openAll() {
+  for (const mod of blocked.value) {
+    await openUrl(mod.url).catch(() => {})
+  }
+}
 
 async function rescan(quiet: boolean) {
   if (!instanceId.value || scanning.value || !blocked.value.length) return

@@ -288,6 +288,7 @@
     "title": "Mods para descargar manualmente",
     "desc": "Los autores de estos mods no permiten descargas de terceros. Descarga cada uno y colócalo en tu carpeta de descargas; se añadirá automáticamente.",
     "download": "Descargar",
+    "openAll": "Abrir todos ({n})",
     "watching": "Vigilando descargas…",
     "chooseFolder": "Elegir carpeta",
     "rescan": "Volver a escanear",

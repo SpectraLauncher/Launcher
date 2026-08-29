@@ -12,6 +12,21 @@ pub fn read_json<T: DeserializeOwned>(path: &Path) -> Result<Option<T>, String> 
     Ok(Some(value))
 }
 
+#[cfg(unix)]
+fn restrict(path: &Path) {
+    use std::os::unix::fs::PermissionsExt;
+    let _ = std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600));
+}
+
+#[cfg(not(unix))]
+fn restrict(_path: &Path) {}
+
+pub fn write_json_private<T: Serialize>(path: &Path, value: &T) -> Result<(), String> {
+    write_json(path, value)?;
+    restrict(path);
+    Ok(())
+}
+
 pub fn write_json<T: Serialize>(path: &Path, value: &T) -> Result<(), String> {
     let parent = path.parent().unwrap_or_else(|| Path::new("."));
     std::fs::create_dir_all(parent).map_err(|e| format!("mkdir {}: {e}", parent.display()))?;
@@ -26,6 +41,7 @@ pub fn write_json<T: Serialize>(path: &Path, value: &T) -> Result<(), String> {
     let tmp = parent.join(format!(".{file_name}.{stamp}.{:x}.tmp", std::process::id()));
 
     std::fs::write(&tmp, &json).map_err(|e| format!("write {}: {e}", tmp.display()))?;
+    restrict(&tmp);
     if let Err(e) = std::fs::rename(&tmp, path) {
         let _ = std::fs::remove_file(&tmp);
         return Err(format!("rename {} -> {}: {e}", tmp.display(), path.display()));

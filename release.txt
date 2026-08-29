@@ -1,3 +1,14 @@
+## Changes (v0.7.3)
+
+### ✨ Features & Improvements
+- **Mods CurseForge will not let us download now open on the right page**: when a mod author blocks third-party downloads the launcher lists what you have to fetch by hand. Those links used to land on the file's details page, where CurseForge often answered with an access-denied screen instead. They now point at the download page, which starts the file straight away.
+- **Open all the missing mods at once**: a button above the list opens every remaining mod in your browser in one go, instead of clicking them one at a time. It shows how many tabs it is about to open.
+
+### 🔒 Security
+- **Downloads must use an encrypted connection**: a modpack manifest can name any address it likes for a mod file. The launcher now refuses plain `http://` ones, so nobody on your network can swap a mod for something else on the way in.
+- **Your saved sign-ins are no longer world-readable**: the files holding your Spectra session and your Microsoft account are written with owner-only permissions on Linux and macOS.
+- **The interface runs under a content security policy**: it can no longer load code from anywhere but the app itself, and can only talk to Spectra.
+
 ## Changes (v0.7.2)
 
 ### ✨ Features & Improvements

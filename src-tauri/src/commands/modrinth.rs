@@ -1600,7 +1600,15 @@ fn extract_overrides(
     Ok(())
 }
 
+pub fn https_only(url: &str) -> Result<(), String> {
+    if url.starts_with("https://") {
+        return Ok(());
+    }
+    Err(format!("refusing to download over an unencrypted connection: {url}"))
+}
+
 async fn download(client: &reqwest::Client, url: &str) -> Result<Vec<u8>, String> {
+    https_only(url)?;
     let resp = send(client.get(url)).await?;
     if !resp.status().is_success() {
         return Err(format!("download failed ({}): {url}", resp.status()));
@@ -1609,6 +1617,7 @@ async fn download(client: &reqwest::Client, url: &str) -> Result<Vec<u8>, String
 }
 
 async fn download_direct(client: &reqwest::Client, url: &str) -> Result<Vec<u8>, String> {
+    https_only(url)?;
     let resp = client.get(url).send().await.map_err(|e| e.to_string())?;
     if !resp.status().is_success() {
         return Err(format!("download failed ({}): {url}", resp.status()));
@@ -1621,6 +1630,21 @@ fn safe_name(name: &str) -> String {
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_else(|| "file".to_string())
+}
+
+#[cfg(test)]
+mod https_tests {
+    use super::https_only;
+
+    #[test]
+    fn refuses_plain_http_downloads() {
+        assert!(https_only("https://cdn.modrinth.com/data/x/mod.jar").is_ok());
+        assert!(https_only("http://cdn.modrinth.com/data/x/mod.jar").is_err());
+        assert!(https_only("http://127.0.0.1:8080/evil.jar").is_err());
+        assert!(https_only("file:///etc/passwd").is_err());
+        assert!(https_only("HTTPS://cdn.modrinth.com/x.jar").is_err());
+        assert!(https_only("").is_err());
+    }
 }
 
 #[cfg(test)]

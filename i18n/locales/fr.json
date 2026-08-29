@@ -288,6 +288,7 @@
     "title": "Mods à télécharger manuellement",
     "desc": "Les auteurs de ces mods n'autorisent pas les téléchargements tiers. Télécharge chacun, puis place-le dans ton dossier de téléchargements — il sera ajouté automatiquement.",
     "download": "Télécharger",
+    "openAll": "Tout ouvrir ({n})",
     "watching": "Surveillance des téléchargements…",
     "chooseFolder": "Choisir un dossier",
     "rescan": "Réanalyser",

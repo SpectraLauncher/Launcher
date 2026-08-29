@@ -288,6 +288,7 @@
     "title": "Mods to download manually",
     "desc": "These mods' authors don't allow third-party downloads. Download each one, then drop it in your downloads folder — it will be added automatically.",
     "download": "Download",
+    "openAll": "Open all ({n})",
     "watching": "Watching for downloads…",
     "chooseFolder": "Choose folder",
     "rescan": "Rescan",

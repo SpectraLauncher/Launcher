@@ -1330,10 +1330,10 @@ pub(crate) async fn install_modpack_bytes(
 fn blocked_url(cf_mod: Option<&CfMod>, mod_id: i64, file_id: i64) -> String {
     if let Some(m) = cf_mod {
         if let Some(w) = m.links.as_ref().and_then(|l| l.website_url.clone()).filter(|s| !s.is_empty()) {
-            return format!("{}/files/{}", w.trim_end_matches('/'), file_id);
+            return format!("{}/download/{}", w.trim_end_matches('/'), file_id);
         }
         if !m.slug.is_empty() {
-            return format!("https://www.curseforge.com/minecraft/mc-mods/{}/files/{}", m.slug, file_id);
+            return format!("https://www.curseforge.com/minecraft/mc-mods/{}/download/{}", m.slug, file_id);
         }
     }
     format!("https://www.curseforge.com/projects/{mod_id}")
@@ -1697,6 +1697,7 @@ fn cf_add_overrides(
 }
 
 async fn download(url: &str) -> Result<Vec<u8>, String> {
+    crate::commands::modrinth::https_only(url)?;
     let resp = http().get(url).send().await.map_err(|e| e.to_string())?;
     if !resp.status().is_success() {
         return Err(format!("download failed ({}): {url}", resp.status()));

@@ -29,7 +29,7 @@ fn load_accounts() -> Result<AccountsFile, String> {
 }
 
 fn save_accounts(file: &AccountsFile) -> Result<(), String> {
-    store::write_json(&paths::accounts_file(), file)
+    store::write_json_private(&paths::accounts_file(), file)
 }
 
 fn upsert_account(file: &mut AccountsFile, account: Account) {
