@@ -1,0 +1,22 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "identifier": "pl.makoto.spectra-launcher",
+  "app": {
+    "windows": [
+      {
+        "title": "Spectra Launcher",
+        "width": 1470,
+        "height": 860,
+        "resizable": true,
+        "fullscreen": false,
+        "minWidth": 1100,
+        "minHeight": 640,
+
+        "decorations": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": { "x": 12, "y": 18 }
+      }
+    ]
+  }
+}

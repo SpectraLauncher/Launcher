@@ -1,3 +1,8 @@
+## Changes (v0.7.5)
+
+### ✨ Features & Improvements
+- **macOS: the launcher looks like a Mac app again**: its corners were square and it sat on the desktop without a shadow, because the custom title bar meant giving up the system window frame. The frame is back — rounded corners, the proper shadow, and the red, yellow and green buttons in the top-left corner are now the real macOS ones rather than look-alikes. Nothing changes on Windows or Linux.
+
 ## Changes (v0.7.4)
 
 ### ✨ Features & Improvements

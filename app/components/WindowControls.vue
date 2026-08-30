@@ -1,5 +1,5 @@
 <template>
-  <div v-if="showControls" class="flex gap-1" :class="{ 'flex-row-reverse': isMac }" style="-webkit-app-region: no-drag">
+  <div v-if="showControls" class="flex gap-1" style="-webkit-app-region: no-drag">
     <button class="flex items-center justify-center p-1 bg-gray-800/20 hover:bg-gray-800 rounded-md h-6 w-6 duration-300 cursor-pointer" title="Minimize" @click="minimize">
       <svg width="8" height="1" viewBox="0 0 10 1">
         <rect width="10" height="1" fill="currentColor" />
@@ -37,8 +37,10 @@ const { platform, ready } = usePlatform()
 const isMaximized = ref(false)
 const appWindow = getCurrentWindow()
 
-const showControls = computed(() => platform.value === 'windows' || platform.value === 'linux' || platform.value === 'macos')
-const isMac = computed(() => platform.value === 'macos')
+// macOS runs with `titleBarStyle: Overlay` (see tauri.macos.conf.json), which
+// keeps the window native — rounded corners, shadow, and the system's own
+// traffic lights — so there is nothing for these buttons to do there.
+const showControls = computed(() => platform.value === 'windows' || platform.value === 'linux')
 
 const minimize = async () => { await appWindow.minimize() }
 

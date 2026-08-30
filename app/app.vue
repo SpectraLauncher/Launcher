@@ -7,9 +7,9 @@
         @pointerdown.self.stop
       >
         <template v-if="isMac">
-          <div class="flex items-center">
-            <WindowControls />
-          </div>
+          <!-- The system draws its traffic lights over this corner; the spacer
+               keeps the right-hand group where justify-between expects it. -->
+          <div class="w-[72px]" />
           <div class="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
             <img src="/logo-transparent.png" alt="Spectra Launcher Icon" class="h-5 object-contain" />
             <span>{{ windowTitle }}</span>

@@ -275,10 +275,10 @@ pub fn create_desktop_shortcut(id: String) -> Result<String, String> {
     let desktop = dirs::desktop_dir().ok_or("no desktop folder")?;
     let name = shortcut_file_name(&instance.name);
     let url = format!("spectra://launch/{id}");
-    let icon = paths::instance_icon_file(&id);
 
     #[cfg(target_os = "windows")]
     {
+        let icon = paths::instance_icon_file(&id);
         let mut body = format!("[InternetShortcut]\r\nURL={url}\r\n");
         let ico = paths::instance_dir(&id).join("icon.ico");
         let png = std::fs::read(&icon).unwrap_or_default();
@@ -295,6 +295,7 @@ pub fn create_desktop_shortcut(id: String) -> Result<String, String> {
 
     #[cfg(target_os = "linux")]
     {
+        let icon = paths::instance_icon_file(&id);
         let mut body = String::from("[Desktop Entry]\nType=Application\nTerminal=false\n");
         body.push_str(&format!("Name={}\n", instance.name));
         body.push_str(&format!("Exec=xdg-open {url}\n"));
@@ -311,6 +312,8 @@ pub fn create_desktop_shortcut(id: String) -> Result<String, String> {
         return Ok(path.to_string_lossy().into_owned());
     }
 
+    // No icon here on purpose: a .webloc carries a URL and nothing else, so
+    // Finder shows the icon of whichever app handles `spectra://`.
     #[cfg(target_os = "macos")]
     {
         let body = format!(
