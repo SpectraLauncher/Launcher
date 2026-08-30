@@ -319,7 +319,11 @@
     "uptodate": "У вас последняя версия",
     "error": "Не удалось обновить",
     "titlebar": "Обновление лаунчера",
-    "titlebarReady": "Обновить v{version}"
+    "titlebarReady": "Обновить v{version}",
+    "startupTitle": "Обновление Spectra Launcher",
+    "startupChecking": "Проверка обновлений…",
+    "startupDownloading": "Загрузка версии {version}…",
+    "startupInstalling": "Установка — лаунчер перезапустится сам."
   },
   "settings": {
     "title": "Настройки",

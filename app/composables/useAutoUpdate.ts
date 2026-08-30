@@ -5,11 +5,20 @@ export type UpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | '
 
 let pendingUpdate: Update | null = null
 
+// Runs once per launcher start, however many components ask for it.
+let startupRun: Promise<void> | null = null
+
+// A launcher that will not open because the update server is slow is worse than
+// a launcher one version behind, so the startup check gives up after this.
+// The download itself is never cut short — someone on bad wifi still gets it.
+const CHECK_TIMEOUT_MS = 10_000
+
 export const useAutoUpdate = () => {
   const toast = useToast()
   const { t } = useI18n()
 
   const status = useState<UpdateStatus>('autoupdate:status', () => 'idle')
+  const gate = useState<'checking' | 'updating' | 'done'>('autoupdate:gate', () => 'checking')
   const newVersion = useState<string>('autoupdate:version', () => '')
   const error = useState<string>('autoupdate:error', () => '')
   const downloaded = useState<number>('autoupdate:downloaded', () => 0)
@@ -81,8 +90,41 @@ export const useAutoUpdate = () => {
     }
   }
 
+  /**
+   * Blocks the launcher on startup: look for an update first, and if there is
+   * one, install it right away and restart into it.
+   *
+   * Every failure path falls through to a normal boot. Nobody is kept out of
+   * their launcher because an update could not be checked, downloaded or
+   * installed — worst case they carry on with the version they have.
+   */
+  function updateOnStartup(): Promise<void> {
+    startupRun ??= (async () => {
+      try {
+        const found = await Promise.race([
+          checkForUpdates(true),
+          new Promise<false>(resolve => setTimeout(() => resolve(false), CHECK_TIMEOUT_MS)),
+        ])
+        if (!found || !pendingUpdate) return
+
+        gate.value = 'updating'
+        // On the happy path this relaunches, so nothing below runs.
+        await downloadAndInstall()
+      }
+      catch {
+        // Boot anyway; downloadAndInstall has already surfaced the reason.
+      }
+      finally {
+        gate.value = 'done'
+      }
+    })()
+    return startupRun
+  }
+
   return {
     status,
+    gate,
+    updateOnStartup,
     newVersion,
     error,
     downloaded,

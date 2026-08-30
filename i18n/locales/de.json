@@ -319,7 +319,11 @@
     "uptodate": "Du bist auf dem neuesten Stand",
     "error": "Update fehlgeschlagen",
     "titlebar": "Launcher wird aktualisiert",
-    "titlebarReady": "Update v{version}"
+    "titlebarReady": "Update v{version}",
+    "startupTitle": "Spectra Launcher wird aktualisiert",
+    "startupChecking": "Suche nach Updates…",
+    "startupDownloading": "Version {version} wird heruntergeladen…",
+    "startupInstalling": "Wird installiert — der Launcher startet von selbst neu."
   },
   "settings": {
     "title": "Einstellungen",

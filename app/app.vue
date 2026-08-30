@@ -15,7 +15,7 @@
             <span>{{ windowTitle }}</span>
           </div>
           <div class="flex items-center gap-3">
-            <template v-if="!isContentWindow">
+            <template v-if="!isContentWindow && !booting">
               <TitlebarActivity />
               <AccountButton />
             </template>
@@ -27,7 +27,7 @@
             <span>{{ windowTitle }}</span>
           </div>
           <div class="flex items-center gap-3">
-            <template v-if="!isContentWindow">
+            <template v-if="!isContentWindow && !booting">
               <TitlebarActivity />
               <AccountButton />
             </template>
@@ -60,6 +60,7 @@
     <template v-if="!isContentWindow">
       <LiveLogsModal />
       <CrashReportModal />
+      <StartupUpdate />
     </template>
   </UApp>
 </template>
@@ -83,6 +84,12 @@ const instances = useInstancesStore()
 const router = useRouter()
 const mc = useMinecraftLaunch()
 const updater = useAutoUpdate()
+const booting = computed(() => !isContentWindow.value && updater.gate.value !== 'done')
+
+// The content browser is a second window running the same app. Only the main
+// window owns the update — otherwise opening the browser would kick off its own
+// check and could restart the launcher out from under someone mid-browse.
+const bootGate = () => (isContentWindow.value ? Promise.resolve() : updater.updateOnStartup())
 const telemetry = useTelemetry()
 const createModal = useCreateInstanceModal()
 const spectra = useSpectraAccount()
@@ -95,6 +102,8 @@ let unlistenShare: UnlistenFn | null = null
 let unlistenAccount: UnlistenFn | null = null
 let unlistenLaunch: UnlistenFn | null = null
 onMounted(async () => {
+  await bootGate()
+
   unlistenShare = await listen<string>('share://open', async (e) => {
     await invoke('take_pending_share').catch(() => {})
     createModal.openWithCode(e.payload)
@@ -134,10 +143,13 @@ async function playInstance(instanceId: string) {
   mc.launch(instanceId).catch(() => {  })
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // Returns immediately when there is nothing to install; when there is, the
+  // launcher restarts and none of this runs.
+  await bootGate()
+
   activity.attach()
   instances.ensureLoaded()
-  updater.checkForUpdates(true)
   telemetry.init()
   spectra.refresh().then(() => {
     if (!spectra.isSignedIn.value) return

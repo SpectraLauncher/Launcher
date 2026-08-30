@@ -1,3 +1,13 @@
+## Changes (v0.7.4)
+
+### ✨ Features & Improvements
+- **The launcher updates itself when you open it**: no more noticing a button and clicking it. If there is a new version, a small screen shows it downloading and the launcher restarts into it. If there is nothing new you go straight in, and if anything goes wrong — no internet, a download that fails — the launcher just opens the version you already have.
+
+### 🔒 Security
+- **Windows: your saved logins are now encrypted**: the files holding your Microsoft and Spectra sign-ins could be read by anything running on your PC. They are now locked to your Windows account, so a copy taken somewhere else is useless. Yours are converted the first time you start the launcher — you do not have to sign in again.
+- **Keys taken out of the app**: the launcher carried keys for CurseForge, for sharing instances and for anonymous statistics inside the program, where anyone with a copy could read them. They are gone — CurseForge goes through Spectra's server now, and sharing uses your own account. Nothing changes in how you use either, and the statistics still send exactly what they sent before.
+- **The launcher only reaches the parts of your account it needs**: it now has a fixed list of what it is allowed to ask Spectra for. If something ever ran inside the launcher window that should not have, it could not use your sign-in to get at the rest of your account.
+
 ## Changes (v0.7.3)
 
 ### ✨ Features & Improvements

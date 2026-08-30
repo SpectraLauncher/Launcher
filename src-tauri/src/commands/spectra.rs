@@ -15,7 +15,7 @@ struct AccountFile {
 }
 
 pub fn stored_token() -> Option<String> {
-    store::read_json::<AccountFile>(&paths::spectra_account_file())
+    store::read_json_private::<AccountFile>(&paths::spectra_account_file())
         .ok()
         .flatten()
         .and_then(|f| f.token)
@@ -30,9 +30,39 @@ fn client() -> reqwest::Client {
     reqwest::Client::new()
 }
 
+/// Every endpoint the launcher is allowed to reach with the stored session.
+///
+/// `call()` is reachable from the webview through the `spectra_api` command, so
+/// without this list any script running in the window — a bypass of the
+/// markdown sanitiser in the Modrinth browser, say — could drive the whole
+/// account API. Adding a screen means adding its route here on purpose.
+pub fn allowed(method: &str, path: &str) -> bool {
+    let path = path.split('?').next().unwrap_or("");
+    let segments: Vec<&str> = path.trim_matches('/').split('/').collect();
+
+    matches!(
+        (method, segments.as_slice()),
+        ("GET" | "POST", ["api", "friends"])
+            | ("PATCH" | "DELETE", ["api", "friends", _])
+            | ("GET", ["api", "notifications"])
+            | ("DELETE", ["api", "notifications", _])
+            | ("POST", ["api", "notifications", "read"])
+            | ("POST", ["api", "presence"])
+            | ("GET", ["api", "shares"])
+            | ("DELETE", ["api", "share", _])
+            | ("POST", ["api", "share", _, "extend"])
+            | ("POST" | "DELETE", ["api", "share", _, "invite"])
+            | ("GET", ["api", "users"])
+            | ("POST", ["api", "me", "activity" | "minecraft"])
+            | ("GET", ["api", "auth", "get-session"])
+            | ("POST", ["api", "auth", "sign-out"])
+            | ("POST", ["api", "auth", "one-time-token", "verify"])
+    )
+}
+
 async fn call(method: &str, path: &str, body: Option<Value>) -> Result<Value, String> {
-    if !path.starts_with("/api/") {
-        return Err("refusing to call a non-API path".into());
+    if !allowed(method, path) {
+        return Err(format!("refusing to call {method} {path}"));
     }
     let mut req = match method {
         "GET" => client().get(format!("{SITE}{path}")),
@@ -207,7 +237,60 @@ pub fn login_token_from_url(url: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{activity_chunks, login_token_from_url, ACTIVITY_MAX_SECONDS};
+    use super::{activity_chunks, allowed, login_token_from_url, ACTIVITY_MAX_SECONDS};
+
+    #[test]
+    fn only_the_routes_the_launcher_uses_are_reachable() {
+        for (method, path) in [
+            ("GET", "/api/friends"),
+            ("POST", "/api/friends"),
+            ("PATCH", "/api/friends/12"),
+            ("DELETE", "/api/friends/12"),
+            ("GET", "/api/notifications?playing=1"),
+            ("POST", "/api/notifications/read"),
+            ("DELETE", "/api/notifications/9"),
+            ("POST", "/api/presence"),
+            ("GET", "/api/shares"),
+            ("DELETE", "/api/share/ABC123"),
+            ("POST", "/api/share/ABC123/extend"),
+            ("POST", "/api/share/ABC123/invite"),
+            ("DELETE", "/api/share/ABC123/invite"),
+            ("GET", "/api/users?q=mako"),
+            ("POST", "/api/me/activity"),
+            ("POST", "/api/me/minecraft"),
+            ("GET", "/api/auth/get-session"),
+            ("POST", "/api/auth/sign-out"),
+            ("POST", "/api/auth/one-time-token/verify"),
+        ] {
+            assert!(allowed(method, path), "should be allowed: {method} {path}");
+        }
+    }
+
+    #[test]
+    fn everything_else_is_refused() {
+        for (method, path) in [
+            // the admin surface is not the launcher's business
+            ("GET", "/api/admin/users"),
+            ("POST", "/api/admin/discord/send"),
+            ("GET", "/api/admin/stats"),
+            // account-altering better-auth routes
+            ("POST", "/api/auth/sign-in/email"),
+            ("POST", "/api/auth/update-user"),
+            ("POST", "/api/auth/change-password"),
+            ("POST", "/api/auth/one-time-token/generate"),
+            // right shape, wrong method
+            ("DELETE", "/api/presence"),
+            ("GET", "/api/me/activity"),
+            // traversal and near misses
+            ("GET", "/api/friends/../admin/users"),
+            ("GET", "/api/friendsx"),
+            ("GET", "/api/share/ABC123/complete"),
+            ("GET", "/"),
+            ("GET", "/render/full/mako/full.png"),
+        ] {
+            assert!(!allowed(method, path), "should be refused: {method} {path}");
+        }
+    }
 
     #[test]
     fn splits_activity_into_chunks_the_server_accepts() {

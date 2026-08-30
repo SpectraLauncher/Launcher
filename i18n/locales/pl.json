@@ -319,7 +319,11 @@
     "uptodate": "Masz najnowszą wersję",
     "error": "Aktualizacja nieudana",
     "titlebar": "Aktualizowanie launchera",
-    "titlebarReady": "Aktualizacja v{version}"
+    "titlebarReady": "Aktualizacja v{version}",
+    "startupTitle": "Aktualizacja Spectra Launcher",
+    "startupChecking": "Sprawdzanie aktualizacji…",
+    "startupDownloading": "Pobieranie wersji {version}…",
+    "startupInstalling": "Instalowanie — launcher uruchomi się ponownie sam."
   },
   "settings": {
     "title": "Ustawienia",

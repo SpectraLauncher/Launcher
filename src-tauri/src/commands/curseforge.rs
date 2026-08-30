@@ -10,39 +10,46 @@ use crate::commands::modrinth::{read_content_index, write_content_index, Install
 use crate::models::{Instance, Loader};
 use crate::paths;
 
-const API: &str = "https://api.curseforge.com/v1";
+// Calls go through the Spectra server, which holds the CurseForge key. Shipping
+// the key in the binary made it readable with `strings` and broke CurseForge's
+// terms; nothing about it can be kept secret on the user's machine.
+const API: &str = "https://spectra.makoto.com.pl/api/curseforge";
 const GAME_ID: i64 = 432;
-const CF_API_KEY: &str = env!("CURSEFORGE_API_KEY");
+
+// Whether the server has a key configured. Assumed yes until it answers 501,
+// and set back on the next success, so a server configured later heals itself.
+static CF_AVAILABLE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
 
 #[tauri::command]
 pub fn cf_enabled() -> bool {
-    !CF_API_KEY.trim().is_empty()
+    CF_AVAILABLE.load(std::sync::atomic::Ordering::Relaxed)
 }
 
 fn http() -> &'static reqwest::Client {
     static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
     CLIENT.get_or_init(|| {
-        let mut headers = reqwest::header::HeaderMap::new();
-        if let Ok(v) = reqwest::header::HeaderValue::from_str(CF_API_KEY) {
-            headers.insert("x-api-key", v);
-        }
         reqwest::Client::builder()
             .user_agent(concat!("MakotoPD/Spectra-Launcher/", env!("CARGO_PKG_VERSION")))
-            .default_headers(headers)
             .build()
             .expect("build curseforge client")
     })
 }
 
 async fn send(req: reqwest::RequestBuilder) -> Result<reqwest::Response, String> {
-    if CF_API_KEY.trim().is_empty() {
-        return Err("CurseForge is not configured (no API key)".into());
-    }
+    use std::sync::atomic::Ordering;
+
     let mut attempt = 0u32;
     loop {
         let r = req.try_clone().ok_or("request is not retryable")?;
         let resp = r.send().await.map_err(|e| e.to_string())?;
+
+        if resp.status().as_u16() == 501 {
+            CF_AVAILABLE.store(false, Ordering::Relaxed);
+            return Err("CurseForge is not configured on the Spectra server".into());
+        }
+
         if resp.status().as_u16() != 429 || attempt >= 3 {
+            CF_AVAILABLE.store(true, Ordering::Relaxed);
             return Ok(resp);
         }
         let wait = resp

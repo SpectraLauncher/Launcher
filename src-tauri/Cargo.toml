@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.7.3"
+version = "0.7.4"
 description = "A modern launcher for Minecraft that allows you to easily manage multiple installations of Minecraft at once"
 authors = ["MakotoPD"]
 license = "MIT"
@@ -87,3 +87,8 @@ libc = "0.2"
 # registers it under the raw bundle identifier). Already in the tree via that plugin.
 [target.'cfg(windows)'.dependencies]
 windows-registry = "0.5"
+# DPAPI, to encrypt the token files at rest. Windows has no equivalent of the
+# 0600 mode the Unix build relies on, so without this the Microsoft refresh
+# token and the Spectra session sit in plaintext for every process on the
+# account to read. Version matches the copy Tauri already pulls in.
+windows = { version = "0.61", features = ["Win32_Security_Cryptography", "Win32_Foundation"] }

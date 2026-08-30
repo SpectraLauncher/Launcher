@@ -28,7 +28,6 @@ fn main() {
         .unwrap_or_default();
 
     println!("cargo:rustc-env=DISCORD_CLIENT_ID={}", get("DISCORD_CLIENT_ID"));
-    println!("cargo:rustc-env=CURSEFORGE_API_KEY={}", get("CURSEFORGE_API_KEY"));
     println!("cargo:rerun-if-changed=.env");
 
     tauri_build::build()

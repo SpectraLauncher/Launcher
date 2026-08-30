@@ -319,7 +319,11 @@
     "uptodate": "你已是最新版本",
     "error": "更新失败",
     "titlebar": "正在更新启动器",
-    "titlebarReady": "更新 v{version}"
+    "titlebarReady": "更新 v{version}",
+    "startupTitle": "正在更新 Spectra Launcher",
+    "startupChecking": "正在检查更新…",
+    "startupDownloading": "正在下载 {version} 版本…",
+    "startupInstalling": "正在安装 — 启动器将自动重启。"
   },
   "settings": {
     "title": "设置",

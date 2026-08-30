@@ -88,7 +88,7 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
 name = "app"
-version = "0.7.3"
+version = "0.7.4"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -123,6 +123,7 @@ dependencies = [
  "tokio-util",
  "toml 0.8.2",
  "uuid 1.23.3",
+ "windows 0.61.3",
  "windows-registry",
  "zip 2.4.2",
 ]

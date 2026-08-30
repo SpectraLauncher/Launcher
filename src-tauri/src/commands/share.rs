@@ -11,7 +11,6 @@ use crate::models::{Instance, Loader};
 use crate::{paths, store};
 
 const SHARE_API: &str = "https://spectra.makoto.com.pl/api/share";
-const INGEST_KEY: &str = "uaH8U5Gh1ecZdQQCRsvkGo2ARFByk641CYYy7YAYw";
 
 pub(crate) const MANIFEST: &str = "spectra-share.json";
 pub(crate) const FORMAT: &str = "spectra-share";
@@ -144,6 +143,12 @@ pub async fn share_instance(
     id: String,
     include: Vec<String>,
 ) -> Result<ShareResult, String> {
+    // Uploads are tied to an account — the server has no anonymous route any
+    // more. Check before packing so a gigabyte of mods is not zipped for nothing.
+    let Some(token) = crate::commands::spectra::stored_token() else {
+        return Err("sign in to your Spectra account to share an instance".into());
+    };
+
     emit_progress(&app, "scanning", 0, 0);
     link_local_files(&id).await;
 
@@ -176,40 +181,8 @@ pub async fn share_instance(
         })?;
     }
 
-    if let Some(token) = crate::commands::spectra::stored_token() {
-        let result = upload_to_storage(&app, &tmp, &instance, &id, items.len(), &token).await;
-        let _ = std::fs::remove_file(&tmp);
-        emit_progress(&app, "done", 1, 1);
-        return result;
-    }
-
-    let bytes = std::fs::read(&tmp).map_err(|e| format!("read pack: {e}"))?;
+    let result = upload_to_storage(&app, &tmp, &instance, &id, items.len(), &token).await;
     let _ = std::fs::remove_file(&tmp);
-    let size = bytes.len() as u64;
-    emit_progress(&app, "uploading", 0, size);
-
-    let resp = reqwest::Client::new()
-        .post(SHARE_API)
-        .query(&[
-            ("name", instance.name.as_str()),
-            ("mc", instance.mc_version.as_str()),
-            ("loader", loader_str(&instance.loader).as_deref().unwrap_or("vanilla")),
-            ("mods", &items.len().to_string()),
-        ])
-        .header("content-type", "application/zip")
-        .header("x-spectra-key", INGEST_KEY)
-        .header("origin", crate::commands::spectra::ORIGIN)
-        .body(bytes)
-        .send()
-        .await
-        .map_err(|e| format!("upload failed: {e}"))?;
-
-    if !resp.status().is_success() {
-        let status = resp.status();
-        let detail = resp.text().await.unwrap_or_default();
-        return Err(extract_message(&detail).unwrap_or_else(|| format!("upload failed ({status})")));
-    }
-    let result = resp.json().await.map_err(|e| format!("bad server reply: {e}"));
     emit_progress(&app, "done", 1, 1);
     result
 }
@@ -266,7 +239,6 @@ async fn upload_to_storage(
     let ticket: Ticket = {
         let resp = client
             .post(format!("{SHARE_API}/upload-url"))
-            .header("x-spectra-key", INGEST_KEY)
             .header("origin", crate::commands::spectra::ORIGIN)
             .bearer_auth(token)
             .json(&serde_json::json!({

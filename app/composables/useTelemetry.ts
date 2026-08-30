@@ -4,7 +4,6 @@ import { platform, arch } from '@tauri-apps/plugin-os'
 import type { Settings } from '~/types/launcher'
 
 const TELEMETRY_ENDPOINT = 'https://spectra.makoto.com.pl/api/telemetry'
-const INGEST_KEY = 'uaH8U5Gh1ecZdQQCRsvkGo2ARFByk641CYYy7YAYw'
 
 interface QueuedEvent {
   event: 'app_start' | 'launch' | 'feature' | 'update' | 'crash'
@@ -43,7 +42,7 @@ async function flush() {
   try {
     await fetch(TELEMETRY_ENDPOINT, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...(INGEST_KEY ? { 'x-spectra-key': INGEST_KEY } : {}) },
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ ...meta, events: batch }),
     })
   } catch {

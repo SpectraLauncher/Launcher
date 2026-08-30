@@ -319,7 +319,11 @@
     "uptodate": "You're up to date",
     "error": "Update failed",
     "titlebar": "Updating launcher",
-    "titlebarReady": "Update v{version}"
+    "titlebarReady": "Update v{version}",
+    "startupTitle": "Updating Spectra Launcher",
+    "startupChecking": "Checking for updates…",
+    "startupDownloading": "Downloading version {version}…",
+    "startupInstalling": "Installing — the launcher will restart on its own."
   },
   "settings": {
     "title": "Settings",

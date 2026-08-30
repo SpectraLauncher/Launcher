@@ -11,7 +11,6 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "@nuxt/scripts": "1.2.1",
     "@nuxt/ui": "4.9.0",
     "@nuxtjs/i18n": "10.4.0",
     "@pinia/nuxt": "^0.11.3",
@@ -23,37 +22,19 @@
     "@tauri-apps/plugin-shell": "^2.3.5",
     "@tauri-apps/plugin-store": "^2.4.3",
     "@tauri-apps/plugin-updater": "^2.10.1",
-    "@tiptap/core": "^3.27.1",
-    "@tiptap/extension-bubble-menu": "^3.27.1",
-    "@tiptap/extension-code": "^3.27.1",
-    "@tiptap/extension-collaboration": "^3.27.1",
-    "@tiptap/extension-drag-handle": "^3.27.1",
-    "@tiptap/extension-drag-handle-vue-3": "^3.27.1",
-    "@tiptap/extension-floating-menu": "^3.27.1",
-    "@tiptap/extension-horizontal-rule": "^3.27.1",
-    "@tiptap/extension-image": "^3.27.1",
-    "@tiptap/extension-mention": "^3.27.1",
-    "@tiptap/extension-node-range": "^3.27.1",
-    "@tiptap/extension-placeholder": "^3.27.1",
-    "@tiptap/markdown": "^3.27.1",
-    "@tiptap/pm": "^3.27.1",
-    "@tiptap/starter-kit": "^3.27.1",
-    "@tiptap/suggestion": "^3.27.1",
-    "@tiptap/vue-3": "^3.27.1",
     "@unhead/vue": "^2.1.15",
     "dompurify": "^3.4.11",
     "marked": "^18.0.5",
     "nuxt": "^4.4.8",
     "skinview3d": "^3.4.1",
     "tailwindcss": "^4.3.1",
-    "typescript": "^6.0.3",
     "vue": "^3.5.35",
-    "vue-draggable-plus": "^0.6.0",
-    "vue-router": "^5.1.0"
+    "vue-draggable-plus": "^0.6.0"
   },
   "devDependencies": {
     "@iconify-json/lucide": "^1.2.123",
     "@iconify-json/simple-icons": "^1.2.93",
-    "@tauri-apps/cli": "^2.11.2"
+    "@tauri-apps/cli": "^2.11.2",
+    "typescript": "^6.0.3"
   }
 }

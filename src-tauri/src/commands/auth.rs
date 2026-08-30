@@ -25,7 +25,7 @@ impl From<microsoft::MinecraftAccount> for Account {
 }
 
 fn load_accounts() -> Result<AccountsFile, String> {
-    Ok(store::read_json::<AccountsFile>(&paths::accounts_file())?.unwrap_or_default())
+    Ok(store::read_json_private::<AccountsFile>(&paths::accounts_file())?.unwrap_or_default())
 }
 
 fn save_accounts(file: &AccountsFile) -> Result<(), String> {
