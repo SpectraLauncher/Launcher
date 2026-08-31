@@ -396,6 +396,9 @@ fn copy_game_dir(src: &Path, dst: &Path) -> Result<(), String> {
 }
 
 fn copy_dir_all(src: &Path, dst: &Path) -> Result<(), String> {
+    if instances::clone_dir(src, dst) {
+        return Ok(());
+    }
     std::fs::create_dir_all(dst).map_err(|e| e.to_string())?;
     for entry in std::fs::read_dir(src).map_err(|e| e.to_string())?.flatten() {
         let from = entry.path();

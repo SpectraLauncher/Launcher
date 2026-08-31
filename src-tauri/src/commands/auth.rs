@@ -1,7 +1,6 @@
 use std::sync::{Arc, Mutex};
 
 use lyceris::auth::microsoft;
-use reqwest::Client;
 use tauri::{AppHandle, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
 use crate::models::{Account, AccountKind, AccountsFile};
@@ -105,7 +104,7 @@ pub async fn auth_login(app: AppHandle) -> Result<Account, String> {
     let code = rx.await.map_err(|_| "login cancelled".to_string())??;
     let _ = window.close();
 
-    let client = Client::new();
+    let client = crate::http();
     let account: Account = microsoft::authenticate(code, &client)
         .await
         .map_err(|e| e.to_string())?
@@ -119,7 +118,7 @@ pub async fn auth_login(app: AppHandle) -> Result<Account, String> {
 
 #[tauri::command]
 pub async fn auth_login_with_code(code: String) -> Result<Account, String> {
-    let client = Client::new();
+    let client = crate::http();
     let account: Account = microsoft::authenticate(code, &client)
         .await
         .map_err(|e| e.to_string())?
@@ -192,7 +191,27 @@ pub fn remove_account(uuid: String) -> Result<(), String> {
     save_accounts(&file)
 }
 
+fn refresh_lock() -> &'static tokio::sync::Mutex<()> {
+    static LOCK: std::sync::OnceLock<tokio::sync::Mutex<()>> = std::sync::OnceLock::new();
+    LOCK.get_or_init(Default::default)
+}
+
+fn unix_now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+fn token_still_valid(exp: u64, now: u64) -> bool {
+    exp > now.saturating_add(TOKEN_MARGIN_SECS)
+}
+
+const TOKEN_MARGIN_SECS: u64 = 900;
+
 pub async fn refresh_active_account() -> Result<Account, String> {
+    let _guard = refresh_lock().lock().await;
+
     let mut file = load_accounts()?;
     let active_uuid = file
         .active_uuid
@@ -210,7 +229,11 @@ pub async fn refresh_active_account() -> Result<Account, String> {
         return Ok(current);
     }
 
-    let client = Client::new();
+    if token_still_valid(current.exp, unix_now()) {
+        return Ok(current);
+    }
+
+    let client = crate::http();
 
     let mut attempt = microsoft::refresh(current.refresh_token.clone(), &client).await;
     if matches!(&attempt, Err(e) if is_transient(e)) {
@@ -255,5 +278,20 @@ Remove the account and add it again."
             format!("Microsoft refused the session for {who}: {msg}")
         }
         other => format!("Could not renew the session for {who}: {other}"),
+    }
+}
+
+#[cfg(test)]
+mod token_tests {
+    use super::{token_still_valid, TOKEN_MARGIN_SECS};
+
+    #[test]
+    fn only_a_comfortably_live_token_skips_the_refresh() {
+        let now = 1_000_000u64;
+        assert!(token_still_valid(now + TOKEN_MARGIN_SECS + 1, now));
+        assert!(!token_still_valid(now + TOKEN_MARGIN_SECS, now));
+        assert!(!token_still_valid(now + 60, now));
+        assert!(!token_still_valid(now - 1, now));
+        assert!(!token_still_valid(0, now));
     }
 }

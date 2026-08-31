@@ -48,18 +48,6 @@ struct CrashInfo {
     crash_report_rel: Option<String>,
 }
 
-fn http() -> reqwest::Client {
-    static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
-    CLIENT
-        .get_or_init(|| {
-            reqwest::Client::builder()
-                .pool_max_idle_per_host(64)
-                .build()
-                .expect("build reqwest client")
-        })
-        .clone()
-}
-
 #[cfg(unix)]
 fn symlink_dir(target: &std::path::Path, link: &std::path::Path) -> std::io::Result<()> {
     std::os::unix::fs::symlink(target, link)
@@ -305,7 +293,7 @@ async fn launch_inner(app: &AppHandle, id: &str, quick_play: Option<QuickPlay>) 
     let builder = ConfigBuilder::new(paths::instance_game_dir(id), instance.mc_version.clone(), auth)
         .memory(Memory::Megabyte(memory_mb))
         .runtime_dir(paths::runtimes_dir())
-        .client(http())
+        .client(crate::http().clone())
         .custom_java_args(java_args)
         .custom_args(game_args);
 
@@ -482,7 +470,7 @@ pub async fn repair_instance(app: AppHandle, id: String) -> Result<(), String> {
     let builder = ConfigBuilder::new(paths::instance_game_dir(&id), instance.mc_version.clone(), auth)
         .memory(Memory::Megabyte(memory_mb))
         .runtime_dir(paths::runtimes_dir())
-        .client(http());
+        .client(crate::http().clone());
     let emitter = build_emitter(&app, &id).await;
 
     let result = match to_lyceris_loader(&instance.loader, &instance.mc_version) {
@@ -650,7 +638,8 @@ fn kill_process_tree(pid: u32, force: bool) -> Result<(), String> {
     {
         let sig = if force { "-KILL" } else { "-TERM" };
         let pgid = unsafe { libc::getpgid(pid as libc::pid_t) };
-        let target = if pgid > 0 {
+        let own = unsafe { libc::getpgid(0) };
+        let target = if pgid > 0 && pgid != own {
             format!("-{pgid}")
         } else {
             pid.to_string()
@@ -751,5 +740,37 @@ mod shared_dir_tests {
 
         fs::remove_dir_all(&root).unwrap();
         std::env::remove_var("SPECTRA_DATA_DIR");
+    }
+}
+
+#[cfg(all(test, unix))]
+mod kill_tests {
+    use super::kill_process_tree;
+    use std::time::{Duration, Instant};
+
+    #[test]
+    fn kills_the_game_and_not_the_launcher() {
+        let mut child = std::process::Command::new("sleep")
+            .arg("30")
+            .spawn()
+            .unwrap();
+        let pid = child.id();
+
+        assert_eq!(
+            unsafe { libc::getpgid(pid as libc::pid_t) },
+            unsafe { libc::getpgid(0) },
+            "child is expected to share our process group, as the JVM does"
+        );
+
+        kill_process_tree(pid, true).unwrap();
+
+        let deadline = Instant::now() + Duration::from_secs(5);
+        loop {
+            if child.try_wait().unwrap().is_some() {
+                break;
+            }
+            assert!(Instant::now() < deadline, "child survived the kill");
+            std::thread::sleep(Duration::from_millis(20));
+        }
     }
 }

@@ -6,10 +6,8 @@ use crate::commands::auth::refresh_active_account;
 use crate::models::{AccountKind, SavedSkin};
 use crate::{paths, store};
 
-const USER_AGENT: &str = concat!("Spectra-Launcher/", env!("CARGO_PKG_VERSION"));
-
-fn http() -> Result<reqwest::Client, String> {
-    reqwest::Client::builder().user_agent(USER_AGENT).build().map_err(|e| e.to_string())
+fn http() -> Result<&'static reqwest::Client, String> {
+    Ok(crate::http())
 }
 
 fn png_data_url(bytes: &[u8]) -> String {

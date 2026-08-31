@@ -568,10 +568,7 @@ pub async fn upload_log_to_mclogs(id: String, rel: String) -> Result<MclogsPaste
         content = content[content.len() - MAX_BYTES..].to_string();
     }
 
-    let resp = reqwest::Client::builder()
-        .user_agent("SpectraLauncher")
-        .build()
-        .map_err(|e| e.to_string())?
+    let resp = crate::http()
         .post("https://api.mclo.gs/1/log")
         .form(&[("content", content.as_str()), ("source", "SpectraLauncher")])
         .send()

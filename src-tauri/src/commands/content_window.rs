@@ -26,13 +26,22 @@ pub async fn open_content_window(app: AppHandle, config: Value) -> Result<(), St
         return Ok(());
     }
 
-    WebviewWindowBuilder::new(&app, LABEL, WebviewUrl::App("browser".into()))
+    let builder = WebviewWindowBuilder::new(&app, LABEL, WebviewUrl::App("browser".into()))
         .title("Spectra")
         .inner_size(1320.0, 860.0)
-        .min_inner_size(960.0, 600.0)
-        .decorations(false)
-        .build()
-        .map_err(|e| e.to_string())?;
+        .min_inner_size(960.0, 600.0);
+
+    #[cfg(target_os = "macos")]
+    let builder = builder
+        .decorations(true)
+        .title_bar_style(tauri::TitleBarStyle::Overlay)
+        .hidden_title(true)
+        .traffic_light_position(tauri::LogicalPosition::new(12.0, 18.0));
+
+    #[cfg(not(target_os = "macos"))]
+    let builder = builder.decorations(false);
+
+    builder.build().map_err(|e| e.to_string())?;
 
     Ok(())
 }

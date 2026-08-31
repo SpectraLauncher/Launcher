@@ -26,8 +26,8 @@ fn save_token(token: Option<String>) -> Result<(), String> {
     store::write_json_private(&paths::spectra_account_file(), &AccountFile { token })
 }
 
-fn client() -> reqwest::Client {
-    reqwest::Client::new()
+fn client() -> &'static reqwest::Client {
+    crate::http()
 }
 
 /// Every endpoint the launcher is allowed to reach with the stored session.

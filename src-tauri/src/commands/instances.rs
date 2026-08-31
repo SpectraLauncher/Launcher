@@ -486,7 +486,33 @@ pub fn duplicate_instance(id: String) -> Result<Instance, String> {
     Ok(instance)
 }
 
+#[cfg(windows)]
+pub(crate) fn clone_dir(_from: &std::path::Path, _to: &std::path::Path) -> bool {
+    false
+}
+
+#[cfg(unix)]
+pub(crate) fn clone_dir(from: &std::path::Path, to: &std::path::Path) -> bool {
+    if to.exists() {
+        return false;
+    }
+    let mut cmd = std::process::Command::new("cp");
+    if cfg!(target_os = "macos") {
+        cmd.arg("-Rc");
+    } else {
+        cmd.args(["-R", "--reflink=auto"]);
+    }
+    cmd.arg(from)
+        .arg(to)
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
 fn copy_dir_all(from: &std::path::Path, to: &std::path::Path) -> std::io::Result<()> {
+    if clone_dir(from, to) {
+        return Ok(());
+    }
     std::fs::create_dir_all(to)?;
     for entry in std::fs::read_dir(from)? {
         let entry = entry?;
@@ -542,5 +568,31 @@ mod tests {
         assert_eq!(len, png.len());
         assert_eq!(offset, 22);
         assert_eq!(&ico[offset..offset + len], png);
+    }
+}
+
+#[cfg(test)]
+mod copy_tests {
+    use super::copy_dir_all;
+    use std::fs;
+
+    #[test]
+    fn copies_a_tree_whichever_path_it_takes() {
+        let root = std::env::temp_dir().join(format!("spectra-cp-{}", uuid::Uuid::new_v4()));
+        let src = root.join("src");
+        fs::create_dir_all(src.join("nested")).unwrap();
+        fs::write(src.join("a.txt"), "one").unwrap();
+        fs::write(src.join("nested/b.bin"), vec![7u8; 4096]).unwrap();
+
+        let dst = root.join("dst");
+        copy_dir_all(&src, &dst).unwrap();
+
+        assert_eq!(fs::read_to_string(dst.join("a.txt")).unwrap(), "one");
+        assert_eq!(fs::read(dst.join("nested/b.bin")).unwrap(), vec![7u8; 4096]);
+
+        fs::write(src.join("a.txt"), "changed").unwrap();
+        assert_eq!(fs::read_to_string(dst.join("a.txt")).unwrap(), "one");
+
+        fs::remove_dir_all(&root).unwrap();
     }
 }

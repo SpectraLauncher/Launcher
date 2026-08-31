@@ -225,7 +225,7 @@ async fn upload_to_storage(
     token: &str,
 ) -> Result<ShareResult, String> {
     let size = std::fs::metadata(path).map_err(|e| format!("stat pack: {e}"))?.len();
-    let client = reqwest::Client::new();
+    let client = crate::http();
 
     #[derive(Deserialize)]
     struct Ticket {
@@ -512,7 +512,7 @@ fn normalize_code(raw: &str) -> Result<String, String> {
 }
 
 async fn revision_of(code: &str) -> Result<u32, String> {
-    let resp = reqwest::Client::new()
+    let resp = crate::http()
         .get(format!("{SHARE_API}/{code}"))
         .query(&[("meta", "1")])
         .header("origin", crate::commands::spectra::ORIGIN)
@@ -542,7 +542,7 @@ struct ShareMeta {
 }
 
 async fn fetch_pack(code: &str) -> Result<(ShareManifest, Vec<u8>), String> {
-    let client = reqwest::Client::new();
+    let client = crate::http();
     let mut req = client
         .get(format!("{SHARE_API}/{code}"))
         .query(&[("url", "1")])

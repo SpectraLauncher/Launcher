@@ -7,6 +7,17 @@ mod store;
 use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
 
+pub fn http() -> &'static reqwest::Client {
+    static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
+    CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .user_agent(concat!("Spectra-Launcher/", env!("CARGO_PKG_VERSION")))
+            .pool_max_idle_per_host(64)
+            .build()
+            .expect("build http client")
+    })
+}
+
 #[derive(Default)]
 pub struct AppState {
     pub running: Mutex<HashSet<String>>,

@@ -1,3 +1,15 @@
+## Changes (v0.7.7)
+
+### ✨ Features & Improvements
+- **Faster everywhere**: signing in, skins, sharing and mod browsing reuse one connection instead of opening a new one each time.
+- **Version lists are cached**: the create-instance screen no longer re-downloads the full Minecraft version list on every click.
+- **Duplicating and importing an instance is near-instant on macOS and Linux**: files are cloned by the filesystem, so they cost no extra disk space.
+
+### 🐛 Bug Fixes
+- **Stop and Kill closed the whole launcher**: they now target only the game.
+- **"Remove the account and add it again" when nothing was wrong**: the Microsoft session was renewed far more often than needed, and two renewals at once could clash. It is now renewed only when it is close to expiring.
+- **macOS: the mod browser window had no close, minimise or zoom buttons**.
+
 ## Changes (v0.7.6)
 
 ### ✨ Features & Improvements
