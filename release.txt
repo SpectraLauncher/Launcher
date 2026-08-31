@@ -1,3 +1,9 @@
+## Changes (v0.7.6)
+
+### ✨ Features & Improvements
+- **Instances download far faster**: the launcher opened a new connection for every one of the ~4,300 files an install needs. It now reuses one, so the wait comes down to your internet speed.
+- **Instances share their game files**: the ~950 MB of artwork, sounds and libraries was downloaded again in full for every instance. It is now kept once and shared, so every instance after the first is ready in seconds and takes far less disk space. Your existing instances are moved over the first time you open the launcher, which takes under a second.
+
 ## Changes (v0.7.5)
 
 ### ✨ Features & Improvements

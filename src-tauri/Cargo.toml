@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.7.5"
+version = "0.7.6"
 description = "A modern launcher for Minecraft that allows you to easily manage multiple installations of Minecraft at once"
 authors = ["MakotoPD"]
 license = "MIT"

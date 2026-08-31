@@ -181,6 +181,7 @@ pub fn run() {
             commands::auth::remove_account,
             commands::launch::launch_instance,
             commands::launch::repair_instance,
+            commands::launch::migrate_shared_dirs,
             commands::launch::is_instance_running,
             commands::launch::stop_instance,
             commands::ping::ping_server,

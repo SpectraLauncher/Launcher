@@ -30,14 +30,6 @@ struct MultiProgress {
 }
 
 #[derive(Clone, Serialize)]
-struct FileProgress {
-    instance_id: String,
-    path: String,
-    current: u64,
-    total: u64,
-}
-
-#[derive(Clone, Serialize)]
 struct ConsoleLine {
     instance_id: String,
     line: String,
@@ -54,6 +46,104 @@ struct CrashInfo {
     instance_id: String,
     code: Option<i32>,
     crash_report_rel: Option<String>,
+}
+
+fn http() -> reqwest::Client {
+    static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
+    CLIENT
+        .get_or_init(|| {
+            reqwest::Client::builder()
+                .pool_max_idle_per_host(64)
+                .build()
+                .expect("build reqwest client")
+        })
+        .clone()
+}
+
+#[cfg(unix)]
+fn symlink_dir(target: &std::path::Path, link: &std::path::Path) -> std::io::Result<()> {
+    std::os::unix::fs::symlink(target, link)
+}
+
+#[cfg(windows)]
+fn symlink_dir(target: &std::path::Path, link: &std::path::Path) -> std::io::Result<()> {
+    std::os::windows::fs::symlink_dir(target, link).or_else(|_| {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        let status = std::process::Command::new("cmd")
+            .args(["/C", "mklink", "/J"])
+            .arg(link)
+            .arg(target)
+            .creation_flags(CREATE_NO_WINDOW)
+            .status()?;
+        if status.success() {
+            Ok(())
+        } else {
+            Err(std::io::Error::other("mklink /J failed"))
+        }
+    })
+}
+
+fn merge_move(from: &std::path::Path, to: &std::path::Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(to)?;
+    for entry in std::fs::read_dir(from)? {
+        let entry = entry?;
+        let dest = to.join(entry.file_name());
+        if entry.file_type()?.is_dir() {
+            merge_move(&entry.path(), &dest)?;
+        } else if !dest.exists() {
+            if std::fs::rename(entry.path(), &dest).is_err() {
+                std::fs::copy(entry.path(), &dest)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn link_shared_dirs(id: &str) {
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    let _guard = LOCK.lock();
+    let game_dir = paths::instance_game_dir(id);
+    for (name, shared) in [
+        ("assets", paths::shared_assets_dir()),
+        ("libraries", paths::shared_libraries_dir()),
+    ] {
+        let link = game_dir.join(name);
+        let is_link = link.symlink_metadata().map(|m| m.is_symlink()).unwrap_or(false);
+        if is_link {
+            if let Err(e) = std::fs::create_dir_all(&shared) {
+                log::warn!("shared {name} dir: {e}");
+            }
+            continue;
+        }
+        if link.is_dir() {
+            if let Err(e) = merge_move(&link, &shared) {
+                log::warn!("migrating {name} of instance {id}: {e}");
+                continue;
+            }
+            if let Err(e) = std::fs::remove_dir_all(&link) {
+                log::warn!("removing migrated {name} of instance {id}: {e}");
+                continue;
+            }
+        } else if let Err(e) = std::fs::create_dir_all(&shared).and_then(|_| std::fs::create_dir_all(&game_dir)) {
+            log::warn!("shared {name} dir: {e}");
+            continue;
+        }
+        if let Err(e) = symlink_dir(&shared, &link) {
+            log::warn!("linking shared {name} into instance {id}: {e}");
+        }
+    }
+}
+
+#[tauri::command]
+pub fn migrate_shared_dirs() {
+    let Ok(entries) = std::fs::read_dir(paths::instances_dir()) else { return };
+    for entry in entries.flatten() {
+        let id = entry.file_name().to_string_lossy().into_owned();
+        if paths::instance_config_file(&id).is_file() {
+            link_shared_dirs(&id);
+        }
+    }
 }
 
 fn to_lyceris_loader(loader: &Loader, mc: &str) -> Option<Box<dyn LyLoader>> {
@@ -79,25 +169,6 @@ async fn build_emitter(app: &AppHandle, id: &str) -> Emitter {
                     "mc://multi-progress",
                     MultiProgress {
                         instance_id: id_multi.clone(),
-                        current,
-                        total,
-                    },
-                );
-            },
-        )
-        .await;
-
-    let app_single = app.clone();
-    let id_single = id.to_string();
-    emitter
-        .on(
-            Event::SingleDownloadProgress,
-            move |(path, current, total): (String, u64, u64)| {
-                let _ = app_single.emit(
-                    "mc://file-progress",
-                    FileProgress {
-                        instance_id: id_single.clone(),
-                        path,
                         current,
                         total,
                     },
@@ -230,9 +301,11 @@ async fn launch_inner(app: &AppHandle, id: &str, quick_play: Option<QuickPlay>) 
         run_hook(cmd, true);
     }
 
+    link_shared_dirs(id);
     let builder = ConfigBuilder::new(paths::instance_game_dir(id), instance.mc_version.clone(), auth)
         .memory(Memory::Megabyte(memory_mb))
         .runtime_dir(paths::runtimes_dir())
+        .client(http())
         .custom_java_args(java_args)
         .custom_args(game_args);
 
@@ -405,9 +478,11 @@ pub async fn repair_instance(app: AppHandle, id: String) -> Result<(), String> {
     let auth = AuthMethod::Offline { username: "Player".into(), uuid: None };
     let memory_mb = instance.memory_mb.unwrap_or(settings.default_memory_mb) as u64;
 
+    link_shared_dirs(&id);
     let builder = ConfigBuilder::new(paths::instance_game_dir(&id), instance.mc_version.clone(), auth)
         .memory(Memory::Megabyte(memory_mb))
-        .runtime_dir(paths::runtimes_dir());
+        .runtime_dir(paths::runtimes_dir())
+        .client(http());
     let emitter = build_emitter(&app, &id).await;
 
     let result = match to_lyceris_loader(&instance.loader, &instance.mc_version) {
@@ -615,5 +690,66 @@ mod deep_link_tests {
         assert_eq!(instance_id_from_url("spectra://launch/"), None);
         assert_eq!(instance_id_from_url("spectra://launch/../../etc/passwd"), None);
         assert_eq!(instance_id_from_url("spectra://launch/a b"), None);
+    }
+}
+
+#[cfg(test)]
+mod shared_dir_tests {
+    use super::{link_shared_dirs, migrate_shared_dirs};
+    use crate::paths;
+    use std::fs;
+
+    fn seed(id: &str, name: &str, file: &str, body: &str) {
+        let dir = paths::instance_game_dir(id).join(name).join("sub");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join(file), body).unwrap();
+    }
+
+    #[test]
+    fn migrates_existing_instances_and_links_new_ones() {
+        let root = std::env::temp_dir().join(format!("spectra-{}", uuid::Uuid::new_v4()));
+        std::env::set_var("SPECTRA_DATA_DIR", &root);
+
+        seed("old", "assets", "a.bin", "one");
+        seed("old", "libraries", "l.jar", "lib");
+        link_shared_dirs("old");
+
+        let link = paths::instance_game_dir("old").join("assets");
+        assert!(link.symlink_metadata().unwrap().is_symlink());
+        assert_eq!(fs::read_to_string(link.join("sub/a.bin")).unwrap(), "one");
+        assert_eq!(fs::read_to_string(paths::shared_assets_dir().join("sub/a.bin")).unwrap(), "one");
+        assert!(paths::shared_libraries_dir().join("sub/l.jar").is_file());
+
+        seed("second", "assets", "a.bin", "clobbered");
+        seed("second", "assets", "b.bin", "two");
+        link_shared_dirs("second");
+
+        let shared = paths::shared_assets_dir();
+        assert_eq!(fs::read_to_string(shared.join("sub/a.bin")).unwrap(), "one");
+        assert_eq!(fs::read_to_string(shared.join("sub/b.bin")).unwrap(), "two");
+        assert!(paths::instance_game_dir("second").join("assets").symlink_metadata().unwrap().is_symlink());
+
+        link_shared_dirs("second");
+        assert_eq!(fs::read_to_string(shared.join("sub/b.bin")).unwrap(), "two");
+
+        seed("fresh", "mods", "m.jar", "mod");
+        link_shared_dirs("fresh");
+        assert_eq!(
+            fs::read_to_string(paths::instance_game_dir("fresh").join("assets/sub/a.bin")).unwrap(),
+            "one"
+        );
+
+        seed("third", "assets", "c.bin", "three");
+        fs::write(paths::instance_config_file("third"), "{}").unwrap();
+        seed("stray", "assets", "d.bin", "four");
+        migrate_shared_dirs();
+
+        assert_eq!(fs::read_to_string(shared.join("sub/c.bin")).unwrap(), "three");
+        assert!(paths::instance_game_dir("third").join("assets").symlink_metadata().unwrap().is_symlink());
+        assert!(!shared.join("sub/d.bin").exists());
+        assert!(!paths::instance_game_dir("stray").join("assets").symlink_metadata().unwrap().is_symlink());
+
+        fs::remove_dir_all(&root).unwrap();
+        std::env::remove_var("SPECTRA_DATA_DIR");
     }
 }

@@ -413,7 +413,8 @@
     "importingInstance": "Importation : {name}",
     "exportingInstance": "Exportation : {name}",
     "uninstallingMod": "Suppression de {name}",
-    "installingMods": "Installation de {n} éléments"
+    "installingMods": "Installation de {n} éléments",
+    "optimizing": "Rangement des fichiers du jeu…"
   },
   "content": {
     "all": "Tout",

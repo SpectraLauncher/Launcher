@@ -57,6 +57,14 @@ pub fn runtimes_dir() -> PathBuf {
     data_root().join("runtimes")
 }
 
+pub fn shared_assets_dir() -> PathBuf {
+    data_root().join("assets")
+}
+
+pub fn shared_libraries_dir() -> PathBuf {
+    data_root().join("libraries")
+}
+
 pub fn skins_dir() -> PathBuf {
     data_root().join("skins")
 }

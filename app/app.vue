@@ -70,6 +70,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import type { UnlistenFn } from '@tauri-apps/api/event'
 
+const { t } = useI18n()
 const theme = useThemeStore()
 
 const route = useRoute()
@@ -149,6 +150,9 @@ onMounted(async () => {
   await bootGate()
 
   activity.attach()
+  if (!isContentWindow.value) {
+    activity.withTask(t('activity.optimizing'), () => invoke('migrate_shared_dirs')).catch(() => {})
+  }
   instances.ensureLoaded()
   telemetry.init()
   spectra.refresh().then(() => {
