@@ -4,7 +4,7 @@ use tauri::{AppHandle, Emitter};
 
 use crate::{paths, store};
 
-pub const SITE: &str = "https://spectra.makoto.com.pl";
+pub const SITE: &str = "https://usespectra.app";
 
 pub const ORIGIN: &str = SITE;
 

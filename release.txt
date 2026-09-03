@@ -1,3 +1,8 @@
+## Changes (v0.7.8)
+
+### ✨ Features & Improvements
+- **New domain**: At last, we can announce it to the world! We have our own domain: usespectra.app
+
 ## Changes (v0.7.7)
 
 ### ✨ Features & Improvements

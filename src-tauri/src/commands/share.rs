@@ -10,7 +10,7 @@ use crate::commands::{curseforge, import, instances, modrinth};
 use crate::models::{Instance, Loader};
 use crate::{paths, store};
 
-const SHARE_API: &str = "https://spectra.makoto.com.pl/api/share";
+const SHARE_API: &str = "https://usespectra.app/api/share";
 
 pub(crate) const MANIFEST: &str = "spectra-share.json";
 pub(crate) const FORMAT: &str = "spectra-share";
@@ -814,6 +814,6 @@ mod tests {
         assert_eq!(code_from_url("spectra://share/abc123/"), Some("ABC123".into()));
         assert_eq!(code_from_url("spectra://share?x=1"), None);
         assert_eq!(code_from_url("spectra://share/AB"), None);
-        assert_eq!(code_from_url("https://spectra.makoto.com.pl/s/ABC123"), None);
+        assert_eq!(code_from_url("https://usespectra.app/s/ABC123"), None);
     }
 }

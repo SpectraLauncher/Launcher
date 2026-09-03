@@ -13,7 +13,7 @@ use crate::paths;
 // Calls go through the Spectra server, which holds the CurseForge key. Shipping
 // the key in the binary made it readable with `strings` and broke CurseForge's
 // terms; nothing about it can be kept secret on the user's machine.
-const API: &str = "https://spectra.makoto.com.pl/api/curseforge";
+const API: &str = "https://usespectra.app/api/curseforge";
 const GAME_ID: i64 = 432;
 
 // Whether the server has a key configured. Assumed yes until it answers 501,

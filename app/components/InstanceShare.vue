@@ -124,7 +124,7 @@ const error = ref('')
 const copied = ref('')
 
 const shareUrl = computed(() =>
-  share.value ? `https://spectra.makoto.com.pl/s/${share.value.code}` : anonymous.value?.url ?? '')
+  share.value ? `https://usespectra.app/s/${share.value.code}` : anonymous.value?.url ?? '')
 const code = computed(() => share.value?.code ?? anonymous.value?.code ?? '')
 
 const invitable = computed(() => {

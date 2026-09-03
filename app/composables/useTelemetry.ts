@@ -3,7 +3,7 @@ import { getVersion } from '@tauri-apps/api/app'
 import { platform, arch } from '@tauri-apps/plugin-os'
 import type { Settings } from '~/types/launcher'
 
-const TELEMETRY_ENDPOINT = 'https://spectra.makoto.com.pl/api/telemetry'
+const TELEMETRY_ENDPOINT = 'https://usespectra.app/api/telemetry'
 
 interface QueuedEvent {
   event: 'app_start' | 'launch' | 'feature' | 'update' | 'crash'

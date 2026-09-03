@@ -26,7 +26,7 @@ Instead of editing files or copying `.jar` mods by hand, you click a button and 
 It works on **Windows** and is built to feel quick and modern.
 
 <div align="center">
-  <img src="https://spectra.makoto.com.pl/screenshots/MainMenu.png" alt="Spectra Launcher home screen showing your list of Minecraft instances" width="800" />
+  <img src="https://usespectra.app/screenshots/MainMenu.png" alt="Spectra Launcher home screen showing your list of Minecraft instances" width="800" />
   <br />
   <em>The home screen — all your Minecraft setups in one place. Hit <strong>Play</strong> to jump back into your last game.</em>
 </div>
@@ -44,7 +44,7 @@ An **instance** is a self-contained copy of Minecraft — its own version, its o
 - Supports every popular mod loader: **Vanilla, Fabric, Quilt, Forge and NeoForge**.
 
 <div align="center">
-  <img src="https://spectra.makoto.com.pl/screenshots/InstanceScreen.png" alt="An instance page listing all installed mods with on/off toggles" width="800" />
+  <img src="https://usespectra.app/screenshots/InstanceScreen.png" alt="An instance page listing all installed mods with on/off toggles" width="800" />
   <br />
   <em>Open an instance to see its mods, shaders, worlds and more — each with a simple on/off switch.</em>
 </div>
@@ -58,13 +58,13 @@ Browse thousands of mods, shaders and resource packs from **Modrinth** and **Cur
 - Install full **modpacks** (like *All the Mods* or *Better MC*) in one go.
 
 <div align="center">
-  <img src="https://spectra.makoto.com.pl/screenshots/ModalAddModsToInstanceModrinth.png" alt="Built-in browser for searching and installing mods from Modrinth" width="800" />
+  <img src="https://usespectra.app/screenshots/ModalAddModsToInstanceModrinth.png" alt="Built-in browser for searching and installing mods from Modrinth" width="800" />
   <br />
   <em>Search Modrinth without leaving the launcher. Pick a mod, choose a version, click <strong>Install</strong>.</em>
 </div>
 
 <div align="center">
-  <img src="https://spectra.makoto.com.pl/screenshots/ModalAddModsToInstanceCurseForge.png.png" alt="The same mod browser switched to the CurseForge source" width="800" />
+  <img src="https://usespectra.app/screenshots/ModalAddModsToInstanceCurseForge.png.png" alt="The same mod browser switched to the CurseForge source" width="800" />
   <br />
   <em>Prefer CurseForge? Switch the source with one dropdown and search there instead.</em>
 </div>
@@ -78,13 +78,13 @@ No more digging through folders. Spectra gathers your stuff into easy tabs:
 - **Skins** — preview your character in 3D, save multiple skins, switch capes, and apply them instantly.
 
 <div align="center">
-  <img src="https://spectra.makoto.com.pl/screenshots/WorldsScreen.png" alt="Worlds tab listing saved worlds from all instances" width="800" />
+  <img src="https://usespectra.app/screenshots/WorldsScreen.png" alt="Worlds tab listing saved worlds from all instances" width="800" />
   <br />
   <em>All your worlds, gathered from every instance, ready to play with one click.</em>
 </div>
 
 <div align="center">
-  <img src="https://spectra.makoto.com.pl/screenshots/SkinsScreen.png" alt="Skins page with a 3D character preview, saved skins and capes" width="800" />
+  <img src="https://usespectra.app/screenshots/SkinsScreen.png" alt="Skins page with a 3D character preview, saved skins and capes" width="800" />
   <br />
   <em>Try on skins and capes with a live 3D preview before you apply them.</em>
 </div>
@@ -104,7 +104,7 @@ No more digging through folders. Spectra gathers your stuff into easy tabs:
 Pick a theme (Dark, pure-black OLED, or a gold "Zębatkowo" look), choose an accent color, and the whole launcher updates to match.
 
 <div align="center">
-  <img src="https://spectra.makoto.com.pl/screenshots/Settings.png" alt="Settings page with theme options and accent color picker" width="800" />
+  <img src="https://usespectra.app/screenshots/Settings.png" alt="Settings page with theme options and accent color picker" width="800" />
   <br />
   <em>Themes and accent colors in Settings — tweak the look in seconds.</em>
 </div>
@@ -114,7 +114,7 @@ Pick a theme (Dark, pure-black OLED, or a gold "Zębatkowo" look), choose an acc
 Every instance has its own settings: rename it, switch the mod loader, adjust how much memory (RAM) it gets, set custom Java options, or duplicate it as a backup before you experiment.
 
 <div align="center">
-  <img src="https://spectra.makoto.com.pl/screenshots/InstanceSettings.png" alt="Per-instance settings page with options for name, mod loader, Java and memory" width="800" />
+  <img src="https://usespectra.app/screenshots/InstanceSettings.png" alt="Per-instance settings page with options for name, mod loader, Java and memory" width="800" />
   <br />
   <em>Per-instance settings — change the version, memory, Java and more without touching the rest of your setups.</em>
 </div>
