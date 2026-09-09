@@ -472,7 +472,9 @@ fn desktop_open(target: &std::ffi::OsStr) -> AppResult<()> {
             .arg(target)
             .spawn()
             .map(|_| ())
-            .map_err(|_| format!("could not open it — is xdg-utils installed? ({e})")),
+            .map_err(|_| {
+                AppError::new("io", format!("could not open it — is xdg-utils installed? ({e})"))
+            }),
     }
 }
 

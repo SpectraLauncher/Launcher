@@ -719,7 +719,7 @@ fn kill_process_tree(pid: u32, force: bool) -> AppResult<()> {
             .args([sig, &target])
             .status()
             .map(|_| ())
-            .map_err(|e| format!("kill: {e}"))
+            .map_err(|e| AppError::new("io", format!("kill: {e}")))
     }
 }
 
