@@ -123,7 +123,7 @@ async function loadVersions() {
     }
   } catch (e) {
     loaderVersions.value = []
-    error.value = String(e)
+    error.value = errorText(e)
   } finally {
     loadingVersions.value = false
   }
@@ -146,7 +146,7 @@ async function apply() {
     toast.add({ title: t('changeLoader.done'), color: 'success' })
     close()
   } catch (e) {
-    error.value = String(e)
+    error.value = errorText(e)
   } finally {
     saving.value = false
   }

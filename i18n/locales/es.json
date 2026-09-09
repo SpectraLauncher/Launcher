@@ -367,7 +367,8 @@
       "privacy": "Privacidad",
       "java": "Instalaciones de Java",
       "defaults": "Opciones predeterminadas de instancia",
-      "accounts": "Cuentas"
+      "accounts": "Cuentas",
+      "sync": "Sincronizacion"
     },
     "privacy": {
       "track_playtime": "Registrar tiempo de juego",
@@ -559,7 +560,15 @@
     "slim": "Delgado",
     "capes": "Capas",
     "noCape": "Sin capa",
-    "capeSet": "Capa actualizada"
+    "capeSet": "Capa actualizada",
+    "title": "Selector de skins",
+    "capesButton": "Capas",
+    "capesDemo": "Inicia sesión con Microsoft para llevar una capa.",
+    "capesEmpty": "No tienes ninguna capa.",
+    "defaultsEmpty": "Las skins predeterminadas aparecerán cuando instales una versión de Minecraft.",
+    "demoTitle": "Estás en modo demostración",
+    "demoDesc": "Mira y previsualiza cualquier skin. Inicia sesión con Microsoft para aplicarla a tu cuenta.",
+    "signIn": "Iniciar sesión con Microsoft"
   },
   "instSettings": {
     "tabs": {
@@ -567,7 +576,8 @@
       "install": "Instalación",
       "window": "Ventana",
       "java": "Java y memoria",
-      "hooks": "Hooks de inicio"
+      "hooks": "Hooks de inicio",
+      "sync": "Sincronizacion"
     },
     "name": "Nombre",
     "duplicate": "Duplicar",
@@ -740,5 +750,82 @@
     "autoHint": "Una actualización de paquete o de modpack puede borrar mods; esto es lo que lo deshace.",
     "keepLabel": "Conservar",
     "keepHint": "automáticos por instancia; los que creas a mano no se borran nunca"
+  },
+  "errors": {
+    "auth": "Problema de inicio de sesión",
+    "busy": "Ya en curso",
+    "disk_full": "Disco lleno",
+    "http": "Error del servidor",
+    "invalid": "Datos no válidos",
+    "io": "Error de disco",
+    "network": "Sin conexión",
+    "not_found": "No encontrado",
+    "panic": "Error interno",
+    "permission": "Sin permisos",
+    "unknown": "Error"
+  },
+  "sync": {
+    "title": "Sincronizar instancias",
+    "desc": "Mantiene los ajustes elegidos iguales en todas las instancias. Los cambios se recogen al cerrar el juego y se aplican al resto en el siguiente arranque.",
+    "sourceTitle": "Elegir origen",
+    "sourceDesc": "Elige la instancia de la que copiar. Su estado inicia la copia compartida; después podrás editarla desde cualquier instancia.",
+    "sourceSearch": "Buscar instancia",
+    "sourceEmpty": "No hay instancias de las que copiar.",
+    "sourceConfirm": "Sincronizar",
+    "seededFrom": "Tomado de una instancia {version}",
+    "enabled": "{option} ya se sincroniza",
+    "packsTitle": "Paquetes de recursos compartidos",
+    "packsEmpty": "Aún no hay paquetes. Se recogen al cerrar el juego.",
+    "packFormat": "formato {n}",
+    "openFolder": "Abrir carpeta compartida",
+    "instanceDesc": "Desactiva una categoría para dejar fuera a esta instancia.",
+    "instanceNothingOn": "Ninguna categoría se sincroniza todavía. Actívalas en los ajustes del launcher.",
+    "conflictTitle": "Esta instancia ya tiene datos propios",
+    "conflictDesc": "La copia compartida y esta instancia tienen datos. Elige cuál gana.",
+    "useSynced": "Usar compartidos",
+    "useInstance": "Sobrescribir compartidos",
+    "options": {
+      "game_options": {
+        "label": "Ajustes del juego",
+        "desc": "Sonido, FOV, distancia de renderizado, idioma y controles. Los controles solo viajan entre 1.13 y posteriores."
+      },
+      "multiplayer_servers": {
+        "label": "Servidores multijugador",
+        "desc": "Tu lista de servidores, combinada en vez de reemplazada."
+      },
+      "resource_packs": {
+        "label": "Paquetes de recursos",
+        "desc": "Archivos compartidos, aplicados donde el formato encaja con la versión."
+      },
+      "command_history": {
+        "label": "Historial de comandos",
+        "desc": "Los comandos que has escrito en el chat."
+      },
+      "creative_hotbars": {
+        "label": "Barras creativas",
+        "desc": "Barras creativas guardadas. Solo entre instancias del mismo lado de 1.13."
+      }
+    },
+    "instancesTitle": "Qué instancias participan",
+    "instancesDesc": "Cada instancia participa por defecto. Desmarca para dejarla fuera.",
+    "instanceColumn": "Instancia"
+  },
+  "syncAnnounce": {
+    "badge": "Novedad de esta actualización",
+    "title": "Sincroniza tus instancias",
+    "body": "Ahora puedes mantener iguales los ajustes del juego, los servidores, los paquetes de recursos y más en todas tus instancias, para que todo siga donde lo dejaste.",
+    "later": "Actívalo ahora o configúralo más tarde en los ajustes del launcher.",
+    "skip": "Omitir",
+    "syncAll": "Sincronizar todo",
+    "syncSelected": "Sincronizar selección",
+    "done": "Sincronizando {n} categorías",
+    "failed": "No se pudo activar la sincronización",
+    "options": {
+      "game_options": "Sincronizar ajustes del juego",
+      "multiplayer_servers": "Sincronizar servidores multijugador",
+      "resource_packs": "Sincronizar paquetes de recursos",
+      "command_history": "Sincronizar historial de comandos",
+      "creative_hotbars": "Sincronizar barras creativas"
+    }
   }
 }

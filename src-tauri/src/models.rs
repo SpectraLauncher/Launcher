@@ -164,6 +164,9 @@ pub struct Settings {
     pub anonymous_stats: bool,
     #[serde(default = "default_true")]
     pub share_activity: bool,
+
+    #[serde(default)]
+    pub sync_announced: bool,
 }
 
 fn default_true() -> bool {
@@ -200,6 +203,7 @@ impl Default for Settings {
             crash_reports: true,
             anonymous_stats: true,
             share_activity: true,
+            sync_announced: false,
         }
     }
 }

@@ -1,8 +1,13 @@
 use crate::models::{Instance, Loader};
 use crate::{paths, store};
+use crate::error::{AppError, AppResult};
 
 #[tauri::command]
-pub fn list_instances() -> Result<Vec<Instance>, String> {
+pub async fn list_instances() -> AppResult<Vec<Instance>> {
+    crate::blocking(all_instances).await
+}
+
+fn all_instances() -> AppResult<Vec<Instance>> {
     let root = paths::instances_dir();
     let mut instances = Vec::new();
 
@@ -26,19 +31,35 @@ pub fn list_instances() -> Result<Vec<Instance>, String> {
 }
 
 #[tauri::command]
-pub fn get_instance(id: String) -> Result<Instance, String> {
-    store::read_json::<Instance>(&paths::instance_config_file(&id))?
-        .ok_or_else(|| format!("instance '{id}' not found"))
+pub async fn get_instance(id: String) -> AppResult<Instance> {
+    crate::blocking(move || {
+        (store::read_json::<Instance>(&paths::instance_config_file(&id))?
+            .ok_or_else(|| format!("instance '{id}' not found"))).map_err(Into::into)
+    })
+    .await
 }
 
 #[tauri::command]
-pub fn create_instance(
+pub async fn create_instance(
     name: String,
     mc_version: String,
     loader: Loader,
     memory_mb: Option<u32>,
     icon_source_path: Option<String>,
-) -> Result<Instance, String> {
+) -> AppResult<Instance> {
+    crate::blocking(move || {
+        make_instance(name, mc_version, loader, memory_mb, icon_source_path)
+    })
+    .await
+}
+
+pub fn make_instance(
+    name: String,
+    mc_version: String,
+    loader: Loader,
+    memory_mb: Option<u32>,
+    icon_source_path: Option<String>,
+) -> AppResult<Instance> {
     let id = uuid::Uuid::new_v4().to_string();
 
     let game_dir = paths::instance_game_dir(&id);
@@ -90,7 +111,7 @@ pub fn get_instance_icon_path(id: String) -> Option<String> {
     }
 }
 
-fn store_icon(id: &str, bytes: &[u8]) -> Result<(), String> {
+fn store_icon(id: &str, bytes: &[u8]) -> AppResult<()> {
     if bytes.len() > 5 * 1024 * 1024 {
         return Err("image too large (max 5 MB)".into());
     }
@@ -102,13 +123,20 @@ fn store_icon(id: &str, bytes: &[u8]) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn set_instance_icon(id: String, source_path: String) -> Result<(), String> {
-    let bytes = std::fs::read(&source_path).map_err(|e| format!("read icon: {e}"))?;
-    store_icon(&id, &bytes)
+pub async fn set_instance_icon(id: String, source_path: String) -> AppResult<()> {
+    crate::blocking(move || {
+        let bytes = std::fs::read(&source_path).map_err(|e| format!("read icon: {e}"))?;
+        store_icon(&id, &bytes)
+    })
+    .await
 }
 
 #[tauri::command]
-pub fn list_custom_symbols() -> Result<Vec<String>, String> {
+pub async fn list_custom_symbols() -> AppResult<Vec<String>> {
+    crate::blocking(custom_symbols).await
+}
+
+fn custom_symbols() -> AppResult<Vec<String>> {
     let dir = paths::symbols_dir();
     let entries = match std::fs::read_dir(&dir) {
         Ok(e) => e,
@@ -131,8 +159,12 @@ pub fn list_custom_symbols() -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
-pub fn add_custom_symbol(source_path: String) -> Result<String, String> {
-    let src = std::path::Path::new(&source_path);
+pub async fn add_custom_symbol(source_path: String) -> AppResult<String> {
+    crate::blocking(move || store_symbol(&source_path)).await
+}
+
+fn store_symbol(source_path: &str) -> AppResult<String> {
+    let src = std::path::Path::new(source_path);
     let bytes = std::fs::read(src).map_err(|e| format!("read symbol: {e}"))?;
     if bytes.len() > 5 * 1024 * 1024 {
         return Err("image too large (max 5 MB)".into());
@@ -150,7 +182,7 @@ pub fn add_custom_symbol(source_path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn delete_custom_symbol(path: String) -> Result<(), String> {
+pub fn delete_custom_symbol(path: String) -> AppResult<()> {
     let dir = paths::symbols_dir();
     let target = std::path::Path::new(&path);
     if target.parent() != Some(dir.as_path()) {
@@ -163,39 +195,52 @@ pub fn delete_custom_symbol(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn set_instance_icon_data(id: String, data_url: String) -> Result<(), String> {
+pub async fn set_instance_icon_data(id: String, data_url: String) -> AppResult<()> {
+    crate::blocking(move || {
+        use base64::Engine;
+
+        let b64 = data_url.rsplit(',').next().unwrap_or_default();
+        let bytes = base64::engine::general_purpose::STANDARD
+            .decode(b64)
+            .map_err(|e| format!("decode icon: {e}"))?;
+        store_icon(&id, &bytes)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn update_instance(instance: Instance) -> AppResult<()> {
+    crate::blocking(move || {
+        let path = paths::instance_config_file(&instance.id);
+        if !path.exists() {
+            return Err(AppError::not_found(format!("instance '{}' not found", instance.id)));
+        }
+        store::write_json(&path, &instance)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn delete_instance(id: String) -> AppResult<()> {
+    crate::blocking(move || {
+        let dir = paths::instance_dir(&id);
+        if dir.exists() {
+            std::fs::remove_dir_all(&dir).map_err(|e| format!("delete instance: {e}"))?;
+        }
+        Ok(())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn read_image_data_url(path: String) -> AppResult<String> {
+    crate::blocking(move || image_data_url(&path)).await
+}
+
+fn image_data_url(path: &str) -> AppResult<String> {
     use base64::Engine;
 
-    let b64 = data_url.rsplit(',').next().unwrap_or_default();
-    let bytes = base64::engine::general_purpose::STANDARD
-        .decode(b64)
-        .map_err(|e| format!("decode icon: {e}"))?;
-    store_icon(&id, &bytes)
-}
-
-#[tauri::command]
-pub fn update_instance(instance: Instance) -> Result<(), String> {
-    let path = paths::instance_config_file(&instance.id);
-    if !path.exists() {
-        return Err(format!("instance '{}' not found", instance.id));
-    }
-    store::write_json(&path, &instance)
-}
-
-#[tauri::command]
-pub fn delete_instance(id: String) -> Result<(), String> {
-    let dir = paths::instance_dir(&id);
-    if dir.exists() {
-        std::fs::remove_dir_all(&dir).map_err(|e| format!("delete instance: {e}"))?;
-    }
-    Ok(())
-}
-
-#[tauri::command]
-pub fn read_image_data_url(path: String) -> Result<String, String> {
-    use base64::Engine;
-
-    let p = std::path::Path::new(&path);
+    let p = std::path::Path::new(path);
     let bytes = std::fs::read(p).map_err(|e| format!("read image: {e}"))?;
     if bytes.len() > 5 * 1024 * 1024 {
         return Err("image too large (max 5 MB)".into());
@@ -222,7 +267,7 @@ pub fn get_instance_path(id: String) -> String {
 }
 
 #[tauri::command]
-pub fn open_instance_folder(id: String) -> Result<(), String> {
+pub fn open_instance_folder(id: String) -> AppResult<()> {
     let dir = paths::instance_dir(&id);
     if !dir.exists() {
         return Err("instance folder not found".into());
@@ -231,7 +276,7 @@ pub fn open_instance_folder(id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn open_instance_game_folder(id: String) -> Result<(), String> {
+pub fn open_instance_game_folder(id: String) -> AppResult<()> {
     let dir = paths::instance_game_dir(&id);
     std::fs::create_dir_all(&dir).map_err(|e| format!("create game dir: {e}"))?;
     open_in_file_manager(&dir)
@@ -269,8 +314,12 @@ fn png_to_ico(png: &[u8]) -> Vec<u8> {
 }
 
 #[tauri::command]
-pub fn create_desktop_shortcut(id: String) -> Result<String, String> {
-    let instance = store::read_json::<Instance>(&paths::instance_config_file(&id))?
+pub async fn create_desktop_shortcut(id: String) -> AppResult<String> {
+    crate::blocking(move || desktop_shortcut(&id)).await
+}
+
+fn desktop_shortcut(id: &str) -> AppResult<String> {
+    let instance = store::read_json::<Instance>(&paths::instance_config_file(id))?
         .ok_or_else(|| format!("instance '{id}' not found"))?;
     let desktop = dirs::desktop_dir().ok_or("no desktop folder")?;
     let name = shortcut_file_name(&instance.name);
@@ -331,7 +380,7 @@ pub fn create_desktop_shortcut(id: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn reveal_in_explorer(path: String) -> Result<(), String> {
+pub fn reveal_in_explorer(path: String) -> AppResult<()> {
     let p = std::path::Path::new(&path);
     if !p.exists() {
         return Err("file not found".into());
@@ -361,11 +410,14 @@ pub fn reveal_in_explorer(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn copy_file(from: String, to: String) -> Result<(), String> {
-    std::fs::copy(&from, &to).map(|_| ()).map_err(|e| format!("copy file: {e}"))
+pub async fn copy_file(from: String, to: String) -> AppResult<()> {
+    crate::blocking(move || {
+        (std::fs::copy(&from, &to).map(|_| ()).map_err(|e| format!("copy file: {e}"))).map_err(Into::into)
+    })
+    .await
 }
 
-fn open_in_file_manager(path: &std::path::Path) -> Result<(), String> {
+fn open_in_file_manager(path: &std::path::Path) -> AppResult<()> {
     #[cfg(target_os = "windows")]
     {
         use std::os::windows::process::CommandExt;
@@ -412,7 +464,7 @@ fn system_command(program: &str) -> std::process::Command {
 }
 
 #[cfg(target_os = "linux")]
-fn desktop_open(target: &std::ffi::OsStr) -> Result<(), String> {
+fn desktop_open(target: &std::ffi::OsStr) -> AppResult<()> {
     match system_command("xdg-open").arg(target).spawn() {
         Ok(_) => Ok(()),
         Err(e) => system_command("gio")
@@ -425,10 +477,10 @@ fn desktop_open(target: &std::ffi::OsStr) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn open_external(url: String) -> Result<(), String> {
+pub fn open_external(url: String) -> AppResult<()> {
     let url = url.trim();
     if !["http://", "https://", "mailto:", "tel:"].iter().any(|s| url.starts_with(s)) {
-        return Err(format!("refusing to open {url}"));
+        return Err(AppError::invalid(format!("refusing to open {url}")));
     }
     #[cfg(target_os = "windows")]
     {
@@ -448,8 +500,12 @@ pub fn open_external(url: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn duplicate_instance(id: String) -> Result<Instance, String> {
-    let src = store::read_json::<Instance>(&paths::instance_config_file(&id))?
+pub async fn duplicate_instance(id: String) -> AppResult<Instance> {
+    crate::blocking(move || clone_instance(&id)).await
+}
+
+fn clone_instance(id: &str) -> AppResult<Instance> {
+    let src = store::read_json::<Instance>(&paths::instance_config_file(id))?
         .ok_or_else(|| format!("instance '{id}' not found"))?;
 
     let new_id = uuid::Uuid::new_v4().to_string();
@@ -526,7 +582,7 @@ fn copy_dir_all(from: &std::path::Path, to: &std::path::Path) -> std::io::Result
     Ok(())
 }
 
-pub fn touch_last_played(id: &str) -> Result<(), String> {
+pub fn touch_last_played(id: &str) -> AppResult<()> {
     if let Some(mut instance) = store::read_json::<Instance>(&paths::instance_config_file(id))? {
         instance.last_played = Some(chrono::Utc::now().to_rfc3339());
         store::write_json(&paths::instance_config_file(id), &instance)?;
@@ -534,7 +590,7 @@ pub fn touch_last_played(id: &str) -> Result<(), String> {
     Ok(())
 }
 
-pub fn add_playtime(id: &str, seconds: u64) -> Result<(), String> {
+pub fn add_playtime(id: &str, seconds: u64) -> AppResult<()> {
     if let Some(mut instance) = store::read_json::<Instance>(&paths::instance_config_file(id))? {
         instance.playtime_seconds = instance.playtime_seconds.saturating_add(seconds);
         store::write_json(&paths::instance_config_file(id), &instance)?;

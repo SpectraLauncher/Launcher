@@ -40,12 +40,13 @@ export const useMinecraftLaunch = (instanceId?: MaybeRefOrGetter<string | undefi
     const inst = instances.instances.find(i => i.id === launchId)
     if (inst) inst.last_played = new Date().toISOString()
     await ac.attach()
+    ac.markRunning(launchId)
     try {
       await invoke('launch_instance', { id: launchId, quickPlay: quickPlay ?? null })
       telemetry.track('launch', { loader: inst?.loader.type, mc: inst?.mc_version })
       instances.load()
     } catch (e) {
-      errors.value = { ...errors.value, [launchId]: String(e) }
+      errors.value = { ...errors.value, [launchId]: errorText(e) }
       ac.clear(launchId)
       throw e
     } finally {

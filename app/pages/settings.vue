@@ -181,6 +181,10 @@
             </UFormField>
           </template>
 
+          <template v-else-if="section === 'sync'">
+            <SyncSettings />
+          </template>
+
           <template v-else-if="section === 'accounts'">
             <p v-if="!accounts.accounts.length" class="text-sm text-muted">{{ t('settings.accounts.noAccounts') }}</p>
             <ul v-else class="space-y-2">
@@ -262,13 +266,14 @@ const java = useJava()
 const sysMem = useSystemMemory()
 const updater = useAutoUpdate()
 
-type Section = 'appearance' | 'language' | 'privacy' | 'java' | 'defaults' | 'accounts'
+type Section = 'appearance' | 'language' | 'privacy' | 'java' | 'defaults' | 'sync' | 'accounts'
 const sections: { key: Section; icon: string }[] = [
   { key: 'appearance', icon: 'i-lucide-palette' },
   { key: 'language', icon: 'i-lucide-languages' },
   { key: 'privacy', icon: 'i-lucide-shield' },
   { key: 'java', icon: 'i-lucide-coffee' },
   { key: 'defaults', icon: 'i-lucide-sliders-horizontal' },
+  { key: 'sync', icon: 'i-lucide-refresh-cw' },
   { key: 'accounts', icon: 'i-lucide-users' },
 ]
 const section = ref<Section>('appearance')

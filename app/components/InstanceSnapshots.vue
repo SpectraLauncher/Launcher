@@ -31,7 +31,7 @@ async function load() {
     snapshots.value = await invoke<Snapshot[]>('list_snapshots', { id: props.instanceId })
     settings.value = await invoke<Settings>('get_settings')
   } catch (e) {
-    error.value = String(e)
+    error.value = errorText(e)
   } finally {
     loading.value = false
   }
@@ -43,7 +43,7 @@ async function run(key: string, fn: () => Promise<unknown>) {
   try {
     await fn()
   } catch (e) {
-    error.value = String(e)
+    error.value = errorText(e)
   } finally {
     busy.value = ''
   }
@@ -84,7 +84,7 @@ function askRestore(s: Snapshot) {
 async function saveSetting(patch: Partial<Settings>) {
   if (!settings.value) return
   settings.value = { ...settings.value, ...patch }
-  await invoke('save_settings', { settings: settings.value }).catch(e => (error.value = String(e)))
+  await invoke('save_settings', { settings: settings.value }).catch(e => (error.value = errorText(e)))
 }
 
 const fmtSize = (n: number) => n < 1024 ** 2

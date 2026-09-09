@@ -63,7 +63,7 @@ watch(isOpen, async (open) => {
     mods.value = await invoke<ModEntry[]>('list_mods', { instanceId: instanceId.value })
     mods.value.sort((a, b) => (a.name ?? a.filename).toLowerCase().localeCompare((b.name ?? b.filename).toLowerCase()))
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   }
 })
 
@@ -148,7 +148,7 @@ async function copy() {
     await navigator.clipboard.writeText(output.value)
     toast.add({ title: t('common.copied'), color: 'success' })
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   }
 }
 
@@ -159,7 +159,7 @@ async function saveFile() {
     await invoke('write_text_file', { path: dest, content: output.value })
     toast.add({ title: t('modlist.saved'), color: 'success' })
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   }
 }
 </script>

@@ -1,8 +1,11 @@
 mod commands;
 mod discord;
+mod error;
 mod models;
 mod paths;
 mod store;
+
+pub use error::{AppError, AppResult};
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
@@ -18,6 +21,17 @@ pub fn http() -> &'static reqwest::Client {
     })
 }
 
+pub async fn blocking<T, F>(work: F) -> AppResult<T>
+where
+    F: FnOnce() -> AppResult<T> + Send + 'static,
+    T: Send + 'static,
+{
+    match tauri::async_runtime::spawn_blocking(work).await {
+        Ok(result) => result,
+        Err(e) => Err(AppError::new("panic", format!("background task failed: {e}"))),
+    }
+}
+
 #[derive(Default)]
 pub struct AppState {
     pub running: Mutex<HashSet<String>>,
@@ -26,6 +40,8 @@ pub struct AppState {
     pub stopping: Mutex<HashSet<String>>,
     pub discord: Mutex<Option<discord_rich_presence::DiscordIpcClient>>,
     pub discord_playing: Mutex<HashMap<String, (String, String)>>,
+    pub console: Mutex<HashMap<String, commands::launch::ConsoleBuffer>>,
+    pub announce_sync: Mutex<bool>,
     pub install_lock: tokio::sync::Mutex<()>,
     pub pending_share: Mutex<Option<String>>,
     pub pending_launch: Mutex<Option<String>>,
@@ -95,6 +111,14 @@ pub fn run() {
                 log::error!("failed to create data directories: {e}");
             }
 
+            {
+                use tauri::Manager;
+                let announce = commands::sync::resolve_announcement();
+                if let Ok(mut flag) = app.state::<AppState>().announce_sync.lock() {
+                    *flag = announce;
+                }
+            }
+
             commands::launch::reconcile_running(app.handle());
 
             if cfg!(debug_assertions) {
@@ -142,6 +166,7 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
             paths::get_launcher_paths,
+            commands::images::get_image_thumbnail,
             commands::settings::get_settings,
             commands::settings::save_settings,
             commands::settings::get_system_memory_mb,
@@ -194,6 +219,18 @@ pub fn run() {
             commands::launch::repair_instance,
             commands::launch::migrate_shared_dirs,
             commands::launch::is_instance_running,
+            commands::launch::read_console,
+            commands::launch::clear_console,
+            commands::sync::take_sync_announcement,
+            commands::sync::sync_get_state,
+            commands::sync::sync_sources,
+            commands::sync::sync_join_preview,
+            commands::sync::sync_set_global,
+            commands::sync::sync_set_instance,
+            commands::sync::sync_list_packs,
+            commands::sync::sync_set_pack_enabled,
+            commands::sync::sync_remove_pack,
+            commands::sync::sync_open_folder,
             commands::launch::stop_instance,
             commands::ping::ping_server,
             commands::meta::get_minecraft_versions,
@@ -262,6 +299,7 @@ pub fn run() {
             commands::mods::set_mod_enabled,
             commands::mods::delete_mod,
             commands::skins::list_skins,
+            commands::skins::list_default_skins,
             commands::skins::save_skin,
             commands::skins::set_skin_model,
             commands::skins::delete_skin,

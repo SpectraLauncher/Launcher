@@ -367,7 +367,8 @@
       "privacy": "Datenschutz",
       "java": "Java-Installationen",
       "defaults": "Standard-Instanzoptionen",
-      "accounts": "Konten"
+      "accounts": "Konten",
+      "sync": "Synchronisierung"
     },
     "privacy": {
       "track_playtime": "Spielzeit erfassen",
@@ -559,7 +560,15 @@
     "slim": "Schlank",
     "capes": "Umhänge",
     "noCape": "Kein Umhang",
-    "capeSet": "Umhang aktualisiert"
+    "capeSet": "Umhang aktualisiert",
+    "title": "Skin-Auswahl",
+    "capesButton": "Umhänge",
+    "capesDemo": "Melde dich mit Microsoft an, um einen Umhang zu tragen.",
+    "capesEmpty": "Du besitzt keine Umhänge.",
+    "defaultsEmpty": "Standard-Skins erscheinen, sobald eine Minecraft-Version installiert ist.",
+    "demoTitle": "Du siehst dich im Demo-Modus um",
+    "demoDesc": "Schau dich um und sieh dir jeden Skin an. Melde dich mit Microsoft an, um einen zu übernehmen.",
+    "signIn": "Mit Microsoft anmelden"
   },
   "instSettings": {
     "tabs": {
@@ -567,7 +576,8 @@
       "install": "Installation",
       "window": "Fenster",
       "java": "Java & Speicher",
-      "hooks": "Start-Hooks"
+      "hooks": "Start-Hooks",
+      "sync": "Synchronisierung"
     },
     "name": "Name",
     "duplicate": "Duplizieren",
@@ -740,5 +750,82 @@
     "autoHint": "Ein Pack- oder Modpack-Update kann Mods löschen; das hier macht es rückgängig.",
     "keepLabel": "Behalte",
     "keepHint": "automatische pro Instanz — selbst erstellte werden nie gelöscht"
+  },
+  "errors": {
+    "auth": "Anmeldeproblem",
+    "busy": "Läuft bereits",
+    "disk_full": "Festplatte voll",
+    "http": "Serverfehler",
+    "invalid": "Ungültige Daten",
+    "io": "Festplattenfehler",
+    "network": "Keine Verbindung",
+    "not_found": "Nicht gefunden",
+    "panic": "Interner Fehler",
+    "permission": "Keine Berechtigung",
+    "unknown": "Fehler"
+  },
+  "sync": {
+    "title": "Instanzen synchronisieren",
+    "desc": "Hält ausgewählte Einstellungen in allen Instanzen gleich. Änderungen werden nach dem Beenden übernommen und beim nächsten Start verteilt.",
+    "sourceTitle": "Quelle wählen",
+    "sourceDesc": "Wähle die Instanz, von der kopiert wird. Ihr Zustand füllt die gemeinsame Kopie; danach kannst du sie aus jeder Instanz bearbeiten.",
+    "sourceSearch": "Instanz suchen",
+    "sourceEmpty": "Keine Instanz zum Kopieren.",
+    "sourceConfirm": "Synchronisieren",
+    "seededFrom": "Übernommen von einer {version}-Instanz",
+    "enabled": "{option} wird jetzt synchronisiert",
+    "packsTitle": "Gemeinsame Ressourcenpakete",
+    "packsEmpty": "Noch keine Pakete gesammelt. Sie werden nach dem Beenden übernommen.",
+    "packFormat": "Format {n}",
+    "openFolder": "Gemeinsamen Ordner öffnen",
+    "instanceDesc": "Schalte eine Kategorie ab, um diese Instanz auszunehmen.",
+    "instanceNothingOn": "Noch keine Kategorie synchronisiert. Aktiviere sie in den Launcher-Einstellungen.",
+    "conflictTitle": "Diese Instanz hat bereits eigene Daten",
+    "conflictDesc": "Gemeinsame Kopie und Instanz haben Daten. Wähle, was gewinnt.",
+    "useSynced": "Gemeinsame nutzen",
+    "useInstance": "Gemeinsame überschreiben",
+    "options": {
+      "game_options": {
+        "label": "Spieleinstellungen",
+        "desc": "Ton, FOV, Sichtweite, Sprache und Tastenbelegung. Tastenbelegung nur zwischen 1.13 und neuer."
+      },
+      "multiplayer_servers": {
+        "label": "Mehrspieler-Server",
+        "desc": "Deine Serverliste, zusammengeführt statt ersetzt."
+      },
+      "resource_packs": {
+        "label": "Ressourcenpakete",
+        "desc": "Gemeinsame Paketdateien, dort angewendet, wo das Format zur Version passt."
+      },
+      "command_history": {
+        "label": "Befehlsverlauf",
+        "desc": "Die im Chat eingegebenen Befehle."
+      },
+      "creative_hotbars": {
+        "label": "Kreativ-Schnellleisten",
+        "desc": "Gespeicherte Kreativ-Schnellleisten. Nur zwischen Instanzen derselben 1.13-Seite."
+      }
+    },
+    "instancesTitle": "Welche Instanzen teilnehmen",
+    "instancesDesc": "Jede Instanz nimmt standardmäßig teil. Abwählen, um sie auszunehmen.",
+    "instanceColumn": "Instanz"
+  },
+  "syncAnnounce": {
+    "badge": "Neu in diesem Update",
+    "title": "Instanzen synchronisieren",
+    "body": "Du kannst jetzt Spieleinstellungen, Server, Ressourcenpakete und mehr in allen Instanzen gleich halten, damit alles so bleibt, wie du es verlassen hast.",
+    "later": "Jetzt aktivieren oder später in den Launcher-Einstellungen einrichten.",
+    "skip": "Überspringen",
+    "syncAll": "Alles synchronisieren",
+    "syncSelected": "Auswahl synchronisieren",
+    "done": "{n} Kategorien werden synchronisiert",
+    "failed": "Synchronisierung konnte nicht aktiviert werden",
+    "options": {
+      "game_options": "Spieleinstellungen synchronisieren",
+      "multiplayer_servers": "Mehrspieler-Server synchronisieren",
+      "resource_packs": "Ressourcenpakete synchronisieren",
+      "command_history": "Befehlsverlauf synchronisieren",
+      "creative_hotbars": "Kreativ-Schnellleisten synchronisieren"
+    }
   }
 }

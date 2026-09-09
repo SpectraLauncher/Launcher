@@ -1,5 +1,11 @@
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
-import type { MultiProgress, ConsoleLine, ExitInfo, CrashInfo, ModpackProgress } from '~/types/launcher'
+import { invoke } from '@tauri-apps/api/core'
+import type { MultiProgress, ExitInfo, CrashInfo, ModpackProgress } from '~/types/launcher'
+
+interface ConsoleChunk { lines: string[], cursor: number, reset: boolean }
+
+const CONSOLE_POLL_MS = 400
+const CONSOLE_KEEP = 5000
 
 export interface Activity {
   instanceId: string
@@ -15,6 +21,8 @@ const PRIORITY: Record<Activity['kind'], number> = {
 
 let unlisteners: UnlistenFn[] = []
 let attachPromise: Promise<void> | null = null
+let consoleTimer: ReturnType<typeof setInterval> | null = null
+const cursors = new Map<string, number>()
 
 export const useActivityCenter = () => {
   const activities = useState<Record<string, Activity>>('mc-activities', () => ({}))
@@ -58,22 +66,40 @@ export const useActivityCenter = () => {
     activities.value = next
   }
 
+  async function pumpConsole(id: string) {
+    let chunk: ConsoleChunk
+    try {
+      chunk = await invoke<ConsoleChunk>('read_console', { id, cursor: cursors.get(id) ?? 0 })
+    } catch {
+      return
+    }
+    if (!chunk.lines.length && !chunk.reset) {
+      cursors.set(id, chunk.cursor)
+      return
+    }
+    const buf = chunk.reset ? [] : (logs.value[id] ?? []).slice()
+    buf.push(...chunk.lines)
+    if (buf.length > CONSOLE_KEEP) buf.splice(0, buf.length - CONSOLE_KEEP)
+    cursors.set(id, chunk.cursor)
+    logs.value = { ...logs.value, [id]: buf }
+  }
+
+  function pollConsoles() {
+    const ids = Object.keys(activities.value)
+    if (!ids.length) return
+    for (const id of ids) void pumpConsole(id)
+  }
+
   const attach = () => {
     if (!attachPromise) {
+      consoleTimer ??= setInterval(pollConsoles, CONSOLE_POLL_MS)
       attachPromise = (async () => {
         unlisteners.push(
           await listen<MultiProgress>('mc://multi-progress', (e) => {
             upsert(e.payload.instance_id, { kind: 'install', current: e.payload.current, total: e.payload.total })
           }),
-          await listen<ConsoleLine>('mc://console', (e) => {
-            const iid = e.payload.instance_id
-            upsert(iid, { kind: 'running' })
-            const buf = logs.value[iid] ?? []
-            buf.push(e.payload.line)
-            if (buf.length > 2000) buf.splice(0, buf.length - 2000)
-            logs.value = { ...logs.value, [iid]: buf }
-          }),
           await listen<ExitInfo>('mc://exited', (e) => {
+            void pumpConsole(e.payload.instance_id)
             clear(e.payload.instance_id)
           }),
           await listen<CrashInfo>('mc://crashed', (e) => {
@@ -101,6 +127,10 @@ export const useActivityCenter = () => {
     unlisteners.forEach(u => u())
     unlisteners = []
     attachPromise = null
+    if (consoleTimer) {
+      clearInterval(consoleTimer)
+      consoleTimer = null
+    }
   }
 
   const list = computed(() => Object.values(activities.value))
@@ -122,6 +152,8 @@ export const useActivityCenter = () => {
   const logsFor = (id: string) => computed(() => logs.value[id] ?? [])
   const clearLog = (id: string) => {
     logs.value = { ...logs.value, [id]: [] }
+    cursors.delete(id)
+    void invoke('clear_console', { id }).catch(() => {})
   }
 
   const taskLabels = computed(() => Object.values(tasks.value))

@@ -1,6 +1,7 @@
 use serde::Serialize;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
+use crate::error::AppResult;
 
 #[derive(Serialize, Clone)]
 pub struct PingResult {
@@ -14,7 +15,7 @@ pub struct PingResult {
 }
 
 #[tauri::command]
-pub async fn ping_server(host: String, port: Option<u16>) -> Result<PingResult, String> {
+pub async fn ping_server(host: String, port: Option<u16>) -> AppResult<PingResult> {
     let port = port.unwrap_or(25565);
     let addr = format!("{host}:{port}");
 
@@ -28,7 +29,7 @@ pub async fn ping_server(host: String, port: Option<u16>) -> Result<PingResult, 
     .map_err(|_| "timeout".to_string())?
 }
 
-async fn do_ping(mut s: TcpStream, host: &str, port: u16) -> Result<PingResult, String> {
+async fn do_ping(mut s: TcpStream, host: &str, port: u16) -> AppResult<PingResult> {
     {
         let mut body = Vec::new();
         write_varint(&mut body, 0x00);
@@ -68,7 +69,7 @@ async fn do_ping(mut s: TcpStream, host: &str, port: u16) -> Result<PingResult, 
     parse_status(&json_str, latency_ms)
 }
 
-fn parse_status(json: &str, latency_ms: u64) -> Result<PingResult, String> {
+fn parse_status(json: &str, latency_ms: u64) -> AppResult<PingResult> {
     let v: serde_json::Value =
         serde_json::from_str(json).map_err(|e| format!("bad JSON: {e}"))?;
 
@@ -118,21 +119,21 @@ fn strip_codes(s: &str) -> String {
     out
 }
 
-async fn send_packet(s: &mut TcpStream, body: &[u8]) -> Result<(), String> {
+async fn send_packet(s: &mut TcpStream, body: &[u8]) -> AppResult<()> {
     let mut packet = Vec::with_capacity(5 + body.len());
     write_varint(&mut packet, body.len() as i32);
     packet.extend_from_slice(body);
-    s.write_all(&packet).await.map_err(|e| e.to_string())
+    (s.write_all(&packet).await.map_err(|e| e.to_string())).map_err(Into::into)
 }
 
-async fn recv_packet(s: &mut TcpStream) -> Result<Vec<u8>, String> {
+async fn recv_packet(s: &mut TcpStream) -> AppResult<Vec<u8>> {
     let len = read_varint_async(s).await? as usize;
     let mut buf = vec![0u8; len];
     s.read_exact(&mut buf).await.map_err(|e| e.to_string())?;
     Ok(buf)
 }
 
-async fn read_varint_async(s: &mut TcpStream) -> Result<i32, String> {
+async fn read_varint_async(s: &mut TcpStream) -> AppResult<i32> {
     let mut result = 0i32;
     let mut shift = 0u32;
     loop {
@@ -150,7 +151,7 @@ async fn read_varint_async(s: &mut TcpStream) -> Result<i32, String> {
     }
 }
 
-fn read_varint_buf(buf: &[u8], cur: &mut usize) -> Result<i32, String> {
+fn read_varint_buf(buf: &[u8], cur: &mut usize) -> AppResult<i32> {
     let mut result = 0i32;
     let mut shift = 0u32;
     loop {

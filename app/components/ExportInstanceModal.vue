@@ -176,7 +176,7 @@ async function doExport() {
       exporting.value = false
     }
   } catch (e) {
-    error.value = String(e)
+    error.value = errorText(e)
   }
 }
 </script>

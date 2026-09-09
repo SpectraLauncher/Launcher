@@ -3,6 +3,7 @@ use serde_json::Value;
 use tauri::{AppHandle, Emitter};
 
 use crate::{paths, store};
+use crate::error::{AppError, AppResult};
 
 pub const SITE: &str = "https://usespectra.app";
 
@@ -22,7 +23,7 @@ pub fn stored_token() -> Option<String> {
         .filter(|t| !t.is_empty())
 }
 
-fn save_token(token: Option<String>) -> Result<(), String> {
+fn save_token(token: Option<String>) -> AppResult<()> {
     store::write_json_private(&paths::spectra_account_file(), &AccountFile { token })
 }
 
@@ -60,16 +61,16 @@ pub fn allowed(method: &str, path: &str) -> bool {
     )
 }
 
-async fn call(method: &str, path: &str, body: Option<Value>) -> Result<Value, String> {
+async fn call(method: &str, path: &str, body: Option<Value>) -> AppResult<Value> {
     if !allowed(method, path) {
-        return Err(format!("refusing to call {method} {path}"));
+        return Err(AppError::invalid(format!("refusing to call {method} {path}")));
     }
     let mut req = match method {
         "GET" => client().get(format!("{SITE}{path}")),
         "POST" => client().post(format!("{SITE}{path}")),
         "PATCH" => client().patch(format!("{SITE}{path}")),
         "DELETE" => client().delete(format!("{SITE}{path}")),
-        other => return Err(format!("unsupported method {other}")),
+        other => return Err(AppError::invalid(format!("unsupported method {other}"))),
     }
     .header("origin", ORIGIN);
 
@@ -88,12 +89,12 @@ async fn call(method: &str, path: &str, body: Option<Value>) -> Result<Value, St
         if status == reqwest::StatusCode::UNAUTHORIZED {
             let _ = save_token(None);
         }
-        return Err(message_of(&text).unwrap_or_else(|| format!("request failed ({status})")));
+        return Err((message_of(&text).unwrap_or_else(|| format!("request failed ({status})"))).into());
     }
     if text.is_empty() {
         return Ok(Value::Null);
     }
-    serde_json::from_str(&text).map_err(|e| format!("bad server reply: {e}"))
+    (serde_json::from_str(&text).map_err(|e| format!("bad server reply: {e}"))).map_err(Into::into)
 }
 
 fn message_of(body: &str) -> Option<String> {
@@ -165,18 +166,18 @@ pub async fn spectra_session() -> Option<Value> {
 }
 
 #[tauri::command]
-pub async fn spectra_logout() -> Result<(), String> {
+pub async fn spectra_logout() -> AppResult<()> {
     let _ = call("POST", "/api/auth/sign-out", Some(serde_json::json!({}))).await;
     save_token(None)
 }
 
 #[tauri::command]
-pub async fn spectra_api(method: String, path: String, body: Option<Value>) -> Result<Value, String> {
+pub async fn spectra_api(method: String, path: String, body: Option<Value>) -> AppResult<Value> {
     call(&method, &path, body).await
 }
 
 #[tauri::command]
-pub async fn spectra_link_minecraft() -> Result<Option<Value>, String> {
+pub async fn spectra_link_minecraft() -> AppResult<Option<Value>> {
     if stored_token().is_none() {
         return Ok(None);
     }
@@ -205,11 +206,11 @@ pub async fn redeem_login(app: AppHandle, token: String) {
     )
     .await
     .and_then(|v| {
-        v.get("session")
+        (v.get("session")
             .and_then(|s| s.get("token"))
             .and_then(|t| t.as_str())
             .map(|t| t.to_string())
-            .ok_or_else(|| "the site did not return a session".to_string())
+            .ok_or_else(|| "the site did not return a session".to_string())).map_err(Into::into)
     });
 
     match result {

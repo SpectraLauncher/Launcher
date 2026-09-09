@@ -11,9 +11,10 @@ use tauri::{AppHandle, Emitter as _, Manager, State};
 
 use crate::commands::auth::refresh_active_account;
 use crate::commands::instances;
-use crate::commands::settings::get_settings;
+use crate::commands::settings::load as load_settings;
 use crate::models::{AccountKind, Instance, Loader};
 use crate::{paths, store, AppState};
+use crate::error::{AppError, AppResult};
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "kind")]
@@ -29,10 +30,57 @@ struct MultiProgress {
     total: u64,
 }
 
-#[derive(Clone, Serialize)]
-struct ConsoleLine {
-    instance_id: String,
-    line: String,
+const CONSOLE_CAPACITY: usize = 5_000;
+
+#[derive(Default)]
+pub struct ConsoleBuffer {
+    lines: std::collections::VecDeque<String>,
+    appended: u64,
+}
+
+impl ConsoleBuffer {
+    fn push(&mut self, line: String) {
+        self.lines.push_back(line);
+        self.appended += 1;
+        while self.lines.len() > CONSOLE_CAPACITY {
+            self.lines.pop_front();
+        }
+    }
+
+    fn since(&self, cursor: u64) -> ConsoleChunk {
+        let first_held = self.appended - self.lines.len() as u64;
+        let from = cursor.max(first_held);
+        let skip = (from - first_held) as usize;
+        ConsoleChunk {
+            lines: self.lines.iter().skip(skip).cloned().collect(),
+            cursor: self.appended,
+            reset: cursor < first_held,
+        }
+    }
+}
+
+#[derive(Serialize, Default)]
+pub struct ConsoleChunk {
+    lines: Vec<String>,
+    cursor: u64,
+    reset: bool,
+}
+
+#[tauri::command]
+pub fn read_console(
+    state: State<'_, AppState>,
+    id: String,
+    cursor: u64,
+) -> AppResult<ConsoleChunk> {
+    let console = state.console.lock().map_err(|e| e.to_string())?;
+    Ok(console.get(&id).map(|b| b.since(cursor)).unwrap_or_default())
+}
+
+#[tauri::command]
+pub fn clear_console(state: State<'_, AppState>, id: String) -> AppResult<()> {
+    let mut console = state.console.lock().map_err(|e| e.to_string())?;
+    console.remove(&id);
+    Ok(())
 }
 
 #[derive(Clone, Serialize)]
@@ -124,7 +172,15 @@ fn link_shared_dirs(id: &str) {
 }
 
 #[tauri::command]
-pub fn migrate_shared_dirs() {
+pub async fn migrate_shared_dirs() {
+    let _ = crate::blocking(|| {
+        migrate_shared_dirs_blocking();
+        Ok(())
+    })
+    .await;
+}
+
+fn migrate_shared_dirs_blocking() {
     let Ok(entries) = std::fs::read_dir(paths::instances_dir()) else { return };
     for entry in entries.flatten() {
         let id = entry.file_name().to_string_lossy().into_owned();
@@ -146,6 +202,12 @@ fn to_lyceris_loader(loader: &Loader, mc: &str) -> Option<Box<dyn LyLoader>> {
 
 async fn build_emitter(app: &AppHandle, id: &str) -> Emitter {
     let emitter = Emitter::default();
+
+    if let Some(state) = app.try_state::<AppState>() {
+        if let Ok(mut console) = state.console.lock() {
+            console.remove(id);
+        }
+    }
 
     let app_multi = app.clone();
     let id_multi = id.to_string();
@@ -169,13 +231,11 @@ async fn build_emitter(app: &AppHandle, id: &str) -> Emitter {
     let id_console = id.to_string();
     emitter
         .on(Event::Console, move |line: String| {
-            let _ = app_console.emit(
-                "mc://console",
-                ConsoleLine {
-                    instance_id: id_console.clone(),
-                    line,
-                },
-            );
+            if let Some(state) = app_console.try_state::<AppState>() {
+                if let Ok(mut console) = state.console.lock() {
+                    console.entry(id_console.clone()).or_default().push(line);
+                }
+            }
         })
         .await;
 
@@ -188,11 +248,11 @@ pub async fn launch_instance(
     state: State<'_, AppState>,
     id: String,
     quick_play: Option<QuickPlay>,
-) -> Result<(), String> {
+) -> AppResult<()> {
     {
         let mut running = state.running.lock().map_err(|e| e.to_string())?;
         if !running.insert(id.clone()) {
-            return Err("instance is already running".into());
+            return Err(AppError::busy("instance is already running"));
         }
     }
 
@@ -204,7 +264,7 @@ pub async fn launch_instance(
             if let Ok(mut adopted) = state.adopted.lock() {
                 adopted.insert(id.clone());
             }
-            return Err("instance is already running".into());
+            return Err(AppError::busy("instance is already running"));
         }
         remove_lock(&id);
     }
@@ -218,11 +278,11 @@ pub async fn launch_instance(
     result
 }
 
-async fn launch_inner(app: &AppHandle, id: &str, quick_play: Option<QuickPlay>) -> Result<(), String> {
+async fn launch_inner(app: &AppHandle, id: &str, quick_play: Option<QuickPlay>) -> AppResult<()> {
     let instance: Instance =
         store::read_json(&paths::instance_config_file(id))?.ok_or("instance not found")?;
     let _ = instances::touch_last_played(id);
-    let settings = get_settings()?;
+    let settings = load_settings()?;
     let account = refresh_active_account().await?;
 
     let auth = match account.kind {
@@ -290,6 +350,9 @@ async fn launch_inner(app: &AppHandle, id: &str, quick_play: Option<QuickPlay>) 
     }
 
     link_shared_dirs(id);
+    if let Err(e) = crate::commands::sync::pull(id, &instance.mc_version) {
+        log::warn!("could not apply synced options to {id}: {e}");
+    }
     let builder = ConfigBuilder::new(paths::instance_game_dir(id), instance.mc_version.clone(), auth)
         .memory(Memory::Megabyte(memory_mb))
         .runtime_dir(paths::runtimes_dir())
@@ -380,6 +443,7 @@ async fn launch_inner(app: &AppHandle, id: &str, quick_play: Option<QuickPlay>) 
 
     let app_bg = app.clone();
     let id_bg = id.to_string();
+    let sync_version = instance.mc_version.clone();
     let game_start = std::time::SystemTime::now();
     tauri::async_runtime::spawn(async move {
         let _keep_emitter = emitter;
@@ -406,6 +470,9 @@ async fn launch_inner(app: &AppHandle, id: &str, quick_play: Option<QuickPlay>) 
             }
         }
         remove_lock(&id_bg);
+        if let Err(e) = crate::commands::sync::push(&id_bg, &sync_version) {
+            log::warn!("could not collect synced options from {id_bg}: {e}");
+        }
         if track_playtime {
             let _ = instances::add_playtime(&id_bg, started.elapsed().as_secs());
         }
@@ -459,10 +526,10 @@ fn run_hook(cmd: &str, wait: bool) {
 }
 
 #[tauri::command]
-pub async fn repair_instance(app: AppHandle, id: String) -> Result<(), String> {
+pub async fn repair_instance(app: AppHandle, id: String) -> AppResult<()> {
     let instance: Instance =
         store::read_json(&paths::instance_config_file(&id))?.ok_or("instance not found")?;
-    let settings = get_settings()?;
+    let settings = load_settings()?;
     let auth = AuthMethod::Offline { username: "Player".into(), uuid: None };
     let memory_mb = instance.memory_mb.unwrap_or(settings.default_memory_mb) as u64;
 
@@ -478,25 +545,29 @@ pub async fn repair_instance(app: AppHandle, id: String) -> Result<(), String> {
         Some(loader) => install(&builder.loader(loader).build(), Some(&emitter)).await,
     };
     let _ = app.emit("mc://exited", ExitInfo { instance_id: id, code: Some(0) });
-    result.map_err(|e| format!("repair failed: {e}"))
+    (result.map_err(|e| format!("repair failed: {e}"))).map_err(Into::into)
 }
 
 #[tauri::command]
-pub fn is_instance_running(state: State<'_, AppState>, id: String) -> Result<bool, String> {
+pub fn is_instance_running(state: State<'_, AppState>, id: String) -> AppResult<bool> {
     let running = state.running.lock().map_err(|e| e.to_string())?;
     Ok(running.contains(&id))
 }
 
 #[tauri::command]
-pub fn stop_instance(state: State<'_, AppState>, id: String, force: bool) -> Result<(), String> {
+pub async fn stop_instance(
+    state: State<'_, AppState>,
+    id: String,
+    force: bool,
+) -> AppResult<()> {
     let pid = {
         let pids = state.pids.lock().map_err(|e| e.to_string())?;
-        pids.get(&id).copied().ok_or("instance is not running")?
+        pids.get(&id).copied().ok_or_else(|| AppError::invalid("instance is not running"))?
     };
     if let Ok(mut stopping) = state.stopping.lock() {
         stopping.insert(id.clone());
     }
-    kill_process_tree(pid, force)?;
+    crate::blocking(move || kill_process_tree(pid, force)).await?;
 
     let is_adopted = state.adopted.lock().map(|a| a.contains(&id)).unwrap_or(false);
     if is_adopted {
@@ -619,7 +690,7 @@ fn spawn_adopted_watcher(app: AppHandle, id: String, pid: u32) {
     });
 }
 
-fn kill_process_tree(pid: u32, force: bool) -> Result<(), String> {
+fn kill_process_tree(pid: u32, force: bool) -> AppResult<()> {
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
@@ -629,10 +700,10 @@ fn kill_process_tree(pid: u32, force: bool) -> Result<(), String> {
         if force {
             cmd.arg("/F");
         }
-        cmd.creation_flags(CREATE_NO_WINDOW)
+        (cmd.creation_flags(CREATE_NO_WINDOW)
             .status()
             .map(|_| ())
-            .map_err(|e| format!("taskkill: {e}"))
+            .map_err(|e| format!("taskkill: {e}"))).map_err(Into::into)
     }
     #[cfg(not(windows))]
     {
@@ -667,6 +738,49 @@ pub fn take_pending_launch(state: tauri::State<'_, crate::AppState>) -> Option<S
 }
 
 #[cfg(test)]
+mod console_tests {
+    use super::{ConsoleBuffer, CONSOLE_CAPACITY};
+
+    #[test]
+    fn a_cursor_reads_only_what_arrived_since_it_was_taken() {
+        let mut buffer = ConsoleBuffer::default();
+        for i in 0..3 {
+            buffer.push(format!("line {i}"));
+        }
+
+        let first = buffer.since(0);
+        assert_eq!(first.lines, ["line 0", "line 1", "line 2"]);
+        assert_eq!(first.cursor, 3);
+        assert!(!first.reset);
+
+        assert!(buffer.since(first.cursor).lines.is_empty());
+
+        buffer.push("line 3".into());
+        let next = buffer.since(first.cursor);
+        assert_eq!(next.lines, ["line 3"]);
+        assert_eq!(next.cursor, 4);
+    }
+
+    #[test]
+    fn overflowing_the_buffer_reports_a_reset_instead_of_lying() {
+        let mut buffer = ConsoleBuffer::default();
+        for i in 0..CONSOLE_CAPACITY + 10 {
+            buffer.push(format!("line {i}"));
+        }
+
+        let chunk = buffer.since(0);
+        assert!(chunk.reset, "a caller that fell behind must be told it lost lines");
+        assert_eq!(chunk.lines.len(), CONSOLE_CAPACITY);
+        assert_eq!(chunk.lines[0], "line 10");
+        assert_eq!(chunk.cursor, CONSOLE_CAPACITY as u64 + 10);
+
+        let tail = buffer.since(chunk.cursor - 2);
+        assert!(!tail.reset);
+        assert_eq!(tail.lines.len(), 2);
+    }
+}
+
+#[cfg(test)]
 mod deep_link_tests {
     use super::instance_id_from_url;
 
@@ -684,7 +798,7 @@ mod deep_link_tests {
 
 #[cfg(test)]
 mod shared_dir_tests {
-    use super::{link_shared_dirs, migrate_shared_dirs};
+    use super::{link_shared_dirs, migrate_shared_dirs_blocking};
     use crate::paths;
     use std::fs;
 
@@ -696,6 +810,7 @@ mod shared_dir_tests {
 
     #[test]
     fn migrates_existing_instances_and_links_new_ones() {
+        let _guard = paths::lock_data_dir();
         let root = std::env::temp_dir().join(format!("spectra-{}", uuid::Uuid::new_v4()));
         std::env::set_var("SPECTRA_DATA_DIR", &root);
 
@@ -731,7 +846,7 @@ mod shared_dir_tests {
         seed("third", "assets", "c.bin", "three");
         fs::write(paths::instance_config_file("third"), "{}").unwrap();
         seed("stray", "assets", "d.bin", "four");
-        migrate_shared_dirs();
+        migrate_shared_dirs_blocking();
 
         assert_eq!(fs::read_to_string(shared.join("sub/c.bin")).unwrap(), "three");
         assert!(paths::instance_game_dir("third").join("assets").symlink_metadata().unwrap().is_symlink());

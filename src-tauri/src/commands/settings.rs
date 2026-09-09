@@ -1,14 +1,19 @@
 use crate::models::Settings;
 use crate::{paths, store};
+use crate::error::AppResult;
 
-#[tauri::command]
-pub fn get_settings() -> Result<Settings, String> {
+pub fn load() -> AppResult<Settings> {
     Ok(store::read_json::<Settings>(&paths::launcher_config_file())?.unwrap_or_default())
 }
 
 #[tauri::command]
-pub fn save_settings(settings: Settings) -> Result<(), String> {
-    store::write_json(&paths::launcher_config_file(), &settings)
+pub async fn get_settings() -> AppResult<Settings> {
+    crate::blocking(load).await
+}
+
+#[tauri::command]
+pub async fn save_settings(settings: Settings) -> AppResult<()> {
+    crate::blocking(move || store::write_json(&paths::launcher_config_file(), &settings)).await
 }
 
 #[tauri::command]

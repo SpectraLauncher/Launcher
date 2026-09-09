@@ -11,6 +11,7 @@ use crate::commands::share::{
 use crate::commands::{curseforge, import, modrinth, settings};
 use crate::models::Instance;
 use crate::{paths, store};
+use crate::error::AppResult;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Snapshot {
@@ -48,17 +49,20 @@ fn read_index(id: &str) -> SnapshotIndex {
     store::read_json(&index_file(id)).ok().flatten().unwrap_or_default()
 }
 
-fn write_index(id: &str, index: &SnapshotIndex) -> Result<(), String> {
+fn write_index(id: &str, index: &SnapshotIndex) -> AppResult<()> {
     store::write_json(&index_file(id), index)
 }
 
 #[tauri::command]
-pub fn list_snapshots(id: String) -> Result<Vec<Snapshot>, String> {
-    let mut list = read_index(&id).snapshots;
-    let dir = snapshots_dir(&id);
-    list.retain(|s| dir.join(&s.file).exists());
-    list.sort_by(|a, b| b.created.cmp(&a.created));
-    Ok(list)
+pub async fn list_snapshots(id: String) -> AppResult<Vec<Snapshot>> {
+    crate::blocking(move || {
+        let mut list = read_index(&id).snapshots;
+        let dir = snapshots_dir(&id);
+        list.retain(|s| dir.join(&s.file).exists());
+        list.sort_by(|a, b| b.created.cmp(&a.created));
+        Ok(list)
+    })
+    .await
 }
 
 #[tauri::command]
@@ -67,7 +71,7 @@ pub async fn create_snapshot(
     id: String,
     label: Option<String>,
     auto: bool,
-) -> Result<Snapshot, String> {
+) -> AppResult<Snapshot> {
     let instance: Instance =
         store::read_json(&paths::instance_config_file(&id))?.ok_or("instance not found")?;
 
@@ -114,7 +118,7 @@ pub async fn create_snapshot(
 }
 
 fn prune(id: &str, index: &mut SnapshotIndex) {
-    let keep = settings::get_settings()
+    let keep = settings::load()
         .map(|s| s.snapshot_keep.max(1) as usize)
         .unwrap_or(5);
 
@@ -129,7 +133,7 @@ fn prune(id: &str, index: &mut SnapshotIndex) {
 }
 
 #[tauri::command]
-pub fn delete_snapshot(id: String, file: String) -> Result<(), String> {
+pub fn delete_snapshot(id: String, file: String) -> AppResult<()> {
     if file.contains('/') || file.contains('\\') || file.contains("..") {
         return Err("bad snapshot name".into());
     }
@@ -144,7 +148,7 @@ pub async fn restore_snapshot(
     app: AppHandle,
     id: String,
     file: String,
-) -> Result<RestoreResult, String> {
+) -> AppResult<RestoreResult> {
     if file.contains('/') || file.contains('\\') || file.contains("..") {
         return Err("bad snapshot name".into());
     }
@@ -263,7 +267,7 @@ pub async fn restore_snapshot(
 }
 
 pub async fn snapshot_before(app: &AppHandle, id: &str, reason: &str) {
-    let enabled = settings::get_settings().map(|s| s.snapshot_before_updates).unwrap_or(true);
+    let enabled = settings::load().map(|s| s.snapshot_before_updates).unwrap_or(true);
     if !enabled {
         return;
     }

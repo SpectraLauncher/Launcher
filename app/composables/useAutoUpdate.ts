@@ -47,9 +47,9 @@ export const useAutoUpdate = () => {
       return false
     } catch (e) {
       status.value = 'error'
-      error.value = String(e)
+      error.value = errorText(e)
       if (!silent) {
-        toast.add({ title: t('update.error'), description: String(e), icon: 'i-lucide-alert-triangle', color: 'error' })
+        toast.add({ title: t('update.error'), description: errorText(e), icon: 'i-lucide-alert-triangle', color: 'error' })
       }
       return false
     }
@@ -85,8 +85,8 @@ export const useAutoUpdate = () => {
       await relaunch()
     } catch (e) {
       status.value = 'error'
-      error.value = String(e)
-      toast.add({ title: t('update.error'), description: String(e), icon: 'i-lucide-alert-triangle', color: 'error' })
+      error.value = errorText(e)
+      toast.add({ title: t('update.error'), description: errorText(e), icon: 'i-lucide-alert-triangle', color: 'error' })
     }
   }
 

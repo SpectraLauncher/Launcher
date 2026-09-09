@@ -124,7 +124,7 @@ async function rescan(quiet: boolean) {
       notifyResolved()
     }
   } catch (e) {
-    if (!quiet) toast.add({ title: String(e), color: 'error' })
+    if (!quiet) toast.add({ title: errorText(e), color: 'error' })
   } finally {
     scanning.value = false
   }

@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::paths;
+use crate::error::{AppError, AppResult};
 
 #[derive(Debug, Serialize)]
 pub struct MinecraftVersion {
@@ -19,7 +20,7 @@ const MANIFEST_URL: &str = "https://launchermeta.mojang.com/mc/game/version_mani
 
 const META_TTL: std::time::Duration = std::time::Duration::from_secs(600);
 
-async fn get_bytes(url: &str) -> Result<Vec<u8>, String> {
+async fn get_bytes(url: &str) -> AppResult<Vec<u8>> {
     use std::collections::HashMap;
     use std::sync::{Mutex, OnceLock};
     use std::time::Instant;
@@ -70,7 +71,7 @@ struct ManifestVersion {
 #[tauri::command]
 pub async fn get_minecraft_versions(
     include_snapshots: bool,
-) -> Result<Vec<MinecraftVersion>, String> {
+) -> AppResult<Vec<MinecraftVersion>> {
     let cache = paths::cache_dir().join("version_manifest_v2.json");
 
     let bytes = match get_bytes(MANIFEST_URL).await {
@@ -100,14 +101,14 @@ pub async fn get_minecraft_versions(
 pub async fn get_loader_versions(
     loader: String,
     mc_version: String,
-) -> Result<Vec<LoaderVersion>, String> {
+) -> AppResult<Vec<LoaderVersion>> {
     match loader.as_str() {
         "vanilla" => Ok(Vec::new()),
         "fabric" => fetch_fabric(&mc_version).await,
         "quilt" => fetch_quilt(&mc_version).await,
         "neoforge" => fetch_neoforge(&mc_version).await,
         "forge" => fetch_forge(&mc_version).await,
-        other => Err(format!("unknown loader: {other}")),
+        other => Err(AppError::invalid(format!("unknown loader: {other}"))),
     }
 }
 
@@ -121,7 +122,7 @@ struct FabricLoader {
     stable: bool,
 }
 
-async fn fetch_fabric(mc: &str) -> Result<Vec<LoaderVersion>, String> {
+async fn fetch_fabric(mc: &str) -> AppResult<Vec<LoaderVersion>> {
     let url = format!("https://meta.fabricmc.net/v2/versions/loader/{mc}");
     let entries: Vec<FabricEntry> =
         serde_json::from_slice(&get_bytes(&url).await?).map_err(|e| e.to_string())?;
@@ -143,7 +144,7 @@ struct QuiltLoader {
     version: String,
 }
 
-async fn fetch_quilt(mc: &str) -> Result<Vec<LoaderVersion>, String> {
+async fn fetch_quilt(mc: &str) -> AppResult<Vec<LoaderVersion>> {
     let url = format!("https://meta.quiltmc.org/v3/versions/loader/{mc}");
     let entries: Vec<QuiltEntry> =
         serde_json::from_slice(&get_bytes(&url).await?).map_err(|e| e.to_string())?;
@@ -164,17 +165,17 @@ struct NeoForgeResponse {
     versions: Vec<String>,
 }
 
-fn neoforge_prefix(mc: &str) -> Result<String, String> {
+fn neoforge_prefix(mc: &str) -> AppResult<String> {
     let parts: Vec<&str> = mc.split('.').collect();
     if parts.len() < 2 || parts[0] != "1" {
-        return Err(format!("unsupported MC version for NeoForge: {mc}"));
+        return Err(AppError::invalid(format!("unsupported MC version for NeoForge: {mc}")));
     }
     let minor = parts[1];
     let patch = parts.get(2).copied().unwrap_or("0");
     Ok(format!("{minor}.{patch}."))
 }
 
-async fn fetch_neoforge(mc: &str) -> Result<Vec<LoaderVersion>, String> {
+async fn fetch_neoforge(mc: &str) -> AppResult<Vec<LoaderVersion>> {
     let url = "https://maven.neoforged.net/api/maven/versions/releases/net/neoforged/neoforge";
     let resp: NeoForgeResponse =
         serde_json::from_slice(&get_bytes(url).await?).map_err(|e| e.to_string())?;
@@ -193,7 +194,7 @@ async fn fetch_neoforge(mc: &str) -> Result<Vec<LoaderVersion>, String> {
     Ok(list)
 }
 
-async fn fetch_forge(mc: &str) -> Result<Vec<LoaderVersion>, String> {
+async fn fetch_forge(mc: &str) -> AppResult<Vec<LoaderVersion>> {
     let url = "https://maven.minecraftforge.net/net/minecraftforge/forge/maven-metadata.xml";
     let xml = String::from_utf8_lossy(&get_bytes(url).await?).into_owned();
 

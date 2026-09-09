@@ -7,6 +7,7 @@ use tauri::AppHandle;
 use crate::commands::instances;
 use crate::models::{Instance, Loader};
 use crate::{paths, store};
+use crate::error::{AppError, AppResult};
 
 #[derive(Serialize, Clone)]
 pub struct ExternalInstance {
@@ -20,22 +21,39 @@ pub struct ExternalInstance {
 }
 
 #[tauri::command]
-pub fn detect_external_instances() -> Vec<ExternalInstance> {
-    let mut out = Vec::new();
-    out.extend(scan_prism());
-    out.extend(scan_curseforge());
-    out.extend(scan_modrinth());
-    out
+pub async fn detect_external_instances() -> Vec<ExternalInstance> {
+    crate::blocking(|| {
+        let mut out = Vec::new();
+        out.extend(scan_prism());
+        out.extend(scan_curseforge());
+        out.extend(scan_modrinth());
+        Ok(out)
+    })
+    .await
+    .unwrap_or_default()
 }
 
 #[tauri::command]
-pub fn import_external_instance(
+pub async fn import_external_instance(
     name: String,
     game_dir: String,
     mc_version: String,
     loader: Option<String>,
     loader_version: Option<String>,
-) -> Result<Instance, String> {
+) -> AppResult<Instance> {
+    crate::blocking(move || {
+        import_game_dir(name, game_dir, mc_version, loader, loader_version)
+    })
+    .await
+}
+
+fn import_game_dir(
+    name: String,
+    game_dir: String,
+    mc_version: String,
+    loader: Option<String>,
+    loader_version: Option<String>,
+) -> AppResult<Instance> {
     if mc_version.trim().is_empty() {
         return Err("could not determine the Minecraft version of this instance".into());
     }
@@ -46,7 +64,7 @@ pub fn import_external_instance(
 
     let lver = loader_version.filter(|s| !s.trim().is_empty());
     let loader_enum = build_loader(loader.as_deref(), lver);
-    let instance = instances::create_instance(name, mc_version, loader_enum, None, None)?;
+    let instance = instances::make_instance(name, mc_version, loader_enum, None, None)?;
 
     let dst = paths::instance_game_dir(&instance.id);
     if let Err(e) = copy_game_dir(&src, &dst) {
@@ -79,9 +97,13 @@ const NEVER: &[&str] = &[
 ];
 
 #[tauri::command]
-pub fn list_dir(id: String, rel: String) -> Result<Vec<DirChild>, String> {
-    let base = paths::instance_game_dir(&id);
-    let dir = join_safe(&base, &rel)?;
+pub async fn list_dir(id: String, rel: String) -> AppResult<Vec<DirChild>> {
+    crate::blocking(move || dir_children(&id, &rel)).await
+}
+
+fn dir_children(id: &str, rel: &str) -> AppResult<Vec<DirChild>> {
+    let base = paths::instance_game_dir(id);
+    let dir = join_safe(&base, rel)?;
     let mut out = Vec::new();
     for e in std::fs::read_dir(&dir).map_err(|e| format!("read dir: {e}"))?.flatten() {
         let name = e.file_name().to_string_lossy().into_owned();
@@ -109,7 +131,7 @@ pub async fn import_dropped(
     app: AppHandle,
     instance_id: Option<String>,
     paths: Vec<String>,
-) -> Result<DropResult, String> {
+) -> AppResult<DropResult> {
     let mut result = DropResult::default();
     for p in paths {
         let path = PathBuf::from(&p);
@@ -145,7 +167,7 @@ fn is_instance_archive(path: &Path) -> bool {
         || z.by_name(BACKUP_MANIFEST).is_ok()
 }
 
-fn copy_dropped_content(instance_id: &str, path: &Path) -> Result<(), String> {
+fn copy_dropped_content(instance_id: &str, path: &Path) -> AppResult<()> {
     let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).ok_or("bad filename")?;
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
     let folder = if ext == "jar" { "mods" } else { sniff_zip_folder(path) };
@@ -186,8 +208,9 @@ pub fn is_never_top(name: &str) -> bool {
 }
 
 #[tauri::command]
-pub fn write_text_file(path: String, content: String) -> Result<(), String> {
-    std::fs::write(&path, content).map_err(|e| format!("write {path}: {e}"))
+pub async fn write_text_file(path: String, content: String) -> AppResult<()> {
+    crate::blocking(move || (std::fs::write(&path, content).map_err(|e| format!("write {path}: {e}"))).map_err(Into::into))
+        .await
 }
 
 pub struct ExportFilter {
@@ -224,10 +247,24 @@ impl ExportFilter {
 }
 
 #[tauri::command]
-pub fn export_instance(id: String, dest: String, exclude: Vec<String>, include: Vec<String>) -> Result<(), String> {
+pub async fn export_instance(
+    id: String,
+    dest: String,
+    exclude: Vec<String>,
+    include: Vec<String>,
+) -> AppResult<()> {
+    crate::blocking(move || write_export(&id, &dest, exclude, include)).await
+}
+
+fn write_export(
+    id: &str,
+    dest: &str,
+    exclude: Vec<String>,
+    include: Vec<String>,
+) -> AppResult<()> {
     let instance: Instance =
-        store::read_json(&paths::instance_config_file(&id))?.ok_or("instance not found")?;
-    let game_dir = paths::instance_game_dir(&id);
+        store::read_json(&paths::instance_config_file(id))?.ok_or("instance not found")?;
+    let game_dir = paths::instance_game_dir(id);
     let filter = ExportFilter::new(include, exclude);
 
     let file = std::fs::File::create(&dest).map_err(|e| format!("create {dest}: {e}"))?;
@@ -257,7 +294,7 @@ fn zip_game_files(
     rel: &str,
     filter: &ExportFilter,
     opts: zip::write::SimpleFileOptions,
-) -> Result<(), String> {
+) -> AppResult<()> {
     let dir = if rel.is_empty() { base.to_path_buf() } else { base.join(rel) };
     let Ok(entries) = std::fs::read_dir(&dir) else { return Ok(()) };
     for e in entries.flatten() {
@@ -286,7 +323,7 @@ pub fn is_backup_zip(bytes: &[u8]) -> bool {
     found
 }
 
-pub fn restore_backup_from_bytes(bytes: &[u8]) -> Result<Instance, String> {
+pub fn restore_backup_from_bytes(bytes: &[u8]) -> AppResult<Instance> {
     let mut archive =
         zip::ZipArchive::new(Cursor::new(bytes)).map_err(|e| format!("open backup: {e}"))?;
 
@@ -300,7 +337,7 @@ pub fn restore_backup_from_bytes(bytes: &[u8]) -> Result<Instance, String> {
     };
     let src = manifest.instance;
 
-    let created = instances::create_instance(
+    let created = instances::make_instance(
         src.name.clone(),
         src.mc_version.clone(),
         src.loader.clone(),
@@ -349,13 +386,13 @@ pub fn restore_backup_from_bytes(bytes: &[u8]) -> Result<Instance, String> {
     Ok(instance)
 }
 
-pub fn join_safe(base: &Path, rel: &str) -> Result<PathBuf, String> {
+pub fn join_safe(base: &Path, rel: &str) -> AppResult<PathBuf> {
     let mut out = base.to_path_buf();
     for comp in Path::new(rel).components() {
         match comp {
             Component::Normal(c) => out.push(c),
             Component::CurDir => {}
-            _ => return Err(format!("unsafe path in backup: {rel}")),
+            _ => return Err(AppError::invalid(format!("unsafe path in backup: {rel}"))),
         }
     }
     Ok(out)
@@ -376,7 +413,7 @@ const SKIP: &[&str] = &[
     ".fabric", ".quilt", ".mixin.out", "asm", "patchouli_books",
 ];
 
-fn copy_game_dir(src: &Path, dst: &Path) -> Result<(), String> {
+fn copy_game_dir(src: &Path, dst: &Path) -> AppResult<()> {
     std::fs::create_dir_all(dst).map_err(|e| format!("create dest: {e}"))?;
     for entry in std::fs::read_dir(src).map_err(|e| format!("read source: {e}"))?.flatten() {
         let name = entry.file_name();
@@ -395,7 +432,7 @@ fn copy_game_dir(src: &Path, dst: &Path) -> Result<(), String> {
     Ok(())
 }
 
-fn copy_dir_all(src: &Path, dst: &Path) -> Result<(), String> {
+fn copy_dir_all(src: &Path, dst: &Path) -> AppResult<()> {
     if instances::clone_dir(src, dst) {
         return Ok(());
     }

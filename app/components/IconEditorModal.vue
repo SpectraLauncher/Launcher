@@ -183,7 +183,7 @@ async function addSymbol() {
     await loadCustom()
     symbol.value = custom.value.find(s => s.path === path) ?? symbol.value
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   } finally {
     adding.value = false
   }
@@ -195,7 +195,7 @@ async function removeSymbol(s: SymbolItem) {
     await loadCustom()
     if (symbol.value?.id === s.id) symbol.value = symbols.value[0] ?? null
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   }
 }
 
@@ -247,7 +247,7 @@ async function save() {
     emit('saved', dataUrl)
     open.value = false
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   } finally {
     saving.value = false
   }

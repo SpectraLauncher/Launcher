@@ -118,7 +118,7 @@
 </template>
 
 <script setup lang="ts">
-import { invoke, convertFileSrc } from '@tauri-apps/api/core'
+import { invoke } from '@tauri-apps/api/core'
 import { save, confirm } from '@tauri-apps/plugin-dialog'
 import type { Instance, WorldInfo } from '~/types/launcher'
 
@@ -137,7 +137,6 @@ const launching = ref<string | null>(null)
 
 const totalWorlds = computed(() => groups.value.reduce((n, g) => n + g.worlds.length, 0))
 
-const assetUrl = (path: string) => convertFileSrc(path)
 const formatDate = (ms: number) => new Date(ms).toLocaleDateString()
 
 function supportsQuickPlay(ver: string): boolean {
@@ -173,7 +172,7 @@ async function backupWorld(instanceId: string, w: WorldInfo) {
     await invoke('backup_world', { id: instanceId, folder: w.folder, dest })
     toast.add({ title: t('content.backupDone'), color: 'success' })
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   } finally {
     busyWorld.value = null
   }
@@ -186,7 +185,7 @@ async function deleteWorld(instanceId: string, w: WorldInfo) {
     await invoke('delete_world', { id: instanceId, folder: w.folder })
     await load()
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   }
 }
 

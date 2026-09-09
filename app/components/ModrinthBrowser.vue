@@ -397,8 +397,7 @@
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 import { openExternal as openUrl } from '~/utils/openExternal'
-import { marked } from 'marked'
-import type { ModrinthHit, ModrinthVersion, ModrinthCategory, ModrinthSortIndex, ModrinthGalleryItem, ModrinthProjectType, InstalledItem } from '~/types/modrinth'
+import type { ModrinthHit, ModrinthVersion, ModrinthCategory, ModrinthProjectType, InstalledItem } from '~/types/modrinth'
 import type { LoaderType, Instance } from '~/types/launcher'
 import type { ContentWindowConfig } from '~/composables/useContentWindow'
 
@@ -436,8 +435,9 @@ const installLabel = computed(() =>
 )
 
 const ANY = 'any'
+const prefs = useBrowserPrefs()
+const sort = prefs.sort
 const query = ref('')
-const sort = ref<ModrinthSortIndex>('relevance')
 const gameVersion = ref<string>(ANY)
 const loader = ref<LoaderType | typeof ANY>(ANY)
 const selectedCategories = ref<string[]>([])
@@ -464,14 +464,7 @@ const gameVersionItems = computed(() => [
   ...mcVersions.value.map(v => ({ label: v, value: v })),
 ])
 
-type ViewMode = 'grid' | 'list'
-type Density = 'cosy' | 'compact'
-
-const PREFS_KEY = 'spectra-content-browser'
-
-const view = ref<ViewMode>('grid')
-const density = ref<Density>('cosy')
-const recent = ref<ModrinthHit[]>([])
+const { view, density, recent, loadPrefs, rememberRecent } = prefs
 const picked = ref<string[]>([])
 const searchInput = ref<{ inputRef?: HTMLInputElement, $el?: HTMLElement } | null>(null)
 
@@ -483,31 +476,6 @@ const resultsClass = computed(() => {
 const gridClass = computed(() => (density.value === 'compact'
   ? 'grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-2'
   : 'grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-3'))
-
-function loadPrefs() {
-  try {
-    const raw = localStorage.getItem(PREFS_KEY)
-    if (!raw) return
-    const saved = JSON.parse(raw) as { view?: ViewMode, density?: Density, sort?: ModrinthSortIndex, recent?: ModrinthHit[] }
-    if (saved.view === 'grid' || saved.view === 'list') view.value = saved.view
-    if (saved.density === 'cosy' || saved.density === 'compact') density.value = saved.density
-    if (saved.sort) sort.value = saved.sort
-    if (Array.isArray(saved.recent)) recent.value = saved.recent.slice(0, 12)
-  } catch {  }
-}
-
-function savePrefs() {
-  try {
-    localStorage.setItem(PREFS_KEY, JSON.stringify({
-      view: view.value,
-      density: density.value,
-      sort: sort.value,
-      recent: recent.value.slice(0, 12),
-    }))
-  } catch {  }
-}
-
-watch([view, density, sort, recent], savePrefs, { deep: true })
 
 const hits = ref<ModrinthHit[]>([])
 const totalHits = ref(0)
@@ -526,32 +494,17 @@ const uninstalling = ref(false)
 const modpackProgress = ref<{ current: number; total: number } | null>(null)
 const showAllVersions = ref(false)
 
-const bodyHtml = ref('')
-const loadingBody = ref(false)
-const detailTab = ref<'description' | 'gallery'>('description')
-const gallery = ref<ModrinthGalleryItem[]>([])
-
-const galleryIndex = ref<number | null>(null)
-const galleryImage = computed(() => (galleryIndex.value !== null ? gallery.value[galleryIndex.value] ?? null : null))
-const galleryOpen = computed({
-  get: () => galleryIndex.value !== null,
-  set: (v: boolean) => { if (!v) galleryIndex.value = null },
-})
-function stepGallery(delta: number) {
-  if (galleryIndex.value === null || !gallery.value.length) return
-  const n = gallery.value.length
-  galleryIndex.value = (galleryIndex.value + delta + n) % n
-}
-
-async function renderBody(md: string) {
-  if (!md) {
-    bodyHtml.value = ''
-    return
-  }
-  const raw = marked.parse(md, { async: false }) as string
-  const DOMPurify = (await import('dompurify')).default
-  bodyHtml.value = DOMPurify.sanitize(raw, { ADD_ATTR: ['target'] })
-}
+const {
+  bodyHtml,
+  loadingBody,
+  detailTab,
+  gallery,
+  galleryIndex,
+  galleryImage,
+  galleryOpen,
+  stepGallery,
+  renderBody,
+} = useProjectDetailView()
 
 const installedIds = ref<Set<string>>(new Set())
 const installedItems = ref<Map<string, InstalledItem>>(new Map())
@@ -621,7 +574,7 @@ async function runSearch(append = false) {
 
     nextTick(nudge)
   } catch (e) {
-    if (seq === searchSeq) searchError.value = String(e)
+    if (seq === searchSeq) searchError.value = errorText(e)
   } finally {
     if (seq === searchSeq) loadingSearch.value = false
   }
@@ -700,7 +653,7 @@ async function installPicked() {
         }
         done++
       } catch (e) {
-        toast.add({ title: `${hit.title}: ${String(e)}`, color: 'error' })
+        toast.add({ title: `${hit.title}: ${errorText(e)}`, color: 'error' })
       }
     }
 
@@ -748,10 +701,6 @@ function toggleCategory(name: string) {
     : [...selectedCategories.value, name]
 }
 
-function rememberRecent(hit: ModrinthHit) {
-  recent.value = [hit, ...recent.value.filter(h => h.project_id !== hit.project_id)].slice(0, 12)
-}
-
 function togglePick(projectId: string) {
   picked.value = picked.value.includes(projectId)
     ? picked.value.filter(id => id !== projectId)
@@ -789,7 +738,7 @@ async function selectHit(hit: ModrinthHit) {
       gameVersionValue.value ? [gameVersionValue.value] : undefined,
     )
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   } finally {
     loadingVersions.value = false
   }
@@ -866,7 +815,7 @@ async function doInstall(version: ModrinthVersion) {
       emit('installed', undefined)
     }
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   } finally {
     activity.endTask(taskId)
     installing.value = null
@@ -914,7 +863,7 @@ async function doUninstall() {
     toast.add({ title: t('modrinth.uninstalled', { name }), color: 'success' })
     emit('installed', undefined)
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   } finally {
     activity.endTask(taskId)
     uninstalling.value = false
@@ -981,14 +930,6 @@ onMounted(async () => {
 })
 onBeforeUnmount(() => unlisten?.())
 
-function onGalleryKey(e: KeyboardEvent) {
-  if (galleryIndex.value === null) return
-  if (e.key === 'ArrowRight') { e.preventDefault(); stepGallery(1) }
-  else if (e.key === 'ArrowLeft') { e.preventDefault(); stepGallery(-1) }
-  else if (e.key === 'Escape') galleryIndex.value = null
-}
-onMounted(() => window.addEventListener('keydown', onGalleryKey))
-onBeforeUnmount(() => window.removeEventListener('keydown', onGalleryKey))
 </script>
 
 <style>

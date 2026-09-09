@@ -1,3 +1,16 @@
+## Changes (v0.8.0)
+
+### ✨ Features & Improvements
+- **Your instances can share their settings**: sound, field of view, render distance, language, key bindings, your server list, resource packs, command history and creative hotbars can now stay the same everywhere. Pick what you want shared in Settings → Sync, choose one instance to copy from, and untick any instance that should keep its own. Changes you make in one game are picked up when you close it and carried over to the others the next time they start.
+- **Key bindings and creative hotbars only travel where they fit**: Minecraft changed how it stores both in 1.13, so they are shared between 1.13-and-newer instances and between older ones, never mixed across. Everything else is shared regardless of version, and resource packs are only added to instances whose version can actually read them.
+- **Screenshots load instantly**: the screenshot pages were loading every picture at full size to show them as small tiles. They now use cached thumbnails.
+- **The launcher stays responsive**: opening a resource pack list, browsing instance files, exporting an instance or scanning for Java used to freeze the window until they finished. They now run in the background.
+- **Live game logs no longer slow the launcher down on heavy modpacks**: a modded start can print tens of thousands of lines, and every single one was being handed to the interface one at a time.
+- **Errors say what actually went wrong**: messages now come through in your language and tell apart no connection, no disk space, no permission and a missing file, instead of showing one raw English line.
+
+### 🔒 Security
+- **Uploading a log no longer shares your Windows or Mac username**: logs sent to mclo.gs are public, and every file path in them starts with your home folder. Paths are now shortened and anything that looks like a session token is removed before the upload. Logs you read inside the launcher are untouched.
+
 ## Changes (v0.7.8)
 
 ### ✨ Features & Improvements

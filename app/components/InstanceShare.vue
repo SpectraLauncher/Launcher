@@ -138,7 +138,7 @@ async function run(key: string, fn: () => Promise<unknown>) {
   try {
     await fn()
   } catch (e) {
-    error.value = String(e)
+    error.value = errorText(e)
   } finally {
     busy.value = ''
   }
@@ -149,7 +149,7 @@ async function loadPreview() {
   try {
     preview.value = await invoke<SharePreview>('share_preview', { id: props.instanceId })
   } catch (e) {
-    error.value = String(e)
+    error.value = errorText(e)
   } finally {
     loadingPreview.value = false
   }
@@ -161,7 +161,7 @@ async function loadShare() {
     const res = await account.api<{ shares: OwnedShare[] }>('GET', '/api/shares')
     share.value = res.shares.find(s => s.instance_id === props.instanceId) ?? null
   } catch (e) {
-    error.value = String(e)
+    error.value = errorText(e)
   }
 }
 

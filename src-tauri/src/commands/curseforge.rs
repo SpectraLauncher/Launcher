@@ -9,6 +9,7 @@ use crate::commands::instances;
 use crate::commands::modrinth::{read_content_index, write_content_index, InstalledItem};
 use crate::models::{Instance, Loader};
 use crate::paths;
+use crate::error::{AppError, AppResult};
 
 // Calls go through the Spectra server, which holds the CurseForge key. Shipping
 // the key in the binary made it readable with `strings` and broke CurseForge's
@@ -35,7 +36,7 @@ fn http() -> &'static reqwest::Client {
     })
 }
 
-async fn send(req: reqwest::RequestBuilder) -> Result<reqwest::Response, String> {
+async fn send(req: reqwest::RequestBuilder) -> AppResult<reqwest::Response> {
     use std::sync::atomic::Ordering;
 
     let mut attempt = 0u32;
@@ -432,7 +433,7 @@ pub struct SearchParams {
 }
 
 #[tauri::command]
-pub async fn curseforge_search(params: SearchParams) -> Result<SearchResponse, String> {
+pub async fn curseforge_search(params: SearchParams) -> AppResult<SearchResponse> {
     let kind = params.project_type.clone();
     let page_size = if params.limit == 0 { 20 } else { params.limit.min(50) };
 
@@ -467,7 +468,7 @@ pub async fn curseforge_search(params: SearchParams) -> Result<SearchResponse, S
 
     let resp = send(http().get(format!("{API}/mods/search")).query(&query)).await?;
     if !resp.status().is_success() {
-        return Err(format!("CurseForge search failed: {}", resp.status()));
+        return Err(AppError::network(format!("CurseForge search failed: {}", resp.status())));
     }
     let parsed: CfListResponse<CfMod> = resp.json().await.map_err(|e| e.to_string())?;
     let total_hits = parsed.pagination.map(|p| p.total_count).unwrap_or(0);
@@ -480,7 +481,7 @@ pub async fn curseforge_versions(
     project_id: String,
     loaders: Option<Vec<String>>,
     game_versions: Option<Vec<String>>,
-) -> Result<Vec<Version>, String> {
+) -> AppResult<Vec<Version>> {
     let mut query: Vec<(String, String)> = vec![("pageSize".into(), "50".into()), ("index".into(), "0".into())];
     if let Some(v) = game_versions.and_then(|g| g.into_iter().next()) {
         query.push(("gameVersion".into(), v));
@@ -491,17 +492,17 @@ pub async fn curseforge_versions(
 
     let resp = send(http().get(format!("{API}/mods/{project_id}/files")).query(&query)).await?;
     if !resp.status().is_success() {
-        return Err(format!("CurseForge versions failed: {}", resp.status()));
+        return Err(AppError::network(format!("CurseForge versions failed: {}", resp.status())));
     }
     let parsed: CfListResponse<CfFile> = resp.json().await.map_err(|e| e.to_string())?;
     Ok(parsed.data.into_iter().map(file_to_version).collect())
 }
 
 #[tauri::command]
-pub async fn curseforge_project(id: String) -> Result<ProjectFull, String> {
+pub async fn curseforge_project(id: String) -> AppResult<ProjectFull> {
     let resp = send(http().get(format!("{API}/mods/{id}"))).await?;
     if !resp.status().is_success() {
-        return Err(format!("CurseForge project failed: {}", resp.status()));
+        return Err(AppError::network(format!("CurseForge project failed: {}", resp.status())));
     }
     let m: CfDataResponse<CfMod> = resp.json().await.map_err(|e| e.to_string())?;
     let m = m.data;
@@ -586,7 +587,7 @@ async fn categories_for(class_id: i64) -> Vec<(String, i64)> {
 }
 
 #[tauri::command]
-pub async fn curseforge_categories(project_type: String) -> Result<Vec<Category>, String> {
+pub async fn curseforge_categories(project_type: String) -> AppResult<Vec<Category>> {
     let cats = categories_for(class_id(&project_type)).await;
     Ok(cats.into_iter().map(|(name, id)| Category { name, header: id.to_string() }).collect())
 }
@@ -614,7 +615,7 @@ pub async fn curseforge_install_with_deps(
     file_id: String,
     game_version: Option<String>,
     loader: Option<String>,
-) -> Result<CfInstallResult, String> {
+) -> AppResult<CfInstallResult> {
     let mut index = read_content_index(&instance_id);
     let mut visited: std::collections::HashSet<String> =
         index.items.iter().map(|i| i.project_id.clone()).collect();
@@ -637,7 +638,7 @@ pub async fn curseforge_install_with_deps(
 
     write_content_index(&instance_id, &index)?;
     if !blocked.is_empty() {
-        let mut all = get_blocked_mods(instance_id.clone());
+        let mut all = blocked_mods(&instance_id);
         for b in &blocked {
             if !all.iter().any(|x| x.file_id == b.file_id) {
                 all.push(b.clone());
@@ -660,7 +661,7 @@ fn install_rec<'a>(
     index: &'a mut crate::commands::modrinth::ContentIndex,
     added: &'a mut Vec<InstalledItem>,
     blocked: &'a mut Vec<BlockedMod>,
-) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send + 'a>> {
+) -> std::pin::Pin<Box<dyn std::future::Future<Output = AppResult<()>> + Send + 'a>> {
     Box::pin(async move {
         if is_dependency && visited.contains(project_id) {
             return Ok(());
@@ -748,19 +749,19 @@ fn install_rec<'a>(
     })
 }
 
-async fn fetch_file(project_id: &str, file_id: &str) -> Result<CfFile, String> {
+async fn fetch_file(project_id: &str, file_id: &str) -> AppResult<CfFile> {
     let resp = send(http().get(format!("{API}/mods/{project_id}/files/{file_id}"))).await?;
     if !resp.status().is_success() {
-        return Err(format!("CurseForge file failed: {}", resp.status()));
+        return Err(AppError::network(format!("CurseForge file failed: {}", resp.status())));
     }
     let d: CfDataResponse<CfFile> = resp.json().await.map_err(|e| e.to_string())?;
     Ok(d.data)
 }
 
-async fn fetch_mod(project_id: &str) -> Result<CfMod, String> {
+async fn fetch_mod(project_id: &str) -> AppResult<CfMod> {
     let resp = send(http().get(format!("{API}/mods/{project_id}"))).await?;
     if !resp.status().is_success() {
-        return Err(format!("CurseForge mod failed: {}", resp.status()));
+        return Err(AppError::network(format!("CurseForge mod failed: {}", resp.status())));
     }
     let d: CfDataResponse<CfMod> = resp.json().await.map_err(|e| e.to_string())?;
     Ok(d.data)
@@ -770,7 +771,7 @@ async fn resolve_latest_file(
     project_id: &str,
     loader: &Option<String>,
     game_version: &Option<String>,
-) -> Result<Option<String>, String> {
+) -> AppResult<Option<String>> {
     let mut query: Vec<(String, String)> = vec![("pageSize".into(), "50".into())];
     if let Some(v) = game_version {
         query.push(("gameVersion".into(), v.clone()));
@@ -818,7 +819,7 @@ pub async fn curseforge_update_all(
     instance_id: String,
     loaders: Option<Vec<String>>,
     game_versions: Option<Vec<String>>,
-) -> Result<usize, String> {
+) -> AppResult<usize> {
     let mut index = read_content_index(&instance_id);
     let cf: Vec<(usize, String, String)> = index
         .items
@@ -970,7 +971,7 @@ struct CfFingerprintResponse {
 }
 
 #[tauri::command]
-pub async fn curseforge_match_local(instance_id: String) -> Result<usize, String> {
+pub async fn curseforge_match_local(instance_id: String) -> AppResult<usize> {
     let dir = paths::instance_game_dir(&instance_id).join("mods");
     let known: std::collections::HashSet<String> =
         read_content_index(&instance_id).items.iter().map(|i| i.filename.clone()).collect();
@@ -1003,7 +1004,7 @@ pub async fn curseforge_match_local(instance_id: String) -> Result<usize, String
     )
     .await?;
     if !resp.status().is_success() {
-        return Err(format!("fingerprints failed: {}", resp.status()));
+        return Err(AppError::network(format!("fingerprints failed: {}", resp.status())));
     }
     let parsed: CfFingerprintResponse = resp.json().await.map_err(|e| e.to_string())?;
     if parsed.data.exact_matches.is_empty() {
@@ -1054,7 +1055,7 @@ pub async fn curseforge_match_local(instance_id: String) -> Result<usize, String
 }
 
 #[tauri::command]
-pub async fn curseforge_match_file(instance_id: String, filename: String) -> Result<bool, String> {
+pub async fn curseforge_match_file(instance_id: String, filename: String) -> AppResult<bool> {
     let dir = paths::instance_game_dir(&instance_id).join("mods");
     let path = if dir.join(&filename).is_file() {
         dir.join(&filename)
@@ -1106,7 +1107,7 @@ pub async fn curseforge_match_file(instance_id: String, filename: String) -> Res
     Ok(true)
 }
 
-async fn bulk_mods(mod_ids: &[i64]) -> Result<HashMap<i64, CfMod>, String> {
+async fn bulk_mods(mod_ids: &[i64]) -> AppResult<HashMap<i64, CfMod>> {
     if mod_ids.is_empty() {
         return Ok(HashMap::new());
     }
@@ -1117,7 +1118,7 @@ async fn bulk_mods(mod_ids: &[i64]) -> Result<HashMap<i64, CfMod>, String> {
     )
     .await?;
     if !resp.status().is_success() {
-        return Err(format!("bulk mods failed: {}", resp.status()));
+        return Err(AppError::network(format!("bulk mods failed: {}", resp.status())));
     }
     let parsed: CfListResponse<CfMod> = resp.json().await.map_err(|e| e.to_string())?;
     Ok(parsed.data.into_iter().map(|m| (m.id, m)).collect())
@@ -1185,7 +1186,7 @@ pub async fn curseforge_import_modpack_file(
     app: AppHandle,
     path: String,
     name_override: Option<String>,
-) -> Result<Instance, String> {
+) -> AppResult<Instance> {
     let bytes = std::fs::read(&path).map_err(|e| format!("read file: {e}"))?;
     install_modpack_bytes(&app, bytes, name_override, None).await
 }
@@ -1196,7 +1197,7 @@ pub async fn curseforge_install_modpack(
     project_id: String,
     file_id: String,
     name_override: Option<String>,
-) -> Result<Instance, String> {
+) -> AppResult<Instance> {
     let file = fetch_file(&project_id, &file_id).await?;
     let url = file
         .download_url
@@ -1213,7 +1214,7 @@ pub(crate) async fn install_modpack_bytes(
     bytes: Vec<u8>,
     name_override: Option<String>,
     icon_url: Option<String>,
-) -> Result<Instance, String> {
+) -> AppResult<Instance> {
     let (manifest, raw_manifest) = parse_cf_manifest(&bytes)?;
 
     let mc_version = manifest.minecraft.version.clone();
@@ -1222,7 +1223,7 @@ pub(crate) async fn install_modpack_bytes(
         .filter(|n| !n.trim().is_empty())
         .unwrap_or_else(|| manifest.name.clone());
 
-    let mut instance = instances::create_instance(name, mc_version, loader, None, None)?;
+    let mut instance = instances::make_instance(name, mc_version, loader, None, None)?;
 
     if let Some(url) = icon_url.filter(|u| !u.trim().is_empty()) {
         if let Ok(data) = download(&url).await {
@@ -1362,8 +1363,12 @@ fn save_blocked_mods(id: &str, blocked: &[BlockedMod]) {
 }
 
 #[tauri::command]
-pub fn get_blocked_mods(instance_id: String) -> Vec<BlockedMod> {
-    std::fs::read_to_string(blocked_mods_file(&instance_id))
+pub async fn get_blocked_mods(instance_id: String) -> Vec<BlockedMod> {
+    crate::blocking(move || Ok(blocked_mods(&instance_id))).await.unwrap_or_default()
+}
+
+fn blocked_mods(instance_id: &str) -> Vec<BlockedMod> {
+    std::fs::read_to_string(blocked_mods_file(instance_id))
         .ok()
         .and_then(|s| serde_json::from_str(&s).ok())
         .unwrap_or_default()
@@ -1376,8 +1381,15 @@ pub struct BlockedResolveResult {
 }
 
 #[tauri::command]
-pub fn resolve_blocked_mods(instance_id: String, dir: Option<String>) -> Result<BlockedResolveResult, String> {
-    let mut blocked = get_blocked_mods(instance_id.clone());
+pub async fn resolve_blocked_mods(
+    instance_id: String,
+    dir: Option<String>,
+) -> AppResult<BlockedResolveResult> {
+    crate::blocking(move || resolve_blocked(instance_id, dir)).await
+}
+
+fn resolve_blocked(instance_id: String, dir: Option<String>) -> AppResult<BlockedResolveResult> {
+    let mut blocked = blocked_mods(&instance_id);
     if blocked.is_empty() {
         return Ok(BlockedResolveResult { resolved: 0, remaining: vec![] });
     }
@@ -1467,7 +1479,7 @@ fn normalize_name(name: &str) -> String {
     name.to_lowercase().chars().filter(|c| c.is_ascii_alphanumeric()).collect()
 }
 
-async fn bulk_files(file_ids: &[i64]) -> Result<HashMap<i64, CfFile>, String> {
+async fn bulk_files(file_ids: &[i64]) -> AppResult<HashMap<i64, CfFile>> {
     if file_ids.is_empty() {
         return Ok(HashMap::new());
     }
@@ -1478,13 +1490,13 @@ async fn bulk_files(file_ids: &[i64]) -> Result<HashMap<i64, CfFile>, String> {
     )
     .await?;
     if !resp.status().is_success() {
-        return Err(format!("CurseForge bulk files failed: {}", resp.status()));
+        return Err(AppError::network(format!("CurseForge bulk files failed: {}", resp.status())));
     }
     let parsed: CfListResponse<CfFile> = resp.json().await.map_err(|e| e.to_string())?;
     Ok(parsed.data.into_iter().map(|f| (f.id, f)).collect())
 }
 
-fn parse_cf_manifest(bytes: &[u8]) -> Result<(CfManifest, String), String> {
+fn parse_cf_manifest(bytes: &[u8]) -> AppResult<(CfManifest, String)> {
     let mut archive = zip::ZipArchive::new(Cursor::new(bytes)).map_err(|e| format!("open zip: {e}"))?;
     let mut f = archive
         .by_name("manifest.json")
@@ -1495,7 +1507,7 @@ fn parse_cf_manifest(bytes: &[u8]) -> Result<(CfManifest, String), String> {
     Ok((manifest, raw))
 }
 
-fn extract_overrides(bytes: &[u8], game_dir: &Path) -> Result<(), String> {
+fn extract_overrides(bytes: &[u8], game_dir: &Path) -> AppResult<()> {
     let mut archive = zip::ZipArchive::new(Cursor::new(bytes)).map_err(|e| e.to_string())?;
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i).map_err(|e| e.to_string())?;
@@ -1573,7 +1585,7 @@ pub async fn export_curseforge(
     exclude: Vec<String>,
     include: Vec<String>,
     optional_disabled: bool,
-) -> Result<(), String> {
+) -> AppResult<()> {
     let instance: Instance =
         crate::store::read_json(&paths::instance_config_file(&id))?.ok_or("instance not found")?;
     let game_dir = paths::instance_game_dir(&id);
@@ -1673,7 +1685,7 @@ fn cf_add_overrides(
     matched: &std::collections::HashSet<String>,
     optional_disabled: bool,
     opts: zip::write::SimpleFileOptions,
-) -> Result<(), String> {
+) -> AppResult<()> {
     let dir = if rel.is_empty() { base.to_path_buf() } else { base.join(rel) };
     let Ok(entries) = std::fs::read_dir(&dir) else { return Ok(()) };
     for e in entries.flatten() {
@@ -1703,11 +1715,11 @@ fn cf_add_overrides(
     Ok(())
 }
 
-async fn download(url: &str) -> Result<Vec<u8>, String> {
+async fn download(url: &str) -> AppResult<Vec<u8>> {
     crate::commands::modrinth::https_only(url)?;
     let resp = http().get(url).send().await.map_err(|e| e.to_string())?;
     if !resp.status().is_success() {
-        return Err(format!("download failed ({}): {url}", resp.status()));
+        return Err(AppError::network(format!("download failed ({}): {url}", resp.status())));
     }
     Ok(resp.bytes().await.map_err(|e| e.to_string())?.to_vec())
 }
@@ -1719,13 +1731,13 @@ fn safe_name(name: &str) -> String {
         .unwrap_or_else(|| "file".to_string())
 }
 
-fn join_safe(base: &Path, rel: &str) -> Result<PathBuf, String> {
+fn join_safe(base: &Path, rel: &str) -> AppResult<PathBuf> {
     let mut out = base.to_path_buf();
     for comp in Path::new(rel).components() {
         match comp {
             Component::Normal(c) => out.push(c),
             Component::CurDir => {}
-            _ => return Err(format!("unsafe path in modpack: {rel}")),
+            _ => return Err(AppError::invalid(format!("unsafe path in modpack: {rel}"))),
         }
     }
     Ok(out)

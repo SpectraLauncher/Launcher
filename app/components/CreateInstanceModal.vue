@@ -224,7 +224,7 @@ async function scanExternal() {
   try {
     external.value = await invoke<ExternalInstance[]>('detect_external_instances')
   } catch (e) {
-    error.value = String(e)
+    error.value = errorText(e)
   } finally {
     scanning.value = false
   }
@@ -253,7 +253,7 @@ async function importFile() {
       importingFile.value = false
     }
   } catch (e) {
-    error.value = String(e)
+    error.value = errorText(e)
   }
 }
 
@@ -281,7 +281,7 @@ async function redeemCode() {
     const blocked = await curseforge.getBlocked(res.instance.id)
     if (blocked.length) blockedModal.open(res.instance.id)
   } catch (e) {
-    error.value = String(e)
+    error.value = errorText(e)
   } finally {
     activity.endTask(tid)
     redeeming.value = false
@@ -305,7 +305,7 @@ async function importExternal(ext: ExternalInstance) {
     close()
     router.push(`/instance/${instance.id}`)
   } catch (e) {
-    error.value = String(e)
+    error.value = errorText(e)
   } finally {
     activity.endTask(tid)
     importingPath.value = null
@@ -393,7 +393,7 @@ async function chooseIcon() {
     form.iconPath = selected
     form.iconPreview = await invoke<string>('read_image_data_url', { path: selected })
   } catch (e) {
-    error.value = String(e)
+    error.value = errorText(e)
   }
 }
 
@@ -410,7 +410,7 @@ async function loadMcVersions() {
     mcVersions.value = list.map(v => v.id)
     if (!mcVersions.value.includes(form.mcVersion)) form.mcVersion = mcVersions.value[0] ?? ''
   } catch (e) {
-    error.value = String(e)
+    error.value = errorText(e)
   } finally {
     loadingMc.value = false
   }
@@ -427,7 +427,7 @@ async function loadLoaderVersions() {
     loaderVersions.value = list.map(v => v.version)
   } catch (e) {
     loaderVersions.value = []
-    error.value = String(e)
+    error.value = errorText(e)
   } finally {
     loadingLoader.value = false
   }
@@ -507,7 +507,7 @@ async function submit() {
     }
     close()
   } catch (e) {
-    error.value = String(e)
+    error.value = errorText(e)
   } finally {
     submitting.value = false
   }

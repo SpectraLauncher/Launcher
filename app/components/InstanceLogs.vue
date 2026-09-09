@@ -78,7 +78,7 @@ async function load() {
       : files.value[0]?.rel ?? null
     if (target && target !== selected.value) open(target)
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   } finally {
     loading.value = false
   }
@@ -91,7 +91,7 @@ async function open(rel: string) {
   try {
     content.value = await invoke<string>('read_log_file', { id: props.instanceId, rel })
   } catch (e) {
-    content.value = String(e)
+    content.value = errorText(e)
   } finally {
     contentLoading.value = false
   }
@@ -103,7 +103,7 @@ async function reveal() {
     const base = await invoke<string>('get_instance_path', { id: props.instanceId })
     await invoke('reveal_in_explorer', { path: `${base}/minecraft/${selected.value}` })
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   }
 }
 
@@ -123,7 +123,7 @@ async function share() {
       actions: [{ label: t('logs.openLink'), onClick: () => openUrl(paste.url) }],
     })
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   } finally {
     uploading.value = false
   }

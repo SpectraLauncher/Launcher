@@ -2,11 +2,11 @@ use std::collections::HashMap;
 use std::io::Read;
 use std::path::Path;
 
-use base64::Engine;
 use serde::Serialize;
 
 use crate::commands::modrinth::{self, InstalledItem};
 use crate::paths;
+use crate::error::AppResult;
 
 type Jar = zip::ZipArchive<std::fs::File>;
 
@@ -116,12 +116,8 @@ fn read_zip_image(zip: &mut Jar, path: &str) -> Option<String> {
         f.read_to_end(&mut buf).ok()?;
     }
     let lower = p.to_lowercase();
-    let mime = if lower.ends_with(".jpg") || lower.ends_with(".jpeg") {
-        "image/jpeg"
-    } else {
-        "image/png"
-    };
-    Some(format!("data:{mime};base64,{}", base64::engine::general_purpose::STANDARD.encode(&buf)))
+    let ext = if lower.ends_with(".jpg") || lower.ends_with(".jpeg") { "jpg" } else { "png" };
+    super::images::cache_icon(&buf, ext)
 }
 
 #[derive(Serialize)]
@@ -132,14 +128,15 @@ pub struct ModEntry {
     version: Option<String>,
     version_id: Option<String>,
     icon_url: Option<String>,
+    icon_path: Option<String>,
     project_id: Option<String>,
     provider: String,
     modified: u64,
 }
 
 #[tauri::command]
-pub fn list_mods(instance_id: String) -> Result<Vec<ModEntry>, String> {
-    list_content(instance_id, "mod".into())
+pub async fn list_mods(instance_id: String) -> AppResult<Vec<ModEntry>> {
+    crate::blocking(move || content(&instance_id, "mod")).await
 }
 
 fn kind_layout(kind: &str) -> (&'static str, &'static str) {
@@ -152,10 +149,14 @@ fn kind_layout(kind: &str) -> (&'static str, &'static str) {
 }
 
 #[tauri::command]
-pub fn list_content(instance_id: String, kind: String) -> Result<Vec<ModEntry>, String> {
-    let (folder, ext) = kind_layout(&kind);
-    let dir = paths::instance_game_dir(&instance_id).join(folder);
-    let index = modrinth::installed_items(&instance_id);
+pub async fn list_content(instance_id: String, kind: String) -> AppResult<Vec<ModEntry>> {
+    crate::blocking(move || content(&instance_id, &kind)).await
+}
+
+fn content(instance_id: &str, kind: &str) -> AppResult<Vec<ModEntry>> {
+    let (folder, ext) = kind_layout(kind);
+    let dir = paths::instance_game_dir(instance_id).join(folder);
+    let index = modrinth::installed_items(instance_id);
     let by_file: HashMap<&str, &InstalledItem> = index.iter().map(|i| (i.filename.as_str(), i)).collect();
 
     let mut out = Vec::new();
@@ -200,7 +201,8 @@ pub fn list_content(instance_id: String, kind: String) -> Result<Vec<ModEntry>, 
             name: meta.map(|m| m.name.clone()).or(local.name),
             version: meta.map(|m| m.version_number.clone()).or(local.version),
             version_id: meta.map(|m| m.version_id.clone()),
-            icon_url: meta.and_then(|m| m.icon_url.clone()).or(local.icon),
+            icon_url: meta.and_then(|m| m.icon_url.clone()),
+            icon_path: local.icon,
             provider: meta.map(|m| m.provider.clone()).unwrap_or_else(|| "local".into()),
             project_id: meta.map(|m| m.project_id.clone()),
             enabled,
@@ -217,7 +219,7 @@ pub fn list_content(instance_id: String, kind: String) -> Result<Vec<ModEntry>, 
 }
 
 #[tauri::command]
-pub fn set_mod_enabled(instance_id: String, filename: String, enabled: bool) -> Result<(), String> {
+pub fn set_mod_enabled(instance_id: String, filename: String, enabled: bool) -> AppResult<()> {
     let dir = paths::instance_game_dir(&instance_id).join("mods");
     let on = dir.join(&filename);
     let off = dir.join(format!("{filename}.disabled"));
@@ -232,13 +234,16 @@ pub fn set_mod_enabled(instance_id: String, filename: String, enabled: bool) -> 
 }
 
 #[tauri::command]
-pub fn delete_mod(instance_id: String, filename: String) -> Result<(), String> {
-    let dir = paths::instance_game_dir(&instance_id).join("mods");
-    for p in [dir.join(&filename), dir.join(format!("{filename}.disabled"))] {
-        if p.exists() {
-            std::fs::remove_file(&p).map_err(|e| e.to_string())?;
+pub async fn delete_mod(instance_id: String, filename: String) -> AppResult<()> {
+    crate::blocking(move || {
+        let dir = paths::instance_game_dir(&instance_id).join("mods");
+        for p in [dir.join(&filename), dir.join(format!("{filename}.disabled"))] {
+            if p.exists() {
+                std::fs::remove_file(&p).map_err(|e| e.to_string())?;
+            }
         }
-    }
-    modrinth::remove_index_entry(&instance_id, &filename);
-    Ok(())
+        modrinth::remove_index_entry(&instance_id, &filename);
+        Ok(())
+    })
+    .await
 }

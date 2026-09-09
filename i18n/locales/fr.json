@@ -367,7 +367,8 @@
       "privacy": "Confidentialité",
       "java": "Installations de Java",
       "defaults": "Options d'instance par défaut",
-      "accounts": "Comptes"
+      "accounts": "Comptes",
+      "sync": "Synchronisation"
     },
     "privacy": {
       "track_playtime": "Suivre le temps de jeu",
@@ -559,7 +560,15 @@
     "slim": "Fin",
     "capes": "Capes",
     "noCape": "Aucune cape",
-    "capeSet": "Cape mise à jour"
+    "capeSet": "Cape mise à jour",
+    "title": "Sélecteur de skin",
+    "capesButton": "Capes",
+    "capesDemo": "Connectez-vous avec Microsoft pour porter une cape.",
+    "capesEmpty": "Vous ne possédez aucune cape.",
+    "defaultsEmpty": "Les skins par défaut apparaîtront une fois une version de Minecraft installée.",
+    "demoTitle": "Vous parcourez en mode démo",
+    "demoDesc": "Regardez et prévisualisez n'importe quel skin. Connectez-vous avec Microsoft pour l'appliquer à votre compte.",
+    "signIn": "Se connecter avec Microsoft"
   },
   "instSettings": {
     "tabs": {
@@ -567,7 +576,8 @@
       "install": "Installation",
       "window": "Fenêtre",
       "java": "Java et mémoire",
-      "hooks": "Hooks de lancement"
+      "hooks": "Hooks de lancement",
+      "sync": "Synchronisation"
     },
     "name": "Nom",
     "duplicate": "Dupliquer",
@@ -740,5 +750,82 @@
     "autoHint": "Une mise à jour de pack ou de modpack peut supprimer des mods ; c’est ce qui l’annule.",
     "keepLabel": "Garder",
     "keepHint": "automatiques par instance — ceux créés à la main ne sont jamais supprimés"
+  },
+  "errors": {
+    "auth": "Problème de connexion",
+    "busy": "Déjà en cours",
+    "disk_full": "Disque plein",
+    "http": "Erreur du serveur",
+    "invalid": "Données invalides",
+    "io": "Erreur de disque",
+    "network": "Pas de connexion",
+    "not_found": "Introuvable",
+    "panic": "Erreur interne",
+    "permission": "Permission refusée",
+    "unknown": "Erreur"
+  },
+  "sync": {
+    "title": "Synchroniser les instances",
+    "desc": "Garde les réglages choisis identiques dans toutes les instances. Les changements sont repris à la fermeture du jeu et appliqués aux autres au démarrage suivant.",
+    "sourceTitle": "Choisir la source",
+    "sourceDesc": "Choisissez l'instance à copier. Son état amorce la copie partagée, ensuite vous pourrez la modifier depuis n'importe quelle instance.",
+    "sourceSearch": "Rechercher une instance",
+    "sourceEmpty": "Aucune instance à copier.",
+    "sourceConfirm": "Synchroniser",
+    "seededFrom": "Amorcé depuis une instance {version}",
+    "enabled": "{option} est désormais synchronisé",
+    "packsTitle": "Packs de ressources partagés",
+    "packsEmpty": "Aucun pack pour le moment. Ils sont repris à la fermeture du jeu.",
+    "packFormat": "format {n}",
+    "openFolder": "Ouvrir le dossier partagé",
+    "instanceDesc": "Désactivez une catégorie pour en exclure cette instance.",
+    "instanceNothingOn": "Aucune catégorie n'est encore synchronisée. Activez-les dans les réglages du launcher.",
+    "conflictTitle": "Cette instance a déjà ses propres données",
+    "conflictDesc": "La copie partagée et cette instance ont des données. Choisissez laquelle gagne.",
+    "useSynced": "Utiliser le partagé",
+    "useInstance": "Écraser le partagé",
+    "options": {
+      "game_options": {
+        "label": "Réglages du jeu",
+        "desc": "Son, FOV, distance d'affichage, langue et touches. Les touches ne circulent qu'entre 1.13 et plus récent."
+      },
+      "multiplayer_servers": {
+        "label": "Serveurs multijoueur",
+        "desc": "Votre liste de serveurs, fusionnée plutôt que remplacée."
+      },
+      "resource_packs": {
+        "label": "Packs de ressources",
+        "desc": "Fichiers partagés, appliqués la ou le format correspond a la versión."
+      },
+      "command_history": {
+        "label": "Historique des commandes",
+        "desc": "Les commandes tapées dans le chat."
+      },
+      "creative_hotbars": {
+        "label": "Barres créatives",
+        "desc": "Barres créatives enregistrées. Uniquement entre instances du même côté de 1.13."
+      }
+    },
+    "instancesTitle": "Quelles instances participent",
+    "instancesDesc": "Chaque instance participe par défaut. Décochez pour l'exclure.",
+    "instanceColumn": "Instance"
+  },
+  "syncAnnounce": {
+    "badge": "Nouveau dans cette mise à jour",
+    "title": "Synchronisez vos instances",
+    "body": "Vous pouvez désormais garder les réglages du jeu, les serveurs, les packs de ressources et plus encore identiques dans toutes vos instances, pour que tout reste où vous l'avez laissé.",
+    "later": "Activez-le maintenant, ou configurez-le plus tard dans les réglages du launcher.",
+    "skip": "Passer",
+    "syncAll": "Tout synchroniser",
+    "syncSelected": "Synchroniser la sélection",
+    "done": "Synchronisation de {n} catégories",
+    "failed": "Impossible d'activer la synchronisation",
+    "options": {
+      "game_options": "Synchroniser les réglages du jeu",
+      "multiplayer_servers": "Synchroniser les serveurs multijoueur",
+      "resource_packs": "Synchroniser les packs de ressources",
+      "command_history": "Synchroniser l'historique des commandes",
+      "creative_hotbars": "Synchroniser les barres créatives"
+    }
   }
 }

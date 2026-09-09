@@ -61,7 +61,7 @@
               class="group overflow-hidden rounded-xl border border-default bg-white/3 text-left transition hover:border-primary-500/40"
               @click="openLightbox(s)"
             >
-              <img :src="assetUrl(s.path)" loading="lazy" class="aspect-video w-full object-cover transition group-hover:opacity-90" :alt="s.name" >
+              <ThumbImage :path="s.path" :size="440" :alt="s.name" class="aspect-video w-full object-cover transition group-hover:opacity-90" />
               <div class="truncate px-2.5 py-1.5 text-[11px] text-neutral-400" :title="s.name">{{ s.name }}</div>
             </button>
           </div>
@@ -110,7 +110,7 @@
 </template>
 
 <script setup lang="ts">
-import { invoke, convertFileSrc } from '@tauri-apps/api/core'
+import { invoke } from '@tauri-apps/api/core'
 import { save, confirm } from '@tauri-apps/plugin-dialog'
 import type { Instance, ScreenshotInfo } from '~/types/launcher'
 
@@ -128,7 +128,6 @@ const flatShots = computed(() =>
   groups.value.flatMap(g => g.shots.map(shot => ({ shot, instance: g.instance }))),
 )
 
-const assetUrl = (path: string) => convertFileSrc(path)
 
 async function load() {
   loading.value = true
@@ -180,7 +179,7 @@ async function downloadShot(s: ScreenshotInfo) {
     await invoke('copy_file', { from: s.path, to: dest })
     toast.add({ title: t('content.downloaded'), color: 'success' })
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   }
 }
 
@@ -188,7 +187,7 @@ async function revealShot(s: ScreenshotInfo) {
   try {
     await invoke('reveal_in_explorer', { path: s.path })
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   }
 }
 
@@ -200,7 +199,7 @@ async function deleteShot(instanceId: string, s: ScreenshotInfo) {
     lightboxIndex.value = null
     await load()
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   }
 }
 

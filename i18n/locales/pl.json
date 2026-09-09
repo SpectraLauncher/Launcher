@@ -367,7 +367,8 @@
       "privacy": "Prywatność",
       "java": "Instalacje Javy",
       "defaults": "Domyślne opcje instancji",
-      "accounts": "Konta"
+      "accounts": "Konta",
+      "sync": "Synchronizacja"
     },
     "privacy": {
       "track_playtime": "Zliczanie czasu gry",
@@ -559,7 +560,15 @@
     "slim": "Slim",
     "capes": "Peleryny",
     "noCape": "Bez peleryny",
-    "capeSet": "Peleryna zmieniona"
+    "capeSet": "Peleryna zmieniona",
+    "title": "Wybór skórki",
+    "capesButton": "Peleryny",
+    "capesDemo": "Zaloguj się przez Microsoft, żeby założyć pelerynę.",
+    "capesEmpty": "Nie masz żadnych peleryn.",
+    "defaultsEmpty": "Domyślne skórki pojawią się, gdy zainstalujesz jakąś wersję Minecrafta.",
+    "demoTitle": "Przeglądasz w trybie demo",
+    "demoDesc": "Możesz oglądać i podejrzeć każdą skórkę. Zaloguj się przez Microsoft, żeby ustawić ją na koncie.",
+    "signIn": "Zaloguj przez Microsoft"
   },
   "instSettings": {
     "tabs": {
@@ -567,7 +576,8 @@
       "install": "Instancja",
       "window": "Okno",
       "java": "Java i pamięć",
-      "hooks": "Haczyki startowe"
+      "hooks": "Haczyki startowe",
+      "sync": "Synchronizacja"
     },
     "name": "Nazwa",
     "duplicate": "Duplikuj",
@@ -740,5 +750,82 @@
     "autoHint": "Wypchnięta aktualizacja paczki albo aktualizacja modpacka może usunąć mody; to jest to, co je cofa.",
     "keepLabel": "Zachowuj",
     "keepHint": "automatycznych na instancję — utworzonych ręcznie nigdy nie usuwamy"
+  },
+  "errors": {
+    "auth": "Problem z logowaniem",
+    "busy": "Operacja już trwa",
+    "disk_full": "Brak miejsca na dysku",
+    "http": "Błąd serwera",
+    "invalid": "Nieprawidłowe dane",
+    "io": "Błąd dysku",
+    "network": "Brak połączenia",
+    "not_found": "Nie znaleziono",
+    "panic": "Błąd wewnętrzny",
+    "permission": "Brak uprawnień",
+    "unknown": "Błąd"
+  },
+  "sync": {
+    "title": "Synchronizacja instancji",
+    "desc": "Trzyma wybrane ustawienia identyczne we wszystkich instancjach. Zmiany z jednej gry są zbierane po jej zamknięciu i wchodzą do pozostałych przy następnym starcie.",
+    "sourceTitle": "Wybierz źródło",
+    "sourceDesc": "Wskaż instancję, z której skopiować stan. Ona zasieje wspólną kopię; potem możesz edytować ją z dowolnej instancji.",
+    "sourceSearch": "Szukaj instancji",
+    "sourceEmpty": "Brak instancji do skopiowania.",
+    "sourceConfirm": "Synchronizuj",
+    "seededFrom": "Zasiane z instancji {version}",
+    "enabled": "{option} — synchronizacja włączona",
+    "packsTitle": "Wspólne paczki zasobów",
+    "packsEmpty": "Brak zebranych paczek. Trafiają tu po zamknięciu gry.",
+    "packFormat": "format {n}",
+    "openFolder": "Otwórz wspólny folder",
+    "instanceDesc": "Wyłącz kategorię, żeby ta instancja z niej wypadła.",
+    "instanceNothingOn": "Żadna kategoria nie jest jeszcze synchronizowana. Włącz je w ustawieniach launchera.",
+    "conflictTitle": "Ta instancja ma już własne dane",
+    "conflictDesc": "Wspólna kopia i ta instancja mają dane. Wybierz, które wygrywa.",
+    "useSynced": "Użyj wspólnych",
+    "useInstance": "Nadpisz wspólne",
+    "options": {
+      "game_options": {
+        "label": "Ustawienia gry",
+        "desc": "Dźwięk, FOV, zasięg widzenia, język i sterowanie. Klawiszologia przenosi się tylko między 1.13 i nowszymi."
+      },
+      "multiplayer_servers": {
+        "label": "Serwery wieloosobowe",
+        "desc": "Lista serwerów, scalana zamiast nadpisywana."
+      },
+      "resource_packs": {
+        "label": "Paczki zasobów",
+        "desc": "Wspólne pliki paczek, wgrywane tam, gdzie format pasuje do wersji gry."
+      },
+      "command_history": {
+        "label": "Historia komend",
+        "desc": "Komendy wpisane na czacie."
+      },
+      "creative_hotbars": {
+        "label": "Paski kreatywne",
+        "desc": "Zapisane paski w trybie kreatywnym. Dzielone tylko między instancjami po tej samej stronie 1.13."
+      }
+    },
+    "instancesTitle": "Które instancje biorą udział",
+    "instancesDesc": "Każda instancja domyślnie wchodzi do włączonej kategorii. Odznacz, żeby ją wypiąć.",
+    "instanceColumn": "Instancja"
+  },
+  "syncAnnounce": {
+    "badge": "Nowość w tej aktualizacji",
+    "title": "Synchronizuj instancje",
+    "body": "Możesz teraz trzymać ustawienia gry, serwery, paczki zasobów i więcej takie same we wszystkich instancjach, żeby wszystko było tam, gdzie je zostawiłeś.",
+    "later": "Włącz teraz albo skonfiguruj później w ustawieniach launchera.",
+    "skip": "Pomiń",
+    "syncAll": "Synchronizuj wszystko",
+    "syncSelected": "Synchronizuj wybrane",
+    "done": "Synchronizuję {n} kategorie",
+    "failed": "Nie udało się włączyć synchronizacji",
+    "options": {
+      "game_options": "Synchronizuj ustawienia gry",
+      "multiplayer_servers": "Synchronizuj serwery wieloosobowe",
+      "resource_packs": "Synchronizuj paczki zasobów",
+      "command_history": "Synchronizuj historię komend",
+      "creative_hotbars": "Synchronizuj paski kreatywne"
+    }
   }
 }

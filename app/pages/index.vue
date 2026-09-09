@@ -305,7 +305,7 @@ async function createShortcut(item: Instance) {
     await invoke('create_desktop_shortcut', { id: item.id })
     toast.add({ title: t('instance.shortcutCreated'), color: 'success' })
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   }
 }
 
@@ -314,7 +314,7 @@ async function duplicate(item: Instance) {
     await invoke('duplicate_instance', { id: item.id })
     await instances.load()
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   }
 }
 
@@ -322,7 +322,7 @@ async function openFolder(item: Instance) {
   try {
     await invoke('open_instance_folder', { id: item.id })
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   }
 }
 
@@ -332,7 +332,7 @@ async function copyPath(item: Instance) {
     await navigator.clipboard.writeText(path)
     toast.add({ title: t('library.copied'), color: 'success' })
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   }
 }
 

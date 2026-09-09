@@ -2,6 +2,14 @@ use std::path::PathBuf;
 
 const APP_DIR_NAME: &str = "SpectraLauncher";
 
+#[cfg(test)]
+pub static DATA_DIR_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+#[cfg(test)]
+pub fn lock_data_dir() -> std::sync::MutexGuard<'static, ()> {
+    DATA_DIR_LOCK.lock().unwrap_or_else(|e| e.into_inner())
+}
+
 pub fn data_root() -> PathBuf {
     if let Ok(custom) = std::env::var("SPECTRA_DATA_DIR") {
         if !custom.trim().is_empty() {
@@ -71,6 +79,38 @@ pub fn skins_dir() -> PathBuf {
 
 pub fn cache_dir() -> PathBuf {
     data_root().join("cache")
+}
+
+pub fn shared_sync_dir() -> PathBuf {
+    data_root().join("shared")
+}
+
+pub fn sync_state_file() -> PathBuf {
+    shared_sync_dir().join("sync.json")
+}
+
+pub fn sync_servers_file() -> PathBuf {
+    shared_sync_dir().join("servers.json")
+}
+
+pub fn sync_options_file() -> PathBuf {
+    shared_sync_dir().join("options.json")
+}
+
+pub fn sync_history_file() -> PathBuf {
+    shared_sync_dir().join("command_history.txt")
+}
+
+pub fn sync_hotbar_file() -> PathBuf {
+    shared_sync_dir().join("hotbar.nbt")
+}
+
+pub fn sync_packs_dir() -> PathBuf {
+    shared_sync_dir().join("resourcepacks")
+}
+
+pub fn sync_packs_file() -> PathBuf {
+    shared_sync_dir().join("resourcepacks.json")
 }
 
 pub fn symbols_dir() -> PathBuf {

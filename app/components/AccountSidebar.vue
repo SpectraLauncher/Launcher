@@ -47,7 +47,7 @@ async function run(key: string, fn: () => Promise<unknown>) {
   try {
     await fn()
   } catch (e) {
-    error.value = String(e)
+    error.value = errorText(e)
   } finally {
     busy.value = ''
   }
@@ -70,7 +70,7 @@ async function loadFriends() {
     outgoing.value = res.outgoing
     presence.value = res.presence ?? 'visible'
   } catch (e) {
-    error.value = String(e)
+    error.value = errorText(e)
   }
 }
 

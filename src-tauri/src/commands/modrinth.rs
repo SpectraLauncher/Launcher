@@ -8,6 +8,7 @@ use tauri::{AppHandle, Emitter};
 use crate::commands::instances;
 use crate::models::{Instance, Loader};
 use crate::{paths, store};
+use crate::error::{AppError, AppResult};
 
 const API: &str = "https://api.modrinth.com/v2";
 const USER_AGENT: &str = concat!("MakotoPD/Spectra-Launcher/", env!("CARGO_PKG_VERSION"), " (spectra launcher)");
@@ -24,7 +25,7 @@ fn http() -> reqwest::Client {
         .clone()
 }
 
-fn client() -> Result<reqwest::Client, String> {
+fn client() -> AppResult<reqwest::Client> {
     Ok(http())
 }
 
@@ -33,7 +34,7 @@ fn rate_gate() -> &'static tokio::sync::Semaphore {
     SEM.get_or_init(|| tokio::sync::Semaphore::new(6))
 }
 
-async fn send(req: reqwest::RequestBuilder) -> Result<reqwest::Response, String> {
+async fn send(req: reqwest::RequestBuilder) -> AppResult<reqwest::Response> {
     let _permit = rate_gate().acquire().await.map_err(|e| e.to_string())?;
     let mut attempt: u32 = 0;
     loop {
@@ -104,7 +105,7 @@ pub struct SearchResponse {
 }
 
 #[tauri::command]
-pub async fn modrinth_search(params: SearchParams) -> Result<SearchResponse, String> {
+pub async fn modrinth_search(params: SearchParams) -> AppResult<SearchResponse> {
     let mut facets: Vec<Vec<String>> = vec![vec![format!("project_type:{}", params.project_type)]];
 
     if !params.loaders.is_empty() {
@@ -129,9 +130,9 @@ pub async fn modrinth_search(params: SearchParams) -> Result<SearchResponse, Str
     .await?;
 
     if !resp.status().is_success() {
-        return Err(format!("Modrinth search failed: {}", resp.status()));
+        return Err(AppError::network(format!("Modrinth search failed: {}", resp.status())));
     }
-    resp.json::<SearchResponse>().await.map_err(|e| e.to_string())
+    (resp.json::<SearchResponse>().await.map_err(|e| e.to_string())).map_err(Into::into)
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -180,7 +181,7 @@ pub async fn modrinth_versions(
     project_id: String,
     loaders: Option<Vec<String>>,
     game_versions: Option<Vec<String>>,
-) -> Result<Vec<Version>, String> {
+) -> AppResult<Vec<Version>> {
     let mut req = http().get(format!("{API}/project/{project_id}/version"));
     if let Some(l) = loaders.filter(|l| !l.is_empty()) {
         req = req.query(&[("loaders", serde_json::to_string(&l).map_err(|e| e.to_string())?)]);
@@ -191,13 +192,13 @@ pub async fn modrinth_versions(
 
     let resp = send(req).await?;
     if !resp.status().is_success() {
-        return Err(format!("Modrinth versions failed: {}", resp.status()));
+        return Err(AppError::network(format!("Modrinth versions failed: {}", resp.status())));
     }
-    resp.json::<Vec<Version>>().await.map_err(|e| e.to_string())
+    (resp.json::<Vec<Version>>().await.map_err(|e| e.to_string())).map_err(Into::into)
 }
 
 #[tauri::command]
-pub async fn modrinth_match_file(instance_id: String, filename: String) -> Result<bool, String> {
+pub async fn modrinth_match_file(instance_id: String, filename: String) -> AppResult<bool> {
     use sha1::{Digest, Sha1};
 
     let dir = paths::instance_game_dir(&instance_id).join("mods");
@@ -283,7 +284,7 @@ async fn bulk_latest_versions(
     hashes: &[String],
     loaders: &Option<Vec<String>>,
     game_versions: &Option<Vec<String>>,
-) -> Result<HashMap<String, Version>, String> {
+) -> AppResult<HashMap<String, Version>> {
     if hashes.is_empty() {
         return Ok(HashMap::new());
     }
@@ -296,9 +297,9 @@ async fn bulk_latest_versions(
     }
     let resp = send(http().post(format!("{API}/version_files/update")).json(&body)).await?;
     if !resp.status().is_success() {
-        return Err(format!("update check failed: {}", resp.status()));
+        return Err(AppError::network(format!("update check failed: {}", resp.status())));
     }
-    resp.json::<HashMap<String, Version>>().await.map_err(|e| e.to_string())
+    (resp.json::<HashMap<String, Version>>().await.map_err(|e| e.to_string())).map_err(Into::into)
 }
 
 #[tauri::command]
@@ -306,7 +307,7 @@ pub async fn check_mod_updates(
     instance_id: String,
     loaders: Option<Vec<String>>,
     game_versions: Option<Vec<String>>,
-) -> Result<Vec<ModUpdate>, String> {
+) -> AppResult<Vec<ModUpdate>> {
     let index = read_content_index(&instance_id);
     let mut out = Vec::new();
 
@@ -353,7 +354,7 @@ pub async fn update_all_mods(
     instance_id: String,
     loaders: Option<Vec<String>>,
     game_versions: Option<Vec<String>>,
-) -> Result<usize, String> {
+) -> AppResult<usize> {
     let mut index = read_content_index(&instance_id);
     let mods_dir = paths::instance_game_dir(&instance_id).join("mods");
 
@@ -434,7 +435,7 @@ pub struct Category {
 }
 
 #[tauri::command]
-pub async fn modrinth_categories(project_type: String) -> Result<Vec<Category>, String> {
+pub async fn modrinth_categories(project_type: String) -> AppResult<Vec<Category>> {
     let resp = send(http().get(format!("{API}/tag/category"))).await?;
     let all: Vec<RawCategory> = resp.json().await.map_err(|e| e.to_string())?;
     Ok(all
@@ -484,7 +485,7 @@ pub fn read_content_index(instance_id: &str) -> ContentIndex {
         .unwrap_or_default()
 }
 
-pub fn write_content_index(instance_id: &str, index: &ContentIndex) -> Result<(), String> {
+pub fn write_content_index(instance_id: &str, index: &ContentIndex) -> AppResult<()> {
     store::write_json(&paths::instance_content_index(instance_id), index)
 }
 
@@ -504,8 +505,8 @@ pub fn installed_by_other_provider(
 }
 
 #[tauri::command]
-pub fn get_installed_content(instance_id: String) -> Result<Vec<InstalledItem>, String> {
-    Ok(read_content_index(&instance_id).items)
+pub async fn get_installed_content(instance_id: String) -> AppResult<Vec<InstalledItem>> {
+    crate::blocking(move || Ok(read_content_index(&instance_id).items)).await
 }
 
 #[derive(Serialize)]
@@ -527,9 +528,13 @@ fn accepted_loaders(loader: &Loader) -> Vec<&'static str> {
 }
 
 #[tauri::command]
-pub fn check_conflicts(instance_id: String) -> Result<Vec<Conflict>, String> {
+pub async fn check_conflicts(instance_id: String) -> AppResult<Vec<Conflict>> {
+    crate::blocking(move || conflicts(&instance_id)).await
+}
+
+fn conflicts(instance_id: &str) -> AppResult<Vec<Conflict>> {
     let instance: Instance =
-        store::read_json(&paths::instance_config_file(&instance_id))?.ok_or("instance not found")?;
+        store::read_json(&paths::instance_config_file(instance_id))?.ok_or("instance not found")?;
     let mut accepted = accepted_loaders(&instance.loader);
     let loader_label = match &instance.loader {
         Loader::Vanilla => "Vanilla",
@@ -603,13 +608,20 @@ pub struct RemovableDep {
 }
 
 #[tauri::command]
-pub fn get_removable_dependencies(
+pub async fn get_removable_dependencies(
     instance_id: String,
     filename: String,
-) -> Result<Vec<RemovableDep>, String> {
+) -> AppResult<Vec<RemovableDep>> {
+    crate::blocking(move || removable_dependencies(&instance_id, &filename)).await
+}
+
+fn removable_dependencies(
+    instance_id: &str,
+    filename: &str,
+) -> AppResult<Vec<RemovableDep>> {
     use std::collections::{HashMap, HashSet, VecDeque};
 
-    let index = read_content_index(&instance_id);
+    let index = read_content_index(instance_id);
     let items = &index.items;
 
     let Some(root) = items.iter().find(|i| i.filename == filename) else {
@@ -683,12 +695,12 @@ pub struct ProjectFull {
 }
 
 #[tauri::command]
-pub async fn modrinth_project(id: String) -> Result<ProjectFull, String> {
+pub async fn modrinth_project(id: String) -> AppResult<ProjectFull> {
     let resp = send(http().get(format!("{API}/project/{id}"))).await?;
     if !resp.status().is_success() {
-        return Err(format!("Modrinth project failed: {}", resp.status()));
+        return Err(AppError::network(format!("Modrinth project failed: {}", resp.status())));
     }
-    resp.json::<ProjectFull>().await.map_err(|e| e.to_string())
+    (resp.json::<ProjectFull>().await.map_err(|e| e.to_string())).map_err(Into::into)
 }
 
 #[derive(Deserialize)]
@@ -735,20 +747,20 @@ fn kind_and_folder(version: &Version, project: &ProjectInfo) -> (&'static str, &
     }
 }
 
-async fn fetch_version(http: &reqwest::Client, version_id: &str) -> Result<Version, String> {
+async fn fetch_version(http: &reqwest::Client, version_id: &str) -> AppResult<Version> {
     let resp = send(http.get(format!("{API}/version/{version_id}"))).await?;
     if !resp.status().is_success() {
-        return Err(format!("version {version_id} failed: {}", resp.status()));
+        return Err(AppError::network(format!("version {version_id} failed: {}", resp.status())));
     }
-    resp.json::<Version>().await.map_err(|e| e.to_string())
+    (resp.json::<Version>().await.map_err(|e| e.to_string())).map_err(Into::into)
 }
 
-async fn fetch_project(http: &reqwest::Client, project_id: &str) -> Result<ProjectInfo, String> {
+async fn fetch_project(http: &reqwest::Client, project_id: &str) -> AppResult<ProjectInfo> {
     let resp = send(http.get(format!("{API}/project/{project_id}"))).await?;
     if !resp.status().is_success() {
-        return Err(format!("project {project_id} failed: {}", resp.status()));
+        return Err(AppError::network(format!("project {project_id} failed: {}", resp.status())));
     }
-    resp.json::<ProjectInfo>().await.map_err(|e| e.to_string())
+    (resp.json::<ProjectInfo>().await.map_err(|e| e.to_string())).map_err(Into::into)
 }
 
 async fn resolve_latest_version(
@@ -756,7 +768,7 @@ async fn resolve_latest_version(
     project_id: &str,
     loader: &Option<String>,
     game_version: &Option<String>,
-) -> Result<Option<String>, String> {
+) -> AppResult<Option<String>> {
     let mut req = http.get(format!("{API}/project/{project_id}/version"));
     if let Some(l) = loader.as_ref().filter(|l| !l.is_empty()) {
         req = req.query(&[("loaders", serde_json::to_string(&[l]).map_err(|e| e.to_string())?)]);
@@ -774,7 +786,7 @@ pub async fn modrinth_install_with_deps(
     version_id: String,
     game_version: Option<String>,
     loader: Option<String>,
-) -> Result<Vec<InstalledItem>, String> {
+) -> AppResult<Vec<InstalledItem>> {
     let http = client()?;
     let mut index = read_content_index(&instance_id);
     let mut visited: std::collections::HashSet<String> =
@@ -799,7 +811,7 @@ fn install_rec<'a>(
     visited: &'a mut std::collections::HashSet<String>,
     index: &'a mut ContentIndex,
     added: &'a mut Vec<InstalledItem>,
-) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send + 'a>> {
+) -> std::pin::Pin<Box<dyn std::future::Future<Output = AppResult<()>> + Send + 'a>> {
     Box::pin(async move {
         let version = fetch_version(http, version_id).await?;
         if is_dependency && visited.contains(&version.project_id) {
@@ -914,7 +926,7 @@ pub async fn modrinth_install_modpack(
     icon_url: Option<String>,
     project_id: Option<String>,
     version_id: Option<String>,
-) -> Result<Instance, String> {
+) -> AppResult<Instance> {
     let http = client()?;
     let pack_bytes = download(&http, &url).await?;
     let (raw_index, index) = parse_mrpack(&pack_bytes)?;
@@ -930,7 +942,7 @@ pub async fn modrinth_install_modpack(
         .filter(|n| !n.trim().is_empty())
         .unwrap_or_else(|| index.name.clone());
 
-    let mut instance = instances::create_instance(name, mc_version, loader, None, None)?;
+    let mut instance = instances::make_instance(name, mc_version, loader, None, None)?;
 
     if let Some(icon) = icon_url.filter(|u| !u.trim().is_empty()) {
         if let Ok(bytes) = download(&http, &icon).await {
@@ -952,7 +964,7 @@ pub async fn import_file(
     app: AppHandle,
     path: String,
     name_override: Option<String>,
-) -> Result<Instance, String> {
+) -> AppResult<Instance> {
     let pack_bytes = std::fs::read(&path).map_err(|e| format!("read file: {e}"))?;
 
     if crate::commands::import::is_backup_zip(&pack_bytes) {
@@ -970,7 +982,7 @@ pub async fn import_file(
             .filter(|n| !n.trim().is_empty())
             .unwrap_or_else(|| index.name.clone());
         let http = client()?;
-        let instance = instances::create_instance(name, mc_version, loader, None, None)?;
+        let instance = instances::make_instance(name, mc_version, loader, None, None)?;
         apply_mrpack_files(&app, &http, &instance.id, &pack_bytes, &index, &raw_index, &instance.name).await?;
         return Ok(instance);
     }
@@ -1038,7 +1050,7 @@ pub async fn export_mrpack(
     exclude: Vec<String>,
     include: Vec<String>,
     optional_disabled: bool,
-) -> Result<(), String> {
+) -> AppResult<()> {
     use sha1::{Digest, Sha1};
 
     let instance: Instance =
@@ -1161,7 +1173,7 @@ pub fn add_overrides(
     optional_disabled: bool,
     opts: zip::write::SimpleFileOptions,
     on_file: &mut dyn FnMut(u64),
-) -> Result<(), String> {
+) -> AppResult<()> {
     let dir = if rel.is_empty() { base.to_path_buf() } else { base.join(rel) };
     let Ok(entries) = std::fs::read_dir(&dir) else { return Ok(()) };
     for e in entries.flatten() {
@@ -1213,7 +1225,7 @@ fn is_junk(rel: &str) -> bool {
     matches!(name, ".DS_Store" | "Thumbs.db" | "thumbs.db") || name.ends_with(".pw.toml")
 }
 
-fn parse_mrpack(pack_bytes: &[u8]) -> Result<(String, MrIndex), String> {
+fn parse_mrpack(pack_bytes: &[u8]) -> AppResult<(String, MrIndex)> {
     let mut archive =
         zip::ZipArchive::new(Cursor::new(pack_bytes)).map_err(|e| format!("open mrpack: {e}"))?;
     let mut f = archive
@@ -1233,7 +1245,7 @@ async fn apply_mrpack_files(
     index: &MrIndex,
     raw_index: &str,
     name: &str,
-) -> Result<(), String> {
+) -> AppResult<()> {
     let game_dir = paths::instance_game_dir(instance_id);
 
     let downloadable: Vec<&MrFile> = index
@@ -1277,7 +1289,7 @@ async fn apply_mrpack_files(
     }
     while let Some(res) = set.join_next().await {
         if let Ok(Err(e)) = res {
-            return Err(e);
+            return Err((e).into());
         }
     }
 
@@ -1310,7 +1322,7 @@ fn pick_modpack_candidate(versions: Vec<Version>, mc_version: &str) -> Option<Ve
 }
 
 #[tauri::command]
-pub async fn check_modpack_update(instance_id: String) -> Result<Option<ModpackUpdate>, String> {
+pub async fn check_modpack_update(instance_id: String) -> AppResult<Option<ModpackUpdate>> {
     let instance: Instance =
         store::read_json(&paths::instance_config_file(&instance_id))?.ok_or("instance not found")?;
     let (Some(pid), Some(current)) = (instance.modpack_project_id, instance.modpack_version_id) else {
@@ -1339,7 +1351,7 @@ pub async fn check_modpack_update(instance_id: String) -> Result<Option<ModpackU
 }
 
 #[tauri::command]
-pub async fn update_modpack(app: AppHandle, instance_id: String) -> Result<(), String> {
+pub async fn update_modpack(app: AppHandle, instance_id: String) -> AppResult<()> {
     crate::commands::snapshots::snapshot_before(&app, &instance_id, "before modpack update").await;
 
     let mut instance: Instance =
@@ -1388,7 +1400,7 @@ async fn index_modpack_content(
     http: &reqwest::Client,
     instance_id: &str,
     files: &[MrFile],
-) -> Result<(), String> {
+) -> AppResult<()> {
     let mut by_hash: std::collections::HashMap<String, &MrFile> = std::collections::HashMap::new();
     for f in files {
         if let Some(h) = f.hashes.as_ref().and_then(|h| h.sha1.clone()) {
@@ -1406,7 +1418,7 @@ async fn index_modpack_content(
     )
     .await?;
     if !resp.status().is_success() {
-        return Err(format!("version_files: {}", resp.status()));
+        return Err(AppError::network(format!("version_files: {}", resp.status())));
     }
     let versions: std::collections::HashMap<String, Version> =
         resp.json().await.map_err(|e| e.to_string())?;
@@ -1462,7 +1474,7 @@ async fn index_modpack_content(
 }
 
 #[tauri::command]
-pub async fn match_local_mods(instance_id: String) -> Result<usize, String> {
+pub async fn match_local_mods(instance_id: String) -> AppResult<usize> {
     use sha1::{Digest, Sha1};
 
     let dir = paths::instance_game_dir(&instance_id).join("mods");
@@ -1502,7 +1514,7 @@ pub async fn match_local_mods(instance_id: String) -> Result<usize, String> {
     )
     .await?;
     if !resp.status().is_success() {
-        return Err(format!("version_files: {}", resp.status()));
+        return Err(AppError::network(format!("version_files: {}", resp.status())));
     }
     let versions: HashMap<String, Version> = resp.json().await.map_err(|e| e.to_string())?;
     if versions.is_empty() {
@@ -1577,7 +1589,7 @@ fn loader_from_deps(deps: &HashMap<String, String>) -> Loader {
 fn extract_overrides(
     archive: &mut zip::ZipArchive<Cursor<&Vec<u8>>>,
     game_dir: &Path,
-) -> Result<(), String> {
+) -> AppResult<()> {
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i).map_err(|e| e.to_string())?;
         if entry.is_dir() {
@@ -1600,27 +1612,27 @@ fn extract_overrides(
     Ok(())
 }
 
-pub fn https_only(url: &str) -> Result<(), String> {
+pub fn https_only(url: &str) -> AppResult<()> {
     if url.starts_with("https://") {
         return Ok(());
     }
-    Err(format!("refusing to download over an unencrypted connection: {url}"))
+    Err(AppError::invalid(format!("refusing to download over an unencrypted connection: {url}")))
 }
 
-async fn download(client: &reqwest::Client, url: &str) -> Result<Vec<u8>, String> {
+async fn download(client: &reqwest::Client, url: &str) -> AppResult<Vec<u8>> {
     https_only(url)?;
     let resp = send(client.get(url)).await?;
     if !resp.status().is_success() {
-        return Err(format!("download failed ({}): {url}", resp.status()));
+        return Err(AppError::network(format!("download failed ({}): {url}", resp.status())));
     }
     Ok(resp.bytes().await.map_err(|e| e.to_string())?.to_vec())
 }
 
-async fn download_direct(client: &reqwest::Client, url: &str) -> Result<Vec<u8>, String> {
+async fn download_direct(client: &reqwest::Client, url: &str) -> AppResult<Vec<u8>> {
     https_only(url)?;
     let resp = client.get(url).send().await.map_err(|e| e.to_string())?;
     if !resp.status().is_success() {
-        return Err(format!("download failed ({}): {url}", resp.status()));
+        return Err(AppError::network(format!("download failed ({}): {url}", resp.status())));
     }
     Ok(resp.bytes().await.map_err(|e| e.to_string())?.to_vec())
 }
@@ -1687,13 +1699,13 @@ mod tests {
     }
 }
 
-fn join_safe(base: &Path, rel: &str) -> Result<PathBuf, String> {
+fn join_safe(base: &Path, rel: &str) -> AppResult<PathBuf> {
     let mut out = base.to_path_buf();
     for comp in Path::new(rel).components() {
         match comp {
             Component::Normal(c) => out.push(c),
             Component::CurDir => {}
-            _ => return Err(format!("unsafe path in modpack: {rel}")),
+            _ => return Err(AppError::invalid(format!("unsafe path in modpack: {rel}"))),
         }
     }
     Ok(out)

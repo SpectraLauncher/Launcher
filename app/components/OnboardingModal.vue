@@ -197,14 +197,14 @@ watch(open, (v) => {
 async function msLogin() {
   loggingIn.value = true
   try { await accounts.login() }
-  catch (e) { toast.add({ title: String(e), color: 'error' }) }
+  catch (e) { toast.add({ title: errorText(e), color: 'error' }) }
   finally { loggingIn.value = false }
 }
 async function offlineLogin() {
   const name = offlineName.value.trim()
   if (!name) return
   try { await accounts.loginOffline(name) }
-  catch (e) { toast.add({ title: String(e), color: 'error' }) }
+  catch (e) { toast.add({ title: errorText(e), color: 'error' }) }
 }
 
 async function complete() {

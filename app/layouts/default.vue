@@ -54,6 +54,7 @@
     <LinkModsModal />
     <BlockedModsModal />
     <OnboardingModal />
+    <SyncAnnouncementModal />
 
     <Transition name="fade">
       <div v-if="dragging" class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
@@ -132,7 +133,7 @@ async function handleDrop(paths: string[]) {
       toast.add({ title: t('drop.nothing'), color: 'neutral' })
     }
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   }
 }
 

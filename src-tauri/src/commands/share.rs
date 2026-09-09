@@ -9,6 +9,7 @@ use crate::commands::modrinth::InstalledItem;
 use crate::commands::{curseforge, import, instances, modrinth};
 use crate::models::{Instance, Loader};
 use crate::{paths, store};
+use crate::error::{AppError, AppResult};
 
 const SHARE_API: &str = "https://usespectra.app/api/share";
 
@@ -125,7 +126,7 @@ pub(crate) fn scan_unresolved(id: &str, items: &[InstalledItem]) -> (Vec<Unresol
 }
 
 #[tauri::command]
-pub async fn share_preview(id: String) -> Result<SharePreview, String> {
+pub async fn share_preview(id: String) -> AppResult<SharePreview> {
     link_local_files(&id).await;
     let items = modrinth::read_content_index(&id).items;
     let (unresolved, unresolved_bytes) = scan_unresolved(&id, &items);
@@ -142,7 +143,7 @@ pub async fn share_instance(
     app: AppHandle,
     id: String,
     include: Vec<String>,
-) -> Result<ShareResult, String> {
+) -> AppResult<ShareResult> {
     // Uploads are tied to an account — the server has no anonymous route any
     // more. Check before packing so a gigabyte of mods is not zipped for nothing.
     let Some(token) = crate::commands::spectra::stored_token() else {
@@ -223,7 +224,7 @@ async fn upload_to_storage(
     id: &str,
     mods: usize,
     token: &str,
-) -> Result<ShareResult, String> {
+) -> AppResult<ShareResult> {
     let size = std::fs::metadata(path).map_err(|e| format!("stat pack: {e}"))?.len();
     let client = crate::http();
 
@@ -255,7 +256,7 @@ async fn upload_to_storage(
         if !resp.status().is_success() {
             let status = resp.status();
             let detail = resp.text().await.unwrap_or_default();
-            return Err(extract_message(&detail).unwrap_or_else(|| format!("upload failed ({status})")));
+            return Err((extract_message(&detail).unwrap_or_else(|| format!("upload failed ({status})"))).into());
         }
         resp.json().await.map_err(|e| format!("bad server reply: {e}"))?
     };
@@ -282,7 +283,7 @@ async fn upload_to_storage(
         .await
         .map_err(|e| format!("upload failed: {e}"))?;
     if !put.status().is_success() {
-        return Err(format!("storage rejected the pack ({})", put.status()));
+        return Err(AppError::network(format!("storage rejected the pack ({})", put.status())));
     }
 
     emit_progress(app, "finishing", 0, 0);
@@ -297,7 +298,7 @@ async fn upload_to_storage(
     if !done.status().is_success() {
         let status = done.status();
         let detail = done.text().await.unwrap_or_default();
-        return Err(extract_message(&detail).unwrap_or_else(|| format!("could not finish the share ({status})")));
+        return Err((extract_message(&detail).unwrap_or_else(|| format!("could not finish the share ({status})"))).into());
     }
 
     #[derive(Deserialize)]
@@ -339,7 +340,7 @@ pub(crate) fn write_pack(
     unresolved: &HashSet<String>,
     include: &HashSet<String>,
     on_file: &mut dyn FnMut(u64),
-) -> Result<(), String> {
+) -> AppResult<()> {
     let handled = handled_files(manifest, unresolved, include);
 
     let file = std::fs::File::create(dest).map_err(|e| format!("create pack: {e}"))?;
@@ -384,7 +385,7 @@ fn extract_message(body: &str) -> Option<String> {
 }
 
 #[tauri::command]
-pub async fn import_share(app: AppHandle, code: String) -> Result<ShareImportResult, String> {
+pub async fn import_share(app: AppHandle, code: String) -> AppResult<ShareImportResult> {
     if code.to_lowercase().contains("curseforge.com") {
         return Err("That's a CurseForge profile link. Spectra can't redeem those — \
                     ask the sender to use the CurseForge app's \"Export profile\" \
@@ -397,7 +398,7 @@ pub async fn import_share(app: AppHandle, code: String) -> Result<ShareImportRes
     let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes))
         .map_err(|e| format!("open pack: {e}"))?;
 
-    let instance = instances::create_instance(
+    let instance = instances::make_instance(
         manifest.name.clone(),
         manifest.mc_version.clone(),
         manifest.loader.clone(),
@@ -497,7 +498,7 @@ pub async fn import_share(app: AppHandle, code: String) -> Result<ShareImportRes
     Ok(ShareImportResult { instance, installed, failed, needs_curseforge })
 }
 
-fn normalize_code(raw: &str) -> Result<String, String> {
+fn normalize_code(raw: &str) -> AppResult<String> {
     let code: String = raw
         .trim()
         .to_uppercase()
@@ -511,7 +512,7 @@ fn normalize_code(raw: &str) -> Result<String, String> {
     Ok(code)
 }
 
-async fn revision_of(code: &str) -> Result<u32, String> {
+async fn revision_of(code: &str) -> AppResult<u32> {
     let resp = crate::http()
         .get(format!("{SHARE_API}/{code}"))
         .query(&[("meta", "1")])
@@ -541,7 +542,7 @@ struct ShareMeta {
     revision: u32,
 }
 
-async fn fetch_pack(code: &str) -> Result<(ShareManifest, Vec<u8>), String> {
+async fn fetch_pack(code: &str) -> AppResult<(ShareManifest, Vec<u8>)> {
     let client = crate::http();
     let mut req = client
         .get(format!("{SHARE_API}/{code}"))
@@ -574,7 +575,7 @@ async fn fetch_pack(code: &str) -> Result<(ShareManifest, Vec<u8>), String> {
             .await
             .map_err(|e| format!("download failed: {e}"))?;
         if !stored.status().is_success() {
-            return Err(format!("storage refused the download ({})", stored.status()));
+            return Err(AppError::network(format!("storage refused the download ({})", stored.status())));
         }
         stored.bytes().await.map_err(|e| e.to_string())?.to_vec()
     } else {
@@ -626,7 +627,7 @@ pub(crate) fn plan_sync<'a>(
 }
 
 #[tauri::command]
-pub async fn sync_share(app: AppHandle, id: String, code: String) -> Result<ShareSyncResult, String> {
+pub async fn sync_share(app: AppHandle, id: String, code: String) -> AppResult<ShareSyncResult> {
     let code = normalize_code(&code)?;
 
     let mut instance: Instance =

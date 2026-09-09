@@ -152,7 +152,7 @@
               @update:model-value="toggle(m, $event)"
             />
           </div>
-          <img v-if="m.icon_url" :src="m.icon_url" class="size-9 rounded-lg object-cover" :alt="m.name ?? m.filename" />
+          <img v-if="contentIconUrl(m)" :src="contentIconUrl(m)" loading="lazy" class="size-9 rounded-lg object-cover" :alt="m.name ?? m.filename" />
           <div v-else class="flex size-9 items-center justify-center rounded-lg bg-white/5">
             <UIcon :name="kindIcon(m.kind)" class="size-4.5 text-neutral-500" />
           </div>
@@ -416,7 +416,7 @@ async function updateMod(mod: Entry) {
     await applyVersion(mod, u.version_id)
     await load()
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   } finally {
     activity.endTask(tid)
     updatingId.value = null
@@ -431,7 +431,7 @@ async function updateAll() {
     await curseforge.updateAll(props.instanceId, filterLoaders.value, filterGv.value)
     await load()
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   } finally {
     activity.endTask(tid)
     updatingAll.value = false
@@ -458,7 +458,7 @@ async function openVersions(mod: Entry) {
       ? await curseforge.versions(mod.project_id, filterLoaders.value, filterGv.value)
       : await modrinth.versions(mod.project_id, filterLoaders.value, filterGv.value)
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   } finally {
     loadingVersions.value = false
   }
@@ -474,7 +474,7 @@ async function chooseVersion(versionId: string) {
     versionsMod.value = null
     await load()
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   } finally {
     activity.endTask(tid)
     installingVersionId.value = null
@@ -562,7 +562,7 @@ async function load() {
   try {
     mods.value = await listAll()
   } catch (e) {
-    error.value = String(e)
+    error.value = errorText(e)
   } finally {
     loading.value = false
   }
@@ -628,7 +628,7 @@ async function toggle(mod: Entry, enabled: boolean) {
     }
     mod.enabled = enabled
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   }
 }
 
@@ -655,7 +655,7 @@ async function deleteMods(mod: Entry, depFilenames: string[]) {
     const removed = new Set(all)
     mods.value = mods.value.filter(m => !removed.has(m.filename))
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   }
 }
 
@@ -665,7 +665,7 @@ async function remove(mod: Entry) {
       await invoke('delete_content', { id: props.instanceId, kind: mod.kind, filename: mod.filename })
       mods.value = mods.value.filter(m => m !== mod)
     } catch (e) {
-      toast.add({ title: String(e), color: 'error' })
+      toast.add({ title: errorText(e), color: 'error' })
     }
     return
   }
@@ -683,7 +683,7 @@ async function remove(mod: Entry) {
     depsChecked.value = new Set(found.map(d => d.filename))
     depsOpen.value = true
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   }
 }
 

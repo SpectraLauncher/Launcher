@@ -1,8 +1,9 @@
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::path::Path;
+use crate::error::{AppError, AppResult};
 
-pub fn read_json<T: DeserializeOwned>(path: &Path) -> Result<Option<T>, String> {
+pub fn read_json<T: DeserializeOwned>(path: &Path) -> AppResult<Option<T>> {
     if !path.exists() {
         return Ok(None);
     }
@@ -18,7 +19,7 @@ pub fn read_json<T: DeserializeOwned>(path: &Path) -> Result<Option<T>, String> 
 /// the same door. Files written by an older build are still plaintext JSON; they
 /// are read as-is and re-sealed, so an existing install upgrades itself the first
 /// time it starts.
-pub fn read_json_private<T: DeserializeOwned + Serialize>(path: &Path) -> Result<Option<T>, String> {
+pub fn read_json_private<T: DeserializeOwned + Serialize>(path: &Path) -> AppResult<Option<T>> {
     if !path.exists() {
         return Ok(None);
     }
@@ -114,28 +115,28 @@ fn seal(plain: Vec<u8>) -> Vec<u8> {
 }
 
 #[cfg(windows)]
-fn unseal(sealed: &[u8]) -> Result<Vec<u8>, String> {
-    dpapi::unseal(sealed)
+fn unseal(sealed: &[u8]) -> AppResult<Vec<u8>> {
+    (dpapi::unseal(sealed)).map_err(Into::into)
 }
 
 #[cfg(not(windows))]
-fn unseal(_sealed: &[u8]) -> Result<Vec<u8>, String> {
+fn unseal(_sealed: &[u8]) -> AppResult<Vec<u8>> {
     Err("file is not JSON and this platform does not encrypt token files".into())
 }
 
 /// Writes a file that holds credentials: 0600 on Unix, DPAPI-encrypted on
 /// Windows, which has no equivalent of the mode bits.
-pub fn write_json_private<T: Serialize>(path: &Path, value: &T) -> Result<(), String> {
+pub fn write_json_private<T: Serialize>(path: &Path, value: &T) -> AppResult<()> {
     let json = serde_json::to_vec_pretty(value).map_err(|e| format!("serialize: {e}"))?;
     write_bytes(path, seal(json))
 }
 
-pub fn write_json<T: Serialize>(path: &Path, value: &T) -> Result<(), String> {
+pub fn write_json<T: Serialize>(path: &Path, value: &T) -> AppResult<()> {
     let json = serde_json::to_vec_pretty(value).map_err(|e| format!("serialize: {e}"))?;
     write_bytes(path, json)
 }
 
-fn write_bytes(path: &Path, bytes: Vec<u8>) -> Result<(), String> {
+fn write_bytes(path: &Path, bytes: Vec<u8>) -> AppResult<()> {
     let parent = path.parent().unwrap_or_else(|| Path::new("."));
     std::fs::create_dir_all(parent).map_err(|e| format!("mkdir {}: {e}", parent.display()))?;
 
@@ -150,7 +151,7 @@ fn write_bytes(path: &Path, bytes: Vec<u8>) -> Result<(), String> {
     restrict(&tmp);
     if let Err(e) = std::fs::rename(&tmp, path) {
         let _ = std::fs::remove_file(&tmp);
-        return Err(format!("rename {} -> {}: {e}", tmp.display(), path.display()));
+        return Err(AppError::new("io", format!("rename {} -> {}: {e}", tmp.display(), path.display())));
     }
     restrict(path);
     Ok(())

@@ -5,6 +5,7 @@ use base64::Engine;
 use serde::{Deserialize, Serialize};
 
 use crate::paths;
+use crate::error::{AppError, AppResult};
 
 const IMAGE_EXTS: [&str; 5] = ["png", "jpg", "jpeg", "webp", "gif"];
 
@@ -16,8 +17,12 @@ pub struct ScreenshotInfo {
 }
 
 #[tauri::command]
-pub fn list_screenshots(id: String) -> Result<Vec<ScreenshotInfo>, String> {
-    let dir = paths::instance_game_dir(&id).join("screenshots");
+pub async fn list_screenshots(id: String) -> AppResult<Vec<ScreenshotInfo>> {
+    crate::blocking(move || screenshots(&id)).await
+}
+
+fn screenshots(id: &str) -> AppResult<Vec<ScreenshotInfo>> {
+    let dir = paths::instance_game_dir(id).join("screenshots");
     let mut out = Vec::new();
     let entries = match std::fs::read_dir(&dir) {
         Ok(e) => e,
@@ -75,8 +80,12 @@ struct LevelVersion {
 }
 
 #[tauri::command]
-pub fn list_worlds(id: String) -> Result<Vec<WorldInfo>, String> {
-    let dir = paths::instance_game_dir(&id).join("saves");
+pub async fn list_worlds(id: String) -> AppResult<Vec<WorldInfo>> {
+    crate::blocking(move || worlds(&id)).await
+}
+
+fn worlds(id: &str) -> AppResult<Vec<WorldInfo>> {
+    let dir = paths::instance_game_dir(id).join("saves");
     let mut out = Vec::new();
     let entries = match std::fs::read_dir(&dir) {
         Ok(e) => e,
@@ -132,22 +141,22 @@ pub struct PackInfo {
     filename: String,
     description: Option<String>,
     pack_format: Option<i64>,
-    icon: Option<String>,
+    icon_path: Option<String>,
     is_zip: bool,
     enabled: bool,
 }
 
 #[tauri::command]
-pub fn list_resource_packs(id: String) -> Result<Vec<PackInfo>, String> {
-    list_packs(&paths::instance_game_dir(&id).join("resourcepacks"))
+pub async fn list_resource_packs(id: String) -> AppResult<Vec<PackInfo>> {
+    crate::blocking(move || list_packs(&paths::instance_game_dir(&id).join("resourcepacks"))).await
 }
 
 #[tauri::command]
-pub fn list_data_packs(id: String) -> Result<Vec<PackInfo>, String> {
-    list_packs(&paths::instance_game_dir(&id).join("datapacks"))
+pub async fn list_data_packs(id: String) -> AppResult<Vec<PackInfo>> {
+    crate::blocking(move || list_packs(&paths::instance_game_dir(&id).join("datapacks"))).await
 }
 
-fn list_packs(dir: &Path) -> Result<Vec<PackInfo>, String> {
+fn list_packs(dir: &Path) -> AppResult<Vec<PackInfo>> {
     let mut out = Vec::new();
     let entries = match std::fs::read_dir(dir) {
         Ok(e) => e,
@@ -168,14 +177,14 @@ fn read_pack(path: &Path) -> Option<PackInfo> {
 
     if path.is_dir() {
         let mcmeta = std::fs::read_to_string(path.join("pack.mcmeta")).ok();
-        let icon = std::fs::read(path.join("pack.png")).ok().map(png_data_url);
+        let icon = path.join("pack.png");
         let (description, pack_format) = parse_mcmeta(mcmeta.as_deref());
         Some(PackInfo {
             name: base.clone(),
             filename: base,
             description,
             pack_format,
-            icon,
+            icon_path: icon.is_file().then(|| icon.to_string_lossy().into_owned()),
             is_zip: false,
             enabled,
         })
@@ -187,7 +196,7 @@ fn read_pack(path: &Path) -> Option<PackInfo> {
             filename: base,
             description,
             pack_format,
-            icon: icon.map(png_data_url),
+            icon_path: icon.and_then(|bytes| super::images::cache_icon(&bytes, "png")),
             is_zip: true,
             enabled,
         })
@@ -255,7 +264,7 @@ fn flatten_text(v: &serde_json::Value) -> String {
 pub struct ServerInfo {
     name: String,
     ip: String,
-    icon: Option<String>,
+    icon_path: Option<String>,
     hidden: bool,
 }
 
@@ -275,8 +284,12 @@ struct ServerEntry {
 }
 
 #[tauri::command]
-pub fn list_servers(id: String) -> Result<Vec<ServerInfo>, String> {
-    let path = paths::instance_game_dir(&id).join("servers.dat");
+pub async fn list_servers(id: String) -> AppResult<Vec<ServerInfo>> {
+    crate::blocking(move || servers(&id)).await
+}
+
+fn servers(id: &str) -> AppResult<Vec<ServerInfo>> {
+    let path = paths::instance_game_dir(id).join("servers.dat");
     let bytes = match std::fs::read(&path) {
         Ok(b) => b,
         Err(_) => return Ok(Vec::new()),
@@ -288,18 +301,25 @@ pub fn list_servers(id: String) -> Result<Vec<ServerInfo>, String> {
         .map(|s| ServerInfo {
             name: s.name.unwrap_or_default(),
             ip: s.ip.unwrap_or_default(),
-            icon: s.icon.map(|b64| format!("data:image/png;base64,{b64}")),
+            icon_path: s
+                .icon
+                .and_then(|b64| base64::engine::general_purpose::STANDARD.decode(b64).ok())
+                .and_then(|bytes| super::images::cache_icon(&bytes, "png")),
             hidden: s.hidden.unwrap_or(0) != 0,
         })
         .collect())
 }
 
 #[tauri::command]
-pub fn add_server(id: String, name: String, ip: String) -> Result<(), String> {
+pub async fn add_server(id: String, name: String, ip: String) -> AppResult<()> {
+    crate::blocking(move || push_server(&id, name, ip)).await
+}
+
+fn push_server(id: &str, name: String, ip: String) -> AppResult<()> {
     use fastnbt::Value;
     use std::collections::HashMap;
 
-    let game_dir = paths::instance_game_dir(&id);
+    let game_dir = paths::instance_game_dir(id);
     let path = game_dir.join("servers.dat");
 
     let mut root: Value = match std::fs::read(&path) {
@@ -318,14 +338,18 @@ pub fn add_server(id: String, name: String, ip: String) -> Result<(), String> {
 
     std::fs::create_dir_all(&game_dir).map_err(|e| e.to_string())?;
     let bytes = fastnbt::to_bytes(&root).map_err(|e| format!("encode servers.dat: {e}"))?;
-    std::fs::write(&path, bytes).map_err(|e| format!("write servers.dat: {e}"))
+    (std::fs::write(&path, bytes).map_err(|e| format!("write servers.dat: {e}"))).map_err(Into::into)
 }
 
 #[tauri::command]
-pub fn delete_server(id: String, index: usize) -> Result<(), String> {
+pub async fn delete_server(id: String, index: usize) -> AppResult<()> {
+    crate::blocking(move || drop_server(&id, index)).await
+}
+
+fn drop_server(id: &str, index: usize) -> AppResult<()> {
     use fastnbt::Value;
 
-    let path = paths::instance_game_dir(&id).join("servers.dat");
+    let path = paths::instance_game_dir(id).join("servers.dat");
     let bytes = std::fs::read(&path).map_err(|e| format!("read servers.dat: {e}"))?;
     let mut root: Value = fastnbt::from_bytes(&bytes).map_err(|e| format!("parse servers.dat: {e}"))?;
 
@@ -336,7 +360,7 @@ pub fn delete_server(id: String, index: usize) -> Result<(), String> {
     }
 
     let out = fastnbt::to_bytes(&root).map_err(|e| format!("encode servers.dat: {e}"))?;
-    std::fs::write(&path, out).map_err(|e| format!("write servers.dat: {e}"))
+    (std::fs::write(&path, out).map_err(|e| format!("write servers.dat: {e}"))).map_err(Into::into)
 }
 
 #[derive(Serialize)]
@@ -348,8 +372,12 @@ pub struct ShaderInfo {
 }
 
 #[tauri::command]
-pub fn list_shaders(id: String) -> Result<Vec<ShaderInfo>, String> {
-    let dir = paths::instance_game_dir(&id).join("shaderpacks");
+pub async fn list_shaders(id: String) -> AppResult<Vec<ShaderInfo>> {
+    crate::blocking(move || shaders(&id)).await
+}
+
+fn shaders(id: &str) -> AppResult<Vec<ShaderInfo>> {
+    let dir = paths::instance_game_dir(id).join("shaderpacks");
     let mut out = Vec::new();
     let entries = match std::fs::read_dir(&dir) {
         Ok(e) => e,
@@ -368,20 +396,24 @@ pub fn list_shaders(id: String) -> Result<Vec<ShaderInfo>, String> {
     Ok(out)
 }
 
-fn content_folder(kind: &str) -> Result<&'static str, String> {
+fn content_folder(kind: &str) -> AppResult<&'static str> {
     match kind {
         "resourcepack" => Ok("resourcepacks"),
         "shader" => Ok("shaderpacks"),
         "datapack" => Ok("datapacks"),
-        other => Err(format!("unknown content kind: {other}")),
+        other => Err(AppError::invalid(format!("unknown content kind: {other}"))),
     }
 }
 
 #[tauri::command]
-pub fn delete_content(id: String, kind: String, filename: String) -> Result<(), String> {
-    let folder = content_folder(&kind)?;
-    let safe = safe_name(&filename)?;
-    let base = paths::instance_game_dir(&id).join(folder);
+pub async fn delete_content(id: String, kind: String, filename: String) -> AppResult<()> {
+    crate::blocking(move || remove_content(&id, &kind, &filename)).await
+}
+
+fn remove_content(id: &str, kind: &str, filename: &str) -> AppResult<()> {
+    let folder = content_folder(kind)?;
+    let safe = safe_name(filename)?;
+    let base = paths::instance_game_dir(id).join(folder);
     for target in [base.join(&safe), base.join(format!("{safe}.disabled"))] {
         if target.is_dir() {
             std::fs::remove_dir_all(&target).map_err(|e| format!("delete: {e}"))?;
@@ -393,7 +425,7 @@ pub fn delete_content(id: String, kind: String, filename: String) -> Result<(), 
 }
 
 #[tauri::command]
-pub fn set_content_enabled(id: String, kind: String, filename: String, enabled: bool) -> Result<(), String> {
+pub fn set_content_enabled(id: String, kind: String, filename: String, enabled: bool) -> AppResult<()> {
     let folder = content_folder(&kind)?;
     let safe = safe_name(&filename)?;
     let base = paths::instance_game_dir(&id).join(folder);
@@ -410,35 +442,41 @@ pub fn set_content_enabled(id: String, kind: String, filename: String, enabled: 
 }
 
 #[tauri::command]
-pub fn delete_world(id: String, folder: String) -> Result<(), String> {
-    let safe = safe_name(&folder)?;
-    let target = paths::instance_game_dir(&id).join("saves").join(&safe);
-    if target.is_dir() {
-        std::fs::remove_dir_all(&target).map_err(|e| format!("delete: {e}"))
-    } else {
-        Ok(())
-    }
+pub async fn delete_world(id: String, folder: String) -> AppResult<()> {
+    crate::blocking(move || {
+        let safe = safe_name(&folder)?;
+        let target = paths::instance_game_dir(&id).join("saves").join(&safe);
+        if target.is_dir() {
+            (std::fs::remove_dir_all(&target).map_err(|e| format!("delete: {e}"))).map_err(Into::into)
+        } else {
+            Ok(())
+        }
+    })
+    .await
 }
 
 #[tauri::command]
-pub fn backup_world(id: String, folder: String, dest: String) -> Result<(), String> {
-    let safe = safe_name(&folder)?;
-    let src = paths::instance_game_dir(&id).join("saves").join(&safe);
-    if !src.is_dir() {
-        return Err("world not found".into());
-    }
-    zip_dir(&src, &safe, Path::new(&dest)).map_err(|e| format!("backup: {e}"))
+pub async fn backup_world(id: String, folder: String, dest: String) -> AppResult<()> {
+    crate::blocking(move || {
+        let safe = safe_name(&folder)?;
+        let src = paths::instance_game_dir(&id).join("saves").join(&safe);
+        if !src.is_dir() {
+            return Err("world not found".into());
+        }
+        (zip_dir(&src, &safe, Path::new(&dest)).map_err(|e| format!("backup: {e}"))).map_err(Into::into)
+    })
+    .await
 }
 
 #[tauri::command]
-pub fn delete_screenshot(id: String, name: String) -> Result<(), String> {
+pub fn delete_screenshot(id: String, name: String) -> AppResult<()> {
     let safe = safe_name(&name)?;
     let target = paths::instance_game_dir(&id).join("screenshots").join(&safe);
     if !has_ext(&target, &IMAGE_EXTS) {
         return Err("not an image".into());
     }
     if target.is_file() {
-        std::fs::remove_file(&target).map_err(|e| format!("delete: {e}"))
+        (std::fs::remove_file(&target).map_err(|e| format!("delete: {e}"))).map_err(Into::into)
     } else {
         Ok(())
     }
@@ -454,8 +492,12 @@ pub struct LogFile {
 }
 
 #[tauri::command]
-pub fn list_log_files(id: String) -> Result<Vec<LogFile>, String> {
-    let game = paths::instance_game_dir(&id);
+pub async fn list_log_files(id: String) -> AppResult<Vec<LogFile>> {
+    crate::blocking(move || log_files(&id)).await
+}
+
+fn log_files(id: &str) -> AppResult<Vec<LogFile>> {
+    let game = paths::instance_game_dir(id);
     let mut out = Vec::new();
 
     if let Ok(entries) = std::fs::read_dir(game.join("logs")) {
@@ -506,17 +548,19 @@ pub fn list_log_files(id: String) -> Result<Vec<LogFile>, String> {
 }
 
 #[tauri::command]
-pub fn read_log_file(id: String, rel: String) -> Result<String, String> {
-    let text = read_log_text(&id, &rel)?;
-    const MAX: usize = 1_000_000;
-    if text.len() > MAX {
-        Ok(text[text.len() - MAX..].to_string())
-    } else {
-        Ok(text)
-    }
+pub async fn read_log_file(id: String, rel: String) -> AppResult<String> {
+    crate::blocking(move || {
+        let text = read_log_text(&id, &rel)?;
+        const MAX: usize = 1_000_000;
+        Ok(match text.char_indices().nth_back(MAX) {
+            Some((cut, _)) => text[cut..].to_string(),
+            None => text,
+        })
+    })
+    .await
 }
 
-fn read_log_text(id: &str, rel: &str) -> Result<String, String> {
+fn read_log_text(id: &str, rel: &str) -> AppResult<String> {
     if (!rel.starts_with("logs/") && !rel.starts_with("crash-reports/")) || rel.contains("..") {
         return Err("invalid log path".into());
     }
@@ -531,6 +575,98 @@ fn read_log_text(id: &str, rel: &str) -> Result<String, String> {
     } else {
         Ok(String::from_utf8_lossy(&bytes).into_owned())
     }
+}
+
+fn censor(text: &str) -> String {
+    redact_tokens(&redact_home(text))
+}
+
+fn redact_home(text: &str) -> String {
+    let Some(home) = dirs::home_dir() else { return text.to_string() };
+    let home = home.to_string_lossy().into_owned();
+    if home.len() < 4 {
+        return text.to_string();
+    }
+
+    let mut forms = vec![
+        home.replace('\\', "\\\\"),
+        home.replace('/', "\\"),
+        home.replace('\\', "/"),
+        home,
+    ];
+    forms.sort_by_key(|f| std::cmp::Reverse(f.len()));
+    forms.dedup();
+
+    let mut out = text.to_string();
+    for form in forms {
+        out = replace_ascii_ignore_case(&out, &form, "~");
+    }
+    out
+}
+
+fn replace_ascii_ignore_case(haystack: &str, needle: &str, with: &str) -> String {
+    if needle.is_empty() {
+        return haystack.to_string();
+    }
+    let folded = haystack.to_ascii_lowercase();
+    let needle = needle.to_ascii_lowercase();
+
+    let mut out = String::with_capacity(haystack.len());
+    let mut at = 0;
+    while let Some(hit) = folded[at..].find(&needle) {
+        let start = at + hit;
+        out.push_str(&haystack[at..start]);
+        out.push_str(with);
+        at = start + needle.len();
+    }
+    out.push_str(&haystack[at..]);
+    out
+}
+
+const SECRET_KEYS: [&str; 6] = [
+    "accesstoken",
+    "access_token",
+    "sessionid",
+    "session_id",
+    "--uuid",
+    "refresh_token",
+];
+
+fn redact_tokens(text: &str) -> String {
+    let folded = text.to_ascii_lowercase();
+    let mut out = String::with_capacity(text.len());
+    let mut at = 0;
+
+    while at < text.len() {
+        let hit = SECRET_KEYS
+            .iter()
+            .filter_map(|key| folded[at..].find(key).map(|i| (at + i, key.len())))
+            .min_by_key(|(start, _)| *start);
+
+        let Some((start, key_len)) = hit else { break };
+        let after_key = start + key_len;
+        out.push_str(&text[at..after_key]);
+
+        let sep_end = after_key
+            + text[after_key..]
+                .find(|c: char| !matches!(c, ' ' | '=' | ':' | '"' | '\'' | '\t'))
+                .unwrap_or(text.len() - after_key);
+        let value_end = sep_end
+            + text[sep_end..]
+                .find(|c: char| !(c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_')))
+                .unwrap_or(text.len() - sep_end);
+
+        if value_end - sep_end >= 16 {
+            out.push_str(&text[after_key..sep_end]);
+            out.push_str("<redacted>");
+            at = value_end;
+        } else {
+            at = after_key;
+        }
+    }
+
+    out.push_str(&text[at..]);
+    out
 }
 
 #[derive(Serialize)]
@@ -554,8 +690,11 @@ struct MclogsResponse {
 }
 
 #[tauri::command]
-pub async fn upload_log_to_mclogs(id: String, rel: String) -> Result<MclogsPaste, String> {
-    let mut content = read_log_text(&id, &rel)?;
+pub async fn upload_log_to_mclogs(id: String, rel: String) -> AppResult<MclogsPaste> {
+    let id_for_read = id.clone();
+    let rel_for_read = rel.clone();
+    let mut content =
+        crate::blocking(move || read_log_text(&id_for_read, &rel_for_read)).await?;
 
     const MAX_LINES: usize = 25_000;
     const MAX_BYTES: usize = 10 * 1024 * 1024;
@@ -565,8 +704,13 @@ pub async fn upload_log_to_mclogs(id: String, rel: String) -> Result<MclogsPaste
         content = content.lines().skip(skip).collect::<Vec<_>>().join("\n");
     }
     if content.len() > MAX_BYTES {
-        content = content[content.len() - MAX_BYTES..].to_string();
+        let cut = (content.len() - MAX_BYTES..content.len())
+            .find(|i| content.is_char_boundary(*i))
+            .unwrap_or(content.len());
+        content = content[cut..].to_string();
     }
+
+    let content = crate::blocking(move || Ok(censor(&content))).await?;
 
     let resp = crate::http()
         .post("https://api.mclo.gs/1/log")
@@ -577,7 +721,7 @@ pub async fn upload_log_to_mclogs(id: String, rel: String) -> Result<MclogsPaste
 
     let body: MclogsResponse = resp.json().await.map_err(|e| format!("bad response: {e}"))?;
     if !body.success {
-        return Err(body.error.unwrap_or_else(|| "mclo.gs rejected the log".into()));
+        return Err((body.error.unwrap_or_else(|| "mclo.gs rejected the log".into())).into());
     }
     Ok(MclogsPaste {
         id: body.id.unwrap_or_default(),
@@ -601,7 +745,7 @@ fn strip_disabled(name: &str) -> (String, bool) {
     }
 }
 
-fn safe_name(name: &str) -> Result<String, String> {
+fn safe_name(name: &str) -> AppResult<String> {
     Path::new(name)
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
@@ -661,7 +805,45 @@ fn modified_millis(entry: &std::fs::DirEntry) -> u64 {
         .unwrap_or(0)
 }
 
-fn png_data_url(bytes: Vec<u8>) -> String {
-    let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
-    format!("data:image/png;base64,{b64}")
+
+#[cfg(test)]
+mod censor_tests {
+    use super::{censor, redact_tokens, replace_ascii_ignore_case};
+
+    #[test]
+    fn strips_the_home_directory_whatever_the_separator() {
+        let home = dirs::home_dir().unwrap().to_string_lossy().into_owned();
+        let slashed = home.replace('\\', "/");
+        let escaped = home.replace('\\', "\\\\");
+
+        let log = format!("loading {home}/mods/a.jar and {slashed}/x and {escaped}/y");
+        let out = censor(&log);
+
+        assert!(!out.contains(&home), "plain form survived: {out}");
+        assert!(!out.contains(&slashed), "slash form survived: {out}");
+        assert!(!out.contains(&escaped), "escaped form survived: {out}");
+        assert!(out.contains("~/mods/a.jar"), "path was mangled: {out}");
+    }
+
+    #[test]
+    fn strips_secrets_but_leaves_short_values_alone() {
+        let out = redact_tokens("--accessToken eyJhbGciOiJIUzI1NiJ9.abc --width 1280");
+        assert_eq!(out, "--accessToken <redacted> --width 1280");
+
+        let out = redact_tokens(r#"{"access_token":"ey.aaaaaaaaaaaaaaaaaa","x":1}"#);
+        assert_eq!(out, r#"{"access_token":"<redacted>","x":1}"#);
+
+        assert_eq!(redact_tokens("sessionId: none"), "sessionId: none");
+        assert_eq!(redact_tokens("no secrets here"), "no secrets here");
+    }
+
+    #[test]
+    fn case_insensitive_replace_keeps_non_ascii_intact() {
+        assert_eq!(
+            replace_ascii_ignore_case("C:\\Users\\Paweł\\x", "c:\\users\\paweł", "~"),
+            "~\\x",
+            "an ASCII-only fold must still match the ASCII part and slice cleanly"
+        );
+        assert_eq!(replace_ascii_ignore_case("abc", "", "~"), "abc");
+    }
 }

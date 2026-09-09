@@ -5,6 +5,7 @@ use tauri::{AppHandle, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
 use crate::models::{Account, AccountKind, AccountsFile};
 use crate::{paths, store};
+use crate::error::{AppError, AppResult};
 
 const REDIRECT_PREFIX: &str = "https://login.live.com/oauth20_desktop.srf";
 
@@ -23,11 +24,11 @@ impl From<microsoft::MinecraftAccount> for Account {
     }
 }
 
-fn load_accounts() -> Result<AccountsFile, String> {
+fn load_accounts() -> AppResult<AccountsFile> {
     Ok(store::read_json_private::<AccountsFile>(&paths::accounts_file())?.unwrap_or_default())
 }
 
-fn save_accounts(file: &AccountsFile) -> Result<(), String> {
+fn save_accounts(file: &AccountsFile) -> AppResult<()> {
     store::write_json_private(&paths::accounts_file(), file)
 }
 
@@ -41,21 +42,21 @@ fn upsert_account(file: &mut AccountsFile, account: Account) {
 }
 
 #[tauri::command]
-pub fn auth_get_login_url() -> Result<String, String> {
-    microsoft::create_link().map_err(|e| e.to_string())
+pub fn auth_get_login_url() -> AppResult<String> {
+    (microsoft::create_link().map_err(|e| e.to_string())).map_err(Into::into)
 }
 
 #[tauri::command]
-pub async fn auth_login(app: AppHandle) -> Result<Account, String> {
+pub async fn auth_login(app: AppHandle) -> AppResult<Account> {
     let url = microsoft::create_link().map_err(|e| e.to_string())?;
     let parsed: tauri::Url = url.parse().map_err(|e| format!("invalid auth url: {e}"))?;
 
-    let (tx, rx) = tokio::sync::oneshot::channel::<Result<String, String>>();
+    let (tx, rx) = tokio::sync::oneshot::channel::<AppResult<String>>();
     let sender = Arc::new(Mutex::new(Some(tx)));
 
     let take_send = {
         let sender = sender.clone();
-        move |result: Result<String, String>| {
+        move |result: AppResult<String>| {
             if let Ok(mut guard) = sender.lock() {
                 if let Some(tx) = guard.take() {
                     let _ = tx.send(result);
@@ -85,7 +86,7 @@ pub async fn auth_login(app: AppHandle) -> Result<Account, String> {
                     return false;
                 }
                 if let Some(error) = error {
-                    nav_send(Err(error));
+                    nav_send(Err((error).into()));
                     return false;
                 }
             }
@@ -97,7 +98,7 @@ pub async fn auth_login(app: AppHandle) -> Result<Account, String> {
     let close_send = take_send.clone();
     window.on_window_event(move |event| {
         if matches!(event, WindowEvent::Destroyed) {
-            close_send(Err("login cancelled".to_string()));
+            close_send(Err(("login cancelled".to_string()).into()));
         }
     });
 
@@ -117,7 +118,7 @@ pub async fn auth_login(app: AppHandle) -> Result<Account, String> {
 }
 
 #[tauri::command]
-pub async fn auth_login_with_code(code: String) -> Result<Account, String> {
+pub async fn auth_login_with_code(code: String) -> AppResult<Account> {
     let client = crate::http();
     let account: Account = microsoft::authenticate(code, &client)
         .await
@@ -130,7 +131,7 @@ pub async fn auth_login_with_code(code: String) -> Result<Account, String> {
     Ok(account)
 }
 
-fn validate_username(name: &str) -> Result<(), String> {
+fn validate_username(name: &str) -> AppResult<()> {
     let len = name.chars().count();
     if !(3..=16).contains(&len) {
         return Err("username must be 3–16 characters".into());
@@ -142,7 +143,11 @@ fn validate_username(name: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn auth_login_offline(username: String) -> Result<Account, String> {
+pub async fn auth_login_offline(username: String) -> AppResult<Account> {
+    crate::blocking(move || offline_account(username)).await
+}
+
+fn offline_account(username: String) -> AppResult<Account> {
     validate_username(&username)?;
 
     let mut file = load_accounts()?;
@@ -167,28 +172,34 @@ pub fn auth_login_offline(username: String) -> Result<Account, String> {
 }
 
 #[tauri::command]
-pub fn list_accounts() -> Result<AccountsFile, String> {
-    load_accounts()
+pub async fn list_accounts() -> AppResult<AccountsFile> {
+    crate::blocking(load_accounts).await
 }
 
 #[tauri::command]
-pub fn set_active_account(uuid: String) -> Result<(), String> {
-    let mut file = load_accounts()?;
-    if !file.accounts.iter().any(|a| a.uuid == uuid) {
-        return Err(format!("account '{uuid}' not found"));
-    }
-    file.active_uuid = Some(uuid);
-    save_accounts(&file)
+pub async fn set_active_account(uuid: String) -> AppResult<()> {
+    crate::blocking(move || {
+        let mut file = load_accounts()?;
+        if !file.accounts.iter().any(|a| a.uuid == uuid) {
+            return Err(AppError::not_found(format!("account '{uuid}' not found")));
+        }
+        file.active_uuid = Some(uuid);
+        save_accounts(&file)
+    })
+    .await
 }
 
 #[tauri::command]
-pub fn remove_account(uuid: String) -> Result<(), String> {
-    let mut file = load_accounts()?;
-    file.accounts.retain(|a| a.uuid != uuid);
-    if file.active_uuid.as_deref() == Some(uuid.as_str()) {
-        file.active_uuid = file.accounts.first().map(|a| a.uuid.clone());
-    }
-    save_accounts(&file)
+pub async fn remove_account(uuid: String) -> AppResult<()> {
+    crate::blocking(move || {
+        let mut file = load_accounts()?;
+        file.accounts.retain(|a| a.uuid != uuid);
+        if file.active_uuid.as_deref() == Some(uuid.as_str()) {
+            file.active_uuid = file.accounts.first().map(|a| a.uuid.clone());
+        }
+        save_accounts(&file)
+    })
+    .await
 }
 
 fn refresh_lock() -> &'static tokio::sync::Mutex<()> {
@@ -209,7 +220,7 @@ fn token_still_valid(exp: u64, now: u64) -> bool {
 
 const TOKEN_MARGIN_SECS: u64 = 900;
 
-pub async fn refresh_active_account() -> Result<Account, String> {
+pub async fn refresh_active_account() -> AppResult<Account> {
     let _guard = refresh_lock().lock().await;
 
     let mut file = load_accounts()?;
@@ -249,7 +260,7 @@ pub async fn refresh_active_account() -> Result<Account, String> {
 }
 
 #[tauri::command]
-pub async fn auth_refresh_active() -> Result<Account, String> {
+pub async fn auth_refresh_active() -> AppResult<Account> {
     refresh_active_account().await
 }
 

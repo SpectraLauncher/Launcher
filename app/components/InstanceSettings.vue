@@ -177,6 +177,47 @@
         </div>
       </template>
 
+      <template v-else-if="section === 'sync'">
+        <p class="text-xs text-muted">{{ $t('sync.instanceDesc') }}</p>
+
+        <p v-if="!syncableOptions.length" class="text-sm text-muted">
+          {{ $t('sync.instanceNothingOn') }}
+        </p>
+
+        <div
+          v-for="option in syncableOptions"
+          :key="option"
+          class="flex items-start gap-3 rounded-lg px-3 py-2.5 transition hover:bg-white/3"
+        >
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-medium">{{ $t(`sync.options.${option}.label`) }}</p>
+            <p class="mt-0.5 text-xs text-muted">{{ $t(`sync.options.${option}.desc`) }}</p>
+          </div>
+          <USwitch
+            :model-value="sync.participates(instanceId, option)"
+            :loading="sync.busy.value === option"
+            @update:model-value="toggleInstanceSync(option, $event)"
+          />
+        </div>
+
+        <UModal v-model:open="conflictOpen" :title="$t('sync.conflictTitle')">
+          <template #body>
+            <p class="text-sm text-muted">{{ $t('sync.conflictDesc') }}</p>
+          </template>
+          <template #footer>
+            <div class="flex w-full justify-end gap-2">
+              <UButton
+                color="neutral"
+                variant="soft"
+                :label="$t('sync.useInstance')"
+                @click="resolveConflict('use_instance')"
+              />
+              <UButton :label="$t('sync.useSynced')" @click="resolveConflict('use_synced')" />
+            </div>
+          </template>
+        </UModal>
+      </template>
+
       <template v-else-if="section === 'hooks'">
         <USwitch v-model="form.override_hooks" :label="$t('instSettings.customHooks')" :description="$t('instSettings.customHooksDesc')" />
         <fieldset :disabled="!form.override_hooks" class="space-y-4" :class="{ 'opacity-50': !form.override_hooks }">
@@ -199,6 +240,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import type { Instance } from '~/types/launcher'
+import { SYNC_OPTIONS, type SyncOption } from '~/types/sync'
 
 const props = defineProps<{ instanceId: string }>()
 const emit = defineEmits<{ (e: 'icon-changed'): void }>()
@@ -242,7 +284,7 @@ async function changeIcon() {
     await onIconChanged()
     toast.add({ title: t('instance.iconChanged'), color: 'success' })
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   } finally {
     pickingIcon.value = false
   }
@@ -261,14 +303,44 @@ onMounted(() => {
 const requiredJava = computed(() => (form.value ? requiredJavaMajor(form.value.mc_version) : 21))
 const matchedJava = computed(() => matchJava(java.installations.value, requiredJava.value))
 
-type Section = 'general' | 'install' | 'window' | 'java' | 'hooks'
+type Section = 'general' | 'install' | 'window' | 'java' | 'hooks' | 'sync'
 const sections: { key: Section; label: string; icon: string }[] = [
   { key: 'general', label: 'instSettings.tabs.general', icon: 'i-lucide-info' },
   { key: 'install', label: 'instSettings.tabs.install', icon: 'i-lucide-wrench' },
   { key: 'window', label: 'instSettings.tabs.window', icon: 'i-lucide-monitor' },
   { key: 'java', label: 'instSettings.tabs.java', icon: 'i-lucide-coffee' },
   { key: 'hooks', label: 'instSettings.tabs.hooks', icon: 'i-lucide-code' },
+  { key: 'sync', label: 'instSettings.tabs.sync', icon: 'i-lucide-refresh-cw' },
 ]
+
+const sync = useInstanceSync()
+const conflictOption = ref<SyncOption | null>(null)
+const conflictOpen = ref(false)
+
+onMounted(() => sync.ensureLoaded())
+
+const syncableOptions = computed(() => SYNC_OPTIONS.filter(o => sync.state.value.global[o]))
+
+async function toggleInstanceSync(option: SyncOption, enabled: boolean) {
+  if (!enabled) {
+    await sync.setInstance(props.instanceId, option, false)
+    return
+  }
+  const action = await sync.joinPreview(props.instanceId, option)
+  if (action === 'requires_resolution') {
+    conflictOption.value = option
+    conflictOpen.value = true
+    return
+  }
+  await sync.setInstance(props.instanceId, option, true)
+}
+
+async function resolveConflict(resolution: 'use_synced' | 'use_instance') {
+  const option = conflictOption.value
+  conflictOpen.value = false
+  conflictOption.value = null
+  if (option) await sync.setInstance(props.instanceId, option, true, resolution)
+}
 const section = ref<Section>('general')
 
 const busy = ref(false)
@@ -341,7 +413,7 @@ watch(form, () => {
   if (!form.value) return
   clearTimeout(debounce)
   const snapshot = JSON.parse(JSON.stringify(form.value)) as Instance
-  debounce = setTimeout(() => instances.update(snapshot).catch((e: unknown) => toast.add({ title: String(e), color: 'error' })), 500)
+  debounce = setTimeout(() => instances.update(snapshot).catch((e: unknown) => toast.add({ title: errorText(e), color: 'error' })), 500)
 }, { deep: true })
 
 async function browseJava() {
@@ -356,7 +428,7 @@ async function duplicate() {
     await instances.load()
     router.push(`/instance/${inst.id}`)
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   } finally {
     busy.value = false
   }
@@ -367,7 +439,7 @@ async function remove() {
     await instances.remove(props.instanceId)
     router.push('/')
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   }
 }
 
@@ -377,7 +449,7 @@ async function repair() {
     await invoke('repair_instance', { id: props.instanceId })
     toast.add({ title: t('instSettings.repaired'), color: 'success' })
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   } finally {
     repairing.value = false
   }

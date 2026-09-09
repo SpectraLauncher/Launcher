@@ -106,7 +106,6 @@ export interface LauncherPaths {
 
 export interface MultiProgress { instance_id: string; current: number; total: number }
 export interface FileProgress { instance_id: string; path: string; current: number; total: number }
-export interface ConsoleLine { instance_id: string; line: string }
 export interface ModpackProgress { instance_id: string; name: string; current: number; total: number }
 export interface ExitInfo { instance_id: string; code: number | null }
 export interface CrashInfo {
@@ -143,12 +142,12 @@ export interface PackInfo {
   filename: string
   description: string | null
   pack_format: number | null
-  icon: string | null
+  icon_path: string | null
   is_zip: boolean
   enabled: boolean
 }
 export interface ShaderInfo { name: string; filename: string; is_zip: boolean; enabled: boolean }
-export interface ServerInfo { name: string; ip: string; icon: string | null; hidden: boolean }
+export interface ServerInfo { name: string; ip: string; icon_path: string | null; hidden: boolean }
 export interface DirChild {
   name: string
   is_dir: boolean
@@ -214,6 +213,7 @@ export interface ModEntry {
   version: string | null
   version_id: string | null
   icon_url: string | null
+  icon_path: string | null
   project_id: string | null
   provider: 'local' | 'modrinth' | 'curseforge'
   modified: number

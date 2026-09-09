@@ -367,7 +367,8 @@
       "privacy": "隐私",
       "java": "Java 安装",
       "defaults": "默认实例选项",
-      "accounts": "账户"
+      "accounts": "账户",
+      "sync": "同步"
     },
     "privacy": {
       "track_playtime": "记录游玩时长",
@@ -558,7 +559,15 @@
     "slim": "纤细",
     "capes": "披风",
     "noCape": "无披风",
-    "capeSet": "披风已更新"
+    "capeSet": "披风已更新",
+    "title": "皮肤选择器",
+    "capesButton": "披风",
+    "capesDemo": "使用 Microsoft 登录后即可佩戴披风。",
+    "capesEmpty": "你没有任何披风。",
+    "defaultsEmpty": "安装任意 Minecraft 版本后即可看到默认皮肤。",
+    "demoTitle": "你正在以演示模式浏览",
+    "demoDesc": "可以自由查看和预览任意皮肤。使用 Microsoft 登录后即可应用到账户。",
+    "signIn": "使用 Microsoft 登录"
   },
   "instSettings": {
     "tabs": {
@@ -566,7 +575,8 @@
       "install": "安装",
       "window": "窗口",
       "java": "Java 与内存",
-      "hooks": "启动钩子"
+      "hooks": "启动钩子",
+      "sync": "同步"
     },
     "name": "名称",
     "duplicate": "复制",
@@ -739,5 +749,82 @@
     "autoHint": "整合包推送或模组包更新可能删除模组；这就是用来撤销的。",
     "keepLabel": "保留",
     "keepHint": "每个实例的自动还原点数量——手动创建的永不删除"
+  },
+  "errors": {
+    "auth": "登录问题",
+    "busy": "已在进行中",
+    "disk_full": "磁盘已满",
+    "http": "服务器错误",
+    "invalid": "数据无效",
+    "io": "磁盘错误",
+    "network": "无法连接",
+    "not_found": "未找到",
+    "panic": "内部错误",
+    "permission": "没有权限",
+    "unknown": "错误"
+  },
+  "sync": {
+    "title": "跨实例同步",
+    "desc": "让所选设置在所有实例中保持一致。游戏关闭后收集改动，并在其他实例下次启动时应用。",
+    "sourceTitle": "选择同步来源",
+    "sourceDesc": "选择要复制的实例。它的状态会初始化共享副本；之后可以从任意实例修改。",
+    "sourceSearch": "搜索实例",
+    "sourceEmpty": "没有可复制的实例。",
+    "sourceConfirm": "同步",
+    "seededFrom": "来自 {version} 实例",
+    "enabled": "{option} 已开始同步",
+    "packsTitle": "共享资源包",
+    "packsEmpty": "尚未收集到资源包。游戏关闭后会自动收集。",
+    "packFormat": "格式 {n}",
+    "openFolder": "打开共享文件夹",
+    "instanceDesc": "关闭某个类别可让此实例不参与。",
+    "instanceNothingOn": "还没有同步任何类别。请在启动器设置中开启。",
+    "conflictTitle": "该实例已有自己的数据",
+    "conflictDesc": "共享副本和该实例都有数据，请选择保留哪一份。",
+    "useSynced": "使用共享",
+    "useInstance": "覆盖共享",
+    "options": {
+      "game_options": {
+        "label": "游戏设置",
+        "desc": "音量、视野、渲染距离、语言和按键。按键仅在 1.13 及更新版本之间传递。"
+      },
+      "multiplayer_servers": {
+        "label": "多人服务器",
+        "desc": "你的服务器列表，采用合并而非替换。"
+      },
+      "resource_packs": {
+        "label": "资源包",
+        "desc": "共享的资源包文件，仅在格式与游戏版本匹配时应用。"
+      },
+      "command_history": {
+        "label": "命令历史",
+        "desc": "你在聊天栏输入过的命令。"
+      },
+      "creative_hotbars": {
+        "label": "创造模式快捷栏",
+        "desc": "保存的创造模式快捷栏。仅在 1.13 同侧的实例之间共享。"
+      }
+    },
+    "instancesTitle": "哪些实例参与",
+    "instancesDesc": "所有实例默认参与。取消勾选即可排除。",
+    "instanceColumn": "实例"
+  },
+  "syncAnnounce": {
+    "badge": "本次更新新增",
+    "title": "同步你的实例",
+    "body": "现在可以让游戏设置、服务器、资源包等在所有实例中保持一致，一切都停在你离开时的样子。",
+    "later": "可以现在开启，也可以稍后在启动器设置中配置。",
+    "skip": "跳过",
+    "syncAll": "全部同步",
+    "syncSelected": "同步所选",
+    "done": "正在同步 {n} 个类别",
+    "failed": "无法开启同步",
+    "options": {
+      "game_options": "同步游戏设置",
+      "multiplayer_servers": "同步多人服务器",
+      "resource_packs": "同步资源包",
+      "command_history": "同步命令历史",
+      "creative_hotbars": "同步创造模式快捷栏"
+    }
   }
 }

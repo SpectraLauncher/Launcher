@@ -4,6 +4,7 @@ use std::process::Command;
 use serde::{Deserialize, Serialize};
 
 use crate::paths;
+use crate::error::AppResult;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct JavaInstallation {
@@ -33,7 +34,11 @@ struct JavaVersionInfo {
 }
 
 #[tauri::command]
-pub fn detect_java_installations() -> Vec<JavaInstallation> {
+pub async fn detect_java_installations() -> Vec<JavaInstallation> {
+    crate::blocking(|| Ok(scan_java_installations())).await.unwrap_or_default()
+}
+
+fn scan_java_installations() -> Vec<JavaInstallation> {
     let mut installations = Vec::new();
     let mut seen = std::collections::HashSet::new();
 
@@ -57,7 +62,20 @@ pub fn detect_java_installations() -> Vec<JavaInstallation> {
 }
 
 #[tauri::command]
-pub fn validate_java_path(path: String) -> JavaValidation {
+pub async fn validate_java_path(path: String) -> JavaValidation {
+    crate::blocking(move || Ok(check_java_path(path)))
+        .await
+        .unwrap_or_else(|e| JavaValidation {
+            is_valid: false,
+            version: None,
+            major: None,
+            vendor: None,
+            arch: None,
+            error: Some(e.message),
+        })
+}
+
+fn check_java_path(path: String) -> JavaValidation {
     let p = Path::new(&path);
     if !p.exists() {
         return JavaValidation {
@@ -84,7 +102,7 @@ pub fn validate_java_path(path: String) -> JavaValidation {
             major: None,
             vendor: None,
             arch: None,
-            error: Some(e),
+            error: Some(e.message),
         },
     }
 }
@@ -100,7 +118,7 @@ fn validate_and_create_installation(path: &Path) -> Option<JavaInstallation> {
     })
 }
 
-fn get_java_version_info(java_path: &Path) -> Result<JavaVersionInfo, String> {
+fn get_java_version_info(java_path: &Path) -> AppResult<JavaVersionInfo> {
     if !java_path.is_file() {
         return Err("Not a file".into());
     }
@@ -121,7 +139,7 @@ fn get_java_version_info(java_path: &Path) -> Result<JavaVersionInfo, String> {
     parse_java_version_output(&combined)
 }
 
-fn parse_java_version_output(output: &str) -> Result<JavaVersionInfo, String> {
+fn parse_java_version_output(output: &str) -> AppResult<JavaVersionInfo> {
     let first = output.lines().next().unwrap_or("");
     let version = extract_version_string(first).ok_or("could not parse Java version")?;
     Ok(JavaVersionInfo {

@@ -145,7 +145,7 @@ async function copyAll() {
     await navigator.clipboard.writeText(lines.value.join('\n'))
     toast.add({ title: t('common.copied'), color: 'success' })
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   }
 }
 function clear() {

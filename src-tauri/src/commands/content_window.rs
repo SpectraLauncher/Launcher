@@ -1,5 +1,6 @@
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
+use crate::error::AppResult;
 
 pub const LABEL: &str = "content-browser";
 
@@ -15,7 +16,7 @@ fn remember(config: Value) {
 }
 
 #[tauri::command]
-pub async fn open_content_window(app: AppHandle, config: Value) -> Result<(), String> {
+pub async fn open_content_window(app: AppHandle, config: Value) -> AppResult<()> {
     remember(config.clone());
 
     if let Some(window) = app.get_webview_window(LABEL) {
@@ -52,7 +53,7 @@ pub fn content_window_config() -> Option<Value> {
 }
 
 #[tauri::command]
-pub fn close_content_window(app: AppHandle) -> Result<(), String> {
+pub fn close_content_window(app: AppHandle) -> AppResult<()> {
     if let Some(window) = app.get_webview_window(LABEL) {
         window.close().map_err(|e| e.to_string())?;
     }
@@ -60,7 +61,7 @@ pub fn close_content_window(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn content_installed(app: AppHandle, payload: Value) -> Result<(), String> {
-    app.emit_to("main", "content://installed", payload)
-        .map_err(|e| e.to_string())
+pub fn content_installed(app: AppHandle, payload: Value) -> AppResult<()> {
+    (app.emit_to("main", "content://installed", payload)
+        .map_err(|e| e.to_string())).map_err(Into::into)
 }

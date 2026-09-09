@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.7.8"
+version = "0.8.0"
 description = "A modern launcher for Minecraft that allows you to easily manage multiple installations of Minecraft at once"
 authors = ["MakotoPD"]
 license = "MIT"
@@ -71,6 +71,8 @@ fastnbt = "2"
 toml = "0.8"
 # sha1 of local jars, to match them against Modrinth by file hash
 sha1 = "0.10"
+# Decoding and downscaling screenshots and pack icons into the thumbnail cache
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif"] }
 
 # Background auto-update — desktop only
 [target."cfg(any(target_os = \"macos\", windows, target_os = \"linux\"))".dependencies]

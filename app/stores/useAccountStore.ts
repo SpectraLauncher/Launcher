@@ -26,7 +26,7 @@ export const useAccountStore = defineStore('accounts', {
         this.accounts = file.accounts
         this.activeUuid = file.active_uuid ?? null
       } catch (e) {
-        this.error = String(e)
+        this.error = errorText(e)
       } finally {
         this.loading = false
       }
@@ -40,7 +40,7 @@ export const useAccountStore = defineStore('accounts', {
         await this.load()
         return account
       } catch (e) {
-        this.error = String(e)
+        this.error = errorText(e)
         throw e
       } finally {
         this.loading = false
@@ -55,7 +55,7 @@ export const useAccountStore = defineStore('accounts', {
         await this.load()
         return account
       } catch (e) {
-        this.error = String(e)
+        this.error = errorText(e)
         throw e
       } finally {
         this.loading = false

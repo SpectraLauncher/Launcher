@@ -26,7 +26,7 @@ export const useInstancesStore = defineStore('instances', {
           this.selectedId = this.instances[0]?.id ?? null
         }
       } catch (e) {
-        this.error = String(e)
+        this.error = errorText(e)
       } finally {
         this.loading = false
       }

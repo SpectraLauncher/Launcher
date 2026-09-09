@@ -367,7 +367,8 @@
       "privacy": "Privacy",
       "java": "Java installations",
       "defaults": "Default instance options",
-      "accounts": "Accounts"
+      "accounts": "Accounts",
+      "sync": "Sync"
     },
     "privacy": {
       "track_playtime": "Track playtime",
@@ -559,7 +560,15 @@
     "slim": "Slim",
     "capes": "Capes",
     "noCape": "No cape",
-    "capeSet": "Cape updated"
+    "capeSet": "Cape updated",
+    "title": "Skin selector",
+    "capesButton": "Capes",
+    "capesDemo": "Sign in with Microsoft to wear a cape.",
+    "capesEmpty": "You do not own any capes.",
+    "defaultsEmpty": "Default skins appear once you have installed a Minecraft version.",
+    "demoTitle": "You are browsing in demo mode",
+    "demoDesc": "Look around and preview any skin. Sign in with Microsoft to apply one to your account.",
+    "signIn": "Sign in with Microsoft"
   },
   "instSettings": {
     "tabs": {
@@ -567,7 +576,8 @@
       "install": "Installation",
       "window": "Window",
       "java": "Java & memory",
-      "hooks": "Launch hooks"
+      "hooks": "Launch hooks",
+      "sync": "Sync"
     },
     "name": "Name",
     "duplicate": "Duplicate",
@@ -740,5 +750,82 @@
     "autoHint": "A pushed pack update or a modpack update can delete mods; this is what undoes it.",
     "keepLabel": "Keep",
     "keepHint": "automatic ones per instance — the ones you take by hand are never deleted"
+  },
+  "errors": {
+    "auth": "Sign-in problem",
+    "busy": "Already in progress",
+    "disk_full": "Disk full",
+    "http": "Server error",
+    "invalid": "Invalid data",
+    "io": "Disk error",
+    "network": "No connection",
+    "not_found": "Not found",
+    "panic": "Internal error",
+    "permission": "No permission",
+    "unknown": "Error"
+  },
+  "sync": {
+    "title": "Sync across instances",
+    "desc": "Keep chosen settings identical in every instance. Changes made in one game are picked up when it closes and applied to the others the next time they start.",
+    "sourceTitle": "Choose sync source",
+    "sourceDesc": "Pick the instance to copy from. Its state seeds the shared copy; afterwards you can edit it from any instance.",
+    "sourceSearch": "Search instance",
+    "sourceEmpty": "No instances to copy from.",
+    "sourceConfirm": "Sync",
+    "seededFrom": "Seeded from a {version} instance",
+    "enabled": "{option} is now synced",
+    "packsTitle": "Shared resource packs",
+    "packsEmpty": "No packs collected yet. They are picked up after a game closes.",
+    "packFormat": "format {n}",
+    "openFolder": "Open shared folder",
+    "instanceDesc": "Turn a category off here to leave this instance out of it.",
+    "instanceNothingOn": "No categories are synced yet. Turn them on in launcher settings.",
+    "conflictTitle": "This instance already has its own",
+    "conflictDesc": "Both the shared copy and this instance have data. Choose which one wins.",
+    "useSynced": "Use shared",
+    "useInstance": "Overwrite shared",
+    "options": {
+      "game_options": {
+        "label": "Game settings",
+        "desc": "Sound, FOV, render distance, language and key bindings. Key bindings only travel between 1.13 and newer."
+      },
+      "multiplayer_servers": {
+        "label": "Multiplayer servers",
+        "desc": "Your server list, merged rather than replaced."
+      },
+      "resource_packs": {
+        "label": "Resource packs",
+        "desc": "Shared pack files, applied where the pack format fits the game version."
+      },
+      "command_history": {
+        "label": "Command history",
+        "desc": "The commands you have typed in chat."
+      },
+      "creative_hotbars": {
+        "label": "Creative hotbars",
+        "desc": "Saved creative hotbars. Only shared between instances on the same side of 1.13."
+      }
+    },
+    "instancesTitle": "Which instances take part",
+    "instancesDesc": "Every instance joins a category by default. Untick one to leave it out.",
+    "instanceColumn": "Instance"
+  },
+  "syncAnnounce": {
+    "badge": "New this update",
+    "title": "Sync your instances",
+    "body": "You can now keep game settings, servers, resource packs and more the same across all your instances, so everything stays where you left it.",
+    "later": "Turn it on now, or set it up later in launcher settings.",
+    "skip": "Skip",
+    "syncAll": "Sync all",
+    "syncSelected": "Sync selected",
+    "done": "Syncing {n} categories",
+    "failed": "Could not turn syncing on",
+    "options": {
+      "game_options": "Sync game settings",
+      "multiplayer_servers": "Sync multiplayer servers",
+      "resource_packs": "Sync resource packs",
+      "command_history": "Sync command history",
+      "creative_hotbars": "Sync creative hotbars"
+    }
   }
 }

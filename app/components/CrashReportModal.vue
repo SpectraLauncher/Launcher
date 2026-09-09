@@ -194,7 +194,7 @@ async function share() {
       actions: [{ label: t('logs.openLink'), onClick: () => openUrl(paste.url) }],
     })
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   } finally {
     uploading.value = false
   }
@@ -211,7 +211,7 @@ async function copyReport() {
     await navigator.clipboard.writeText(reportContent.value)
     toast.add({ title: t('common.copied'), color: 'success' })
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   }
 }
 

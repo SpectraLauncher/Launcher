@@ -260,7 +260,7 @@ async function updateModpack() {
     showChangelog.value = false
     changelogHtml.value = ''
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   } finally {
     activity.endTask(tid)
     updatingModpack.value = false
@@ -303,7 +303,7 @@ async function stopInstance(force: boolean) {
       }
     } catch {  }
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   } finally {
     stopping.value = false
     killing.value = false
@@ -441,7 +441,7 @@ async function createShortcut() {
     await invoke<string>('create_desktop_shortcut', { id: id.value })
     toast.add({ title: t('instance.shortcutCreated'), color: 'success' })
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   }
 }
 
@@ -449,7 +449,7 @@ async function openGameFolder() {
   try {
     await invoke('open_instance_game_folder', { id: id.value })
   } catch (e) {
-    toast.add({ title: String(e), color: 'error' })
+    toast.add({ title: errorText(e), color: 'error' })
   }
 }
 
