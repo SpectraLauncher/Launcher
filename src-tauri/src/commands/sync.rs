@@ -647,18 +647,32 @@ pub fn resolve_announcement() -> bool {
     let config = paths::launcher_config_file();
     let upgraded = config.is_file() || has_instances();
 
-    let mut settings = crate::commands::settings::load().unwrap_or_default();
-    if settings.sync_announced {
+    let Ok(mut settings) = crate::commands::settings::load() else {
+        return false;
+    };
+    if settings.sync_announce_seen {
         return false;
     }
 
-    settings.sync_announced = true;
-    if let Err(e) = store::write_json(&config, &settings) {
-        log::warn!("could not record the sync announcement: {e}");
+    if !upgraded {
+        settings.sync_announce_seen = true;
+        if let Err(e) = store::write_json(&config, &settings) {
+            log::warn!("could not mark the sync announcement as seen: {e}");
+        }
         return false;
     }
 
-    upgraded && !load_state().map(|s| s.global.any()).unwrap_or(false)
+    !load_state().map(|s| s.global.any()).unwrap_or(false)
+}
+
+#[tauri::command]
+pub async fn mark_sync_announcement_seen() -> AppResult<()> {
+    crate::blocking(|| {
+        let mut settings = crate::commands::settings::load()?;
+        settings.sync_announce_seen = true;
+        store::write_json(&paths::launcher_config_file(), &settings)
+    })
+    .await
 }
 
 fn has_instances() -> bool {
@@ -953,12 +967,36 @@ mod tests {
         assert!(!resolve_announcement(), "and it stays quiet on every later start");
         std::fs::remove_dir_all(&fresh).unwrap();
 
+        let unseen = std::env::temp_dir().join(format!("spectra-keep-{}", uuid::Uuid::new_v4()));
+        std::env::set_var("SPECTRA_DATA_DIR", &unseen);
+        std::fs::create_dir_all(&unseen).unwrap();
+        std::fs::write(paths::launcher_config_file(), "{\"default_memory_mb\":4096}").unwrap();
+        assert!(resolve_announcement(), "an upgrade is offered the announcement");
+        assert!(
+            resolve_announcement(),
+            "and keeps being offered until the window is actually closed, so a crash or a \
+             relaunch mid-update does not swallow it"
+        );
+        std::fs::remove_dir_all(&unseen).unwrap();
+
         let upgraded = std::env::temp_dir().join(format!("spectra-upg-{}", uuid::Uuid::new_v4()));
         std::env::set_var("SPECTRA_DATA_DIR", &upgraded);
         std::fs::create_dir_all(&upgraded).unwrap();
         std::fs::write(paths::launcher_config_file(), "{\"default_memory_mb\":4096}").unwrap();
-        assert!(resolve_announcement(), "an existing install upgrading sees it once");
-        assert!(!resolve_announcement(), "but only once");
+        assert!(resolve_announcement(), "an existing install upgrading sees it");
+
+        let mut settings = crate::commands::settings::load().unwrap();
+        settings.sync_announce_seen = true;
+        store::write_json(&paths::launcher_config_file(), &settings).unwrap();
+        assert!(
+            !resolve_announcement(),
+            "once the window reports back that it was closed, it never returns"
+        );
+        assert_eq!(
+            crate::commands::settings::load().unwrap().default_memory_mb,
+            4096,
+            "marking it seen must not reset the rest of the settings"
+        );
         std::fs::remove_dir_all(&upgraded).unwrap();
 
         let no_config = std::env::temp_dir().join(format!("spectra-inst-{}", uuid::Uuid::new_v4()));

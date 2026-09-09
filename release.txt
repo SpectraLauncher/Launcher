@@ -1,3 +1,12 @@
+## Changes (v0.8.1)
+
+### 🐛 Bug Fixes
+- **The "sync your instances" window never appeared for some people who updated to 0.8.0**: the launcher ticked it off as shown before it had actually been shown, so anything that interrupted the first start after updating — the update restarting the app, a crash, closing the window quickly — made it disappear for good. It now only counts as shown once you have actually closed it, and it comes back on the next start until then. If you updated to 0.8.0 and never saw it, you will get it now.
+- **A damaged settings file could be silently replaced with the defaults**: if `launcher.json` could not be read, the launcher wrote a fresh one over it on startup and your memory, Java and window settings were gone. It now leaves the file alone.
+
+### ✨ Features & Improvements
+- **The launcher writes a log file in normal use**: warnings and errors now go to `logs/launcher.log` in the launcher folder, not only in development builds. If something misbehaves there is finally something to look at.
+
 ## Changes (v0.8.0)
 
 ### ✨ Features & Improvements

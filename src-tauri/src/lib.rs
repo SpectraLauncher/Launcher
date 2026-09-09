@@ -121,13 +121,22 @@ pub fn run() {
 
             commands::launch::reconcile_running(app.handle());
 
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
-            }
+            app.handle().plugin(
+                tauri_plugin_log::Builder::default()
+                    .level(if cfg!(debug_assertions) {
+                        log::LevelFilter::Info
+                    } else {
+                        log::LevelFilter::Warn
+                    })
+                    .targets([
+                        tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
+                        tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Folder {
+                            path: paths::logs_dir(),
+                            file_name: Some("launcher".into()),
+                        }),
+                    ])
+                    .build(),
+            )?;
 
             #[cfg(desktop)]
             {
@@ -222,6 +231,7 @@ pub fn run() {
             commands::launch::read_console,
             commands::launch::clear_console,
             commands::sync::take_sync_announcement,
+            commands::sync::mark_sync_announcement_seen,
             commands::sync::sync_get_state,
             commands::sync::sync_sources,
             commands::sync::sync_join_preview,

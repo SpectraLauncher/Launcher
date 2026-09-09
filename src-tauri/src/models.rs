@@ -124,6 +124,7 @@ pub struct AccountsFile {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
+    #[serde(default = "default_memory")]
     pub default_memory_mb: u32,
     #[serde(default)]
     pub last_instance_id: Option<String>,
@@ -167,10 +168,17 @@ pub struct Settings {
 
     #[serde(default)]
     pub sync_announced: bool,
+
+    #[serde(default)]
+    pub sync_announce_seen: bool,
 }
 
 fn default_true() -> bool {
     true
+}
+
+fn default_memory() -> u32 {
+    4096
 }
 
 fn default_snapshot_keep() -> u32 {
@@ -184,7 +192,7 @@ fn default_theme() -> String {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            default_memory_mb: 4096,
+            default_memory_mb: default_memory(),
             last_instance_id: None,
             theme: default_theme(),
             default_fullscreen: false,
@@ -204,6 +212,7 @@ impl Default for Settings {
             anonymous_stats: true,
             share_activity: true,
             sync_announced: false,
+            sync_announce_seen: false,
         }
     }
 }

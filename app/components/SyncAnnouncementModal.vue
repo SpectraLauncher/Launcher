@@ -84,17 +84,17 @@ const draft = reactive(
 const picked = computed(() => SYNC_OPTIONS.filter(o => draft[o]))
 
 onMounted(async () => {
-  let announce = false
   try {
-    announce = await invoke<boolean>('take_sync_announcement')
-  } catch {
+    if (!await invoke<boolean>('take_sync_announcement')) return
+  } catch (e) {
+    console.error('sync announcement check failed', e)
     return
   }
-  if (!announce) return
 
   try {
     sources.value = await sync.sources()
-  } catch {
+  } catch (e) {
+    console.error('sync announcement could not list instances', e)
     return
   }
   if (sources.value.length < 2) return
@@ -102,8 +102,15 @@ onMounted(async () => {
   open.value = true
 })
 
+function markSeen() {
+  invoke('mark_sync_announcement_seen').catch(e =>
+    console.error('could not mark the sync announcement as seen', e),
+  )
+}
+
 function skip() {
   open.value = false
+  markSeen()
 }
 
 function begin() {
@@ -134,6 +141,7 @@ async function apply(instanceId: string) {
   if (failed.length === chosen.length) {
     toast.add({ title: t('syncAnnounce.failed'), color: 'error' })
   } else {
+    markSeen()
     toast.add({ title: t('syncAnnounce.done', { n: chosen.length - failed.length }) })
   }
 }
