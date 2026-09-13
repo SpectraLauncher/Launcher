@@ -11,7 +11,7 @@ use crate::models::{Instance, Loader};
 use crate::{paths, store};
 use crate::error::{AppError, AppResult};
 
-const SHARE_API: &str = "https://usespectra.app/api/share";
+const SHARE_API: &str = concat!(crate::spectra_site!(), "/api/share");
 
 pub(crate) const MANIFEST: &str = "spectra-share.json";
 pub(crate) const FORMAT: &str = "spectra-share";

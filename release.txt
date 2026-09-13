@@ -1,3 +1,8 @@
+## Changes (v0.8.2)
+
+### ✨ Features & Improvements
+- **Share links now come from the site itself**: the launcher used to put the link to a shared instance together on its own, out of a copy of our web address kept in its code. It asks the site for the link instead, so a link you send someone keeps working even if that address ever changes.
+
 ## Changes (v0.8.1)
 
 ### 🐛 Bug Fixes

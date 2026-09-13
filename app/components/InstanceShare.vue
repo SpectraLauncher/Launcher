@@ -17,6 +17,8 @@ interface Recipient {
 }
 interface OwnedShare {
   code: string
+  /** Sent by the site. Optional so an older deployment still works. */
+  url?: string
   instance_id: string | null
   name: string | null
   revision: number
@@ -123,8 +125,12 @@ const busy = ref('')
 const error = ref('')
 const copied = ref('')
 
-const shareUrl = computed(() =>
-  share.value ? `https://usespectra.app/s/${share.value.code}` : anonymous.value?.url ?? '')
+// The server sends the address it wants used; building one here is the fallback
+// for a site that has not been updated yet.
+const shareUrl = computed(() => {
+  if (share.value) return share.value.url ?? spectraShareUrl(share.value.code)
+  return anonymous.value?.url ?? ''
+})
 const code = computed(() => share.value?.code ?? anonymous.value?.code ?? '')
 
 const invitable = computed(() => {

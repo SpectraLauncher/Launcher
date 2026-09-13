@@ -5,7 +5,19 @@ use tauri::{AppHandle, Emitter};
 use crate::{paths, store};
 use crate::error::{AppError, AppResult};
 
-pub const SITE: &str = "https://usespectra.app";
+/// The website's origin.
+///
+/// A macro rather than a plain const because `concat!` only takes literals, and
+/// the other modules build their endpoints at compile time from this one place —
+/// curseforge.rs and share.rs each used to carry their own copy of the domain.
+#[macro_export]
+macro_rules! spectra_site {
+    () => {
+        "https://usespectra.app"
+    };
+}
+
+pub const SITE: &str = crate::spectra_site!();
 
 pub const ORIGIN: &str = SITE;
 
