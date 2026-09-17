@@ -1,0 +1,101 @@
+name: Bug report
+description: Something in Spectra Launcher does not work as expected
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a problem. The more details you give, the faster it can be fixed.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you report
+      options:
+        - label: I searched the existing issues and this problem has not been reported yet.
+          required: true
+        - label: I am using the latest Spectra Launcher release.
+          required: false
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the problem and what you expected to happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Create a new Fabric 1.21.1 instance
+        2. Install Sodium from Modrinth
+        3. Press Play
+        4. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Launching the game or game crash
+        - Instances (create, import, export, settings)
+        - Mods, modpacks, shaders or resource packs
+        - Microsoft or offline accounts
+        - Java runtime
+        - Worlds, screenshots or skins
+        - Launcher interface or settings
+        - Installation or updates
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Spectra Launcher version
+      placeholder: 0.8.2
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux (AppImage)
+        - Linux (deb)
+    validations:
+      required: true
+  - type: input
+    id: os-version
+    attributes:
+      label: Operating system version
+      placeholder: Windows 11 24H2, macOS 15.3, Ubuntu 24.04
+  - type: input
+    id: instance
+    attributes:
+      label: Minecraft version and mod loader
+      placeholder: 1.21.1 Fabric 0.16.10
+  - type: textarea
+    id: mods
+    attributes:
+      label: Mods or modpack
+      description: The modpack name or the list of installed mods, if the problem is related to them.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and crash report
+      description: |
+        Launcher logs are in the `logs` folder of the data directory (`%APPDATA%\SpectraLauncher\logs` on Windows).
+        For game crashes paste the crash report or the share link created by the launcher.
+        Remove access tokens or other private data before posting.
+      render: text
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Optional. Make sure they do not show anything private.

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Website
+    url: https://usespectra.app
+    about: Downloads, screenshots and information about Spectra Launcher.
+  - name: Report a security vulnerability
+    url: https://github.com/SpectraLauncher/Launcher/security/advisories/new
+    about: Please report security issues privately instead of opening a public issue.

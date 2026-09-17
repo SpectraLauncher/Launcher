@@ -1,0 +1,41 @@
+name: Translation
+description: Add a new language or fix an existing translation
+title: "[Translation]: "
+labels: ["translation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Translations live in `i18n/locales/<language>.json`. The launcher is available in English, Polish, German,
+        Spanish, French, Russian and Chinese.
+  - type: input
+    id: language
+    attributes:
+      label: Language
+      placeholder: German (de)
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Request
+      options:
+        - Fix a wrong, missing or unclear translation
+        - Add a new language
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: For fixes, quote the current text, the proposed text and where it appears in the launcher.
+    validations:
+      required: true
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: Can you provide the translation?
+      options:
+        - Yes, I will open a pull request
+        - Yes, I can send the texts in this issue
+        - "No"

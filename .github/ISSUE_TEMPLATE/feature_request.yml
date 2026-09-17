@@ -1,0 +1,59 @@
+name: Feature request
+description: Suggest an idea or an improvement
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. Please describe the problem it solves, not only the solution.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you suggest
+      options:
+        - label: I searched the existing issues and this idea has not been suggested yet.
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What are you trying to do, and what makes it hard today?
+      placeholder: When I play a modpack with friends I want to...
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How would you like it to work?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other launchers that do this well, workarounds you use today.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Instances
+        - Mods, modpacks, shaders or resource packs
+        - Accounts
+        - Worlds, screenshots or skins
+        - Servers and Quick Play
+        - Themes and interface
+        - Translations
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: Would you like to help implement it?
+      options:
+        - "No"
+        - Yes, I can open a pull request
+        - I can help with testing
