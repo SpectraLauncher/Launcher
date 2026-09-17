@@ -22,7 +22,7 @@
     "@tauri-apps/plugin-shell": "^2.3.5",
     "@tauri-apps/plugin-store": "^2.4.3",
     "@tauri-apps/plugin-updater": "^2.10.1",
-    "@unhead/vue": "^2.1.15",
+    "@unhead/vue": "^3.4.0",
     "dompurify": "^3.4.11",
     "marked": "^18.0.5",
     "nuxt": "^4.4.8",
