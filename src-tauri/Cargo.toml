@@ -70,7 +70,7 @@ fastnbt = "2"
 # Parsing Forge/NeoForge mods.toml metadata from local jars
 toml = "0.8"
 # sha1 of local jars, to match them against Modrinth by file hash
-sha1 = "0.10"
+sha1 = "0.11"
 # Decoding and downscaling screenshots and pack icons into the thumbnail cache
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif"] }
 
