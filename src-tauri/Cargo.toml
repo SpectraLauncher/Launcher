@@ -88,7 +88,7 @@ libc = "0.2"
 # Renames the `spectra://` handler shown in browser prompts (the deep-link plugin
 # registers it under the raw bundle identifier). Already in the tree via that plugin.
 [target.'cfg(windows)'.dependencies]
-windows-registry = "0.5"
+windows-registry = "0.100"
 # DPAPI, to encrypt the token files at rest. Windows has no equivalent of the
 # 0600 mode the Unix build relies on, so without this the Microsoft refresh
 # token and the Spectra session sit in plaintext for every process on the
