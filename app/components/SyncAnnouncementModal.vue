@@ -1,22 +1,26 @@
 <template>
   <UModal v-model:open="open" :dismissible="false" :ui="{ content: 'max-w-3xl' }">
     <template #content>
-      <div class="grid grid-cols-1 sm:grid-cols-[1fr_360px]">
+      <div class="grid grid-cols-1 sm:grid-cols-[1fr_320px]">
         <div class="flex flex-col gap-4 p-7">
-          <span
-            class="w-fit rounded-full bg-primary-500/15 px-3 py-1 text-xs font-semibold text-primary-400"
-          >
-            {{ $t('syncAnnounce.badge') }}
+          <span class="w-fit rounded-full bg-primary-500/15 px-3 py-1 text-xs font-semibold text-primary-400">
+            {{ $t('syncAnnounce.badge') }} · 0.9.0
           </span>
 
-          <h2 class="text-2xl font-bold tracking-tight">{{ $t('syncAnnounce.title') }}</h2>
+          <div class="flex items-center gap-3">
+            <UIcon name="i-lucide-cloud" class="size-7 shrink-0 text-primary-400" />
+            <h2 class="text-2xl font-bold tracking-tight">{{ $t('syncAnnounce.title') }}</h2>
+          </div>
 
           <p class="text-sm leading-relaxed text-muted">{{ $t('syncAnnounce.body') }}</p>
+          <p class="text-sm leading-relaxed text-muted">{{ $t('syncAnnounce.conflicts') }}</p>
           <p class="text-sm leading-relaxed text-muted">{{ $t('syncAnnounce.later') }}</p>
+
+          <p v-if="error" role="alert" class="text-xs text-red-400">{{ error }}</p>
 
           <div class="mt-auto flex flex-wrap gap-2 pt-2">
             <UButton
-              icon="i-lucide-circle-slash"
+              icon="i-lucide-clock-3"
               color="neutral"
               variant="soft"
               :label="$t('syncAnnounce.skip')"
@@ -24,16 +28,16 @@
               @click="skip"
             />
             <UButton
-              icon="i-lucide-refresh-cw"
-              :label="picked.length ? $t('syncAnnounce.syncSelected') : $t('syncAnnounce.syncAll')"
+              :icon="primaryIcon"
+              :label="primaryLabel"
               :loading="busy"
-              @click="begin"
+              @click="primary"
             />
           </div>
         </div>
 
-        <div class="flex flex-col gap-1 border-t border-default bg-white/2 p-5 sm:border-t-0 sm:border-l">
-          <div class="mb-1 flex justify-end">
+        <div class="flex flex-col gap-3 border-t border-default bg-white/2 p-5 sm:border-t-0 sm:border-l">
+          <div class="flex justify-end">
             <UButton
               icon="i-lucide-x"
               color="neutral"
@@ -46,103 +50,122 @@
             />
           </div>
 
-          <label
-            v-for="option in SYNC_OPTIONS"
-            :key="option"
-            class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 transition hover:bg-white/4"
-          >
-            <span class="min-w-0 flex-1 text-sm font-semibold">
-              {{ $t(`syncAnnounce.options.${option}`) }}
-            </span>
-            <USwitch :model-value="draft[option]" :disabled="busy" @update:model-value="draft[option] = $event" />
-          </label>
+          <p class="text-xs font-semibold uppercase tracking-wide text-muted">{{ $t('syncAnnounce.included') }}</p>
+          <div class="space-y-2">
+            <div class="flex items-center gap-2 text-sm">
+              <UIcon name="i-lucide-list" class="size-4 shrink-0 text-primary-400" />
+              <span>{{ $t('syncAnnounce.instances') }}</span>
+            </div>
+            <div v-for="option in SYNC_OPTIONS" :key="option" class="flex items-center gap-2 text-sm">
+              <UIcon :name="OPTION_ICONS[option]" class="size-4 shrink-0 text-primary-400" />
+              <span>{{ $t(`sync.options.${option}.label`) }}</span>
+            </div>
+          </div>
+
+          <p class="mt-2 border-t border-default pt-3 text-xs leading-relaxed text-muted">
+            {{ $t('syncAnnounce.localOnly') }}
+          </p>
         </div>
       </div>
     </template>
   </UModal>
-
-  <SyncSourceModal v-model:open="sourceOpen" :sources="sources" @picked="apply" />
 </template>
 
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core'
-import { SYNC_OPTIONS, type SyncOption, type SyncSource } from '~/types/sync'
+import type { CloudSyncView } from '~/composables/useCloudSync'
+import { SYNC_OPTIONS, type SyncOption } from '~/types/sync'
 
-const sync = useInstanceSync()
-const toast = useToast()
+const OPTION_ICONS: Record<SyncOption, string> = {
+  game_options: 'i-lucide-sliders-horizontal',
+  multiplayer_servers: 'i-lucide-server',
+  resource_packs: 'i-lucide-image',
+  command_history: 'i-lucide-terminal',
+  creative_hotbars: 'i-lucide-layout-grid',
+}
+
 const { t } = useI18n()
+const updater = useAutoUpdate()
+const spectra = useSpectraAccount()
+const cloud = useCloudSync()
+const router = useRouter()
+const toast = useToast()
 
-const open = ref(false)
+const open = useState('cloud-sync-announcement-open', () => false)
+const pending = useState('cloud-sync-announcement-pending', () => true)
 const busy = ref(false)
-const sourceOpen = ref(false)
-const sources = ref<SyncSource[]>([])
-
-const draft = reactive(
-  Object.fromEntries(SYNC_OPTIONS.map(o => [o, false])) as Record<SyncOption, boolean>,
-)
-
-const picked = computed(() => SYNC_OPTIONS.filter(o => draft[o]))
+const error = ref<string | null>(null)
+const alreadyEnabled = computed(() => cloud.view.value.enabled
+  && cloud.view.value.accountId === spectra.user.value?.id)
+const primaryLabel = computed(() => alreadyEnabled.value
+  ? t('syncAnnounce.manage')
+  : spectra.isSignedIn.value ? t('syncAnnounce.enable') : t('syncAnnounce.signIn'))
+const primaryIcon = computed(() => alreadyEnabled.value
+  ? 'i-lucide-settings-2'
+  : spectra.isSignedIn.value ? 'i-lucide-cloud-upload' : 'i-lucide-log-in')
 
 onMounted(async () => {
+  // An update may restart the launcher. Offer the new feature only after that
+  // check has finished, so the announcement survives an interrupted update.
   try {
-    if (!await invoke<boolean>('take_sync_announcement')) return
+    await updater.updateOnStartup()
+    if (!await invoke<boolean>('take_cloud_sync_announcement')) return
+    await Promise.allSettled([
+      spectra.refresh(),
+      invoke<CloudSyncView>('cloud_sync_state').then(state => { cloud.view.value = state }),
+    ])
+    open.value = true
   } catch (e) {
-    console.error('sync announcement check failed', e)
-    return
+    console.error('cloud sync announcement check failed', e)
+  } finally {
+    pending.value = false
   }
-
-  try {
-    sources.value = await sync.sources()
-  } catch (e) {
-    console.error('sync announcement could not list instances', e)
-    return
-  }
-  if (sources.value.length < 2) return
-
-  open.value = true
 })
 
-function markSeen() {
-  invoke('mark_sync_announcement_seen').catch(e =>
-    console.error('could not mark the sync announcement as seen', e),
-  )
-}
-
-function skip() {
+async function finish() {
+  await invoke('mark_cloud_sync_announcement_seen')
   open.value = false
-  markSeen()
 }
 
-function begin() {
-  if (!sources.value.length) {
-    open.value = false
-    return
-  }
-  sourceOpen.value = true
-}
-
-async function apply(instanceId: string) {
-  const chosen = picked.value.length ? picked.value : SYNC_OPTIONS
+async function skip() {
+  if (busy.value) return
   busy.value = true
-  const failed: SyncOption[] = []
+  error.value = null
   try {
-    for (const option of chosen) {
-      try {
-        await sync.setGlobal(option, true, instanceId)
-      } catch {
-        failed.push(option)
-      }
-    }
+    await finish()
+  } catch (e) {
+    error.value = errorText(e)
   } finally {
     busy.value = false
   }
+}
 
-  open.value = false
-  if (failed.length === chosen.length) {
-    toast.add({ title: t('syncAnnounce.failed'), color: 'error' })
-  } else {
-    markSeen()
-    toast.add({ title: t('syncAnnounce.done', { n: chosen.length - failed.length }) })
+async function primary() {
+  if (busy.value) return
+  busy.value = true
+  error.value = null
+  try {
+    if (!spectra.isSignedIn.value) {
+      await spectra.login()
+      return
+    }
+    if (alreadyEnabled.value) {
+      await finish()
+      await router.push({ path: '/settings', query: { section: 'sync' } })
+      return
+    }
+    try {
+      await cloud.setEnabled(true)
+    } catch (e) {
+      if (!cloud.view.value.enabled) throw e
+      toast.add({ title: t('syncAnnounce.retry'), description: errorText(e), color: 'warning' })
+    }
+    await finish()
+    toast.add({ title: t('syncAnnounce.done') })
+  } catch (e) {
+    error.value = errorText(e)
+  } finally {
+    busy.value = false
   }
 }
 </script>

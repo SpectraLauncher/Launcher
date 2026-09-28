@@ -184,6 +184,31 @@ fn write_options(path: &Path, values: &BTreeMap<String, String>) -> AppResult<()
     std::fs::write(path, body).map_err(|e| format!("write options.txt: {e}").into())
 }
 
+pub(crate) fn export_cloud_options(id: &str, mc_version: &str) -> BTreeMap<String, String> {
+    let era = flattening_era(mc_version);
+    read_options(&paths::instance_game_dir(id).join("options.txt"))
+        .into_iter()
+        .filter(|(key, _)| is_synced_option_key(key, era) || key == "resourcePacks")
+        .collect()
+}
+
+pub(crate) fn import_cloud_options(
+    id: &str,
+    mc_version: &str,
+    cloud: BTreeMap<String, String>,
+) -> AppResult<()> {
+    let path = paths::instance_game_dir(id).join("options.txt");
+    let era = flattening_era(mc_version);
+    let mut local = read_options(&path);
+    local.retain(|key, _| !is_synced_option_key(key, era) && key != "resourcePacks");
+    for (key, value) in cloud {
+        if (is_synced_option_key(&key, era) || key == "resourcePacks") && !value.contains('\n') && value.len() <= 8192 {
+            local.insert(key, value);
+        }
+    }
+    write_options(&path, &local)
+}
+
 fn pull_options(id: &str, mc_version: &str) -> AppResult<()> {
     let shared: BTreeMap<String, String> =
         store::read_json(&paths::sync_options_file())?.unwrap_or_default();
@@ -643,33 +668,33 @@ pub struct SyncSource {
     pub has_icon: bool,
 }
 
-pub fn resolve_announcement() -> bool {
+pub fn resolve_cloud_announcement() -> bool {
     let config = paths::launcher_config_file();
     let upgraded = config.is_file() || has_instances();
 
     let Ok(mut settings) = crate::commands::settings::load() else {
         return false;
     };
-    if settings.sync_announce_seen {
+    if settings.cloud_sync_announce_seen {
         return false;
     }
 
     if !upgraded {
-        settings.sync_announce_seen = true;
+        settings.cloud_sync_announce_seen = true;
         if let Err(e) = store::write_json(&config, &settings) {
             log::warn!("could not mark the sync announcement as seen: {e}");
         }
         return false;
     }
 
-    !load_state().map(|s| s.global.any()).unwrap_or(false)
+    true
 }
 
 #[tauri::command]
-pub async fn mark_sync_announcement_seen() -> AppResult<()> {
+pub async fn mark_cloud_sync_announcement_seen() -> AppResult<()> {
     crate::blocking(|| {
         let mut settings = crate::commands::settings::load()?;
-        settings.sync_announce_seen = true;
+        settings.cloud_sync_announce_seen = true;
         store::write_json(&paths::launcher_config_file(), &settings)
     })
     .await
@@ -686,9 +711,9 @@ fn has_instances() -> bool {
 }
 
 #[tauri::command]
-pub fn take_sync_announcement(state: tauri::State<'_, crate::AppState>) -> bool {
+pub fn take_cloud_sync_announcement(state: tauri::State<'_, crate::AppState>) -> bool {
     state
-        .announce_sync
+        .announce_cloud_sync
         .lock()
         .map(|mut flag| std::mem::replace(&mut *flag, false))
         .unwrap_or(false)
@@ -953,27 +978,27 @@ mod tests {
     }
 
     #[test]
-    fn the_announcement_fires_after_an_upgrade_but_never_after_a_fresh_install() {
+    fn cloud_announcement_fires_once_for_upgrades_even_if_old_sync_was_seen() {
         let guard = paths::lock_data_dir();
 
         let fresh = std::env::temp_dir().join(format!("spectra-fresh-{}", uuid::Uuid::new_v4()));
         std::env::set_var("SPECTRA_DATA_DIR", &fresh);
         std::fs::create_dir_all(&fresh).unwrap();
         assert!(
-            !resolve_announcement(),
+            !resolve_cloud_announcement(),
             "a launcher with no config file has never run before"
         );
         assert!(paths::launcher_config_file().is_file());
-        assert!(!resolve_announcement(), "and it stays quiet on every later start");
+        assert!(!resolve_cloud_announcement(), "and it stays quiet on every later start");
         std::fs::remove_dir_all(&fresh).unwrap();
 
         let unseen = std::env::temp_dir().join(format!("spectra-keep-{}", uuid::Uuid::new_v4()));
         std::env::set_var("SPECTRA_DATA_DIR", &unseen);
         std::fs::create_dir_all(&unseen).unwrap();
         std::fs::write(paths::launcher_config_file(), "{\"default_memory_mb\":4096}").unwrap();
-        assert!(resolve_announcement(), "an upgrade is offered the announcement");
+        assert!(resolve_cloud_announcement(), "an upgrade is offered the announcement");
         assert!(
-            resolve_announcement(),
+            resolve_cloud_announcement(),
             "and keeps being offered until the window is actually closed, so a crash or a \
              relaunch mid-update does not swallow it"
         );
@@ -983,13 +1008,19 @@ mod tests {
         std::env::set_var("SPECTRA_DATA_DIR", &upgraded);
         std::fs::create_dir_all(&upgraded).unwrap();
         std::fs::write(paths::launcher_config_file(), "{\"default_memory_mb\":4096}").unwrap();
-        assert!(resolve_announcement(), "an existing install upgrading sees it");
+        assert!(resolve_cloud_announcement(), "an existing install upgrading sees it");
 
         let mut settings = crate::commands::settings::load().unwrap();
         settings.sync_announce_seen = true;
         store::write_json(&paths::launcher_config_file(), &settings).unwrap();
         assert!(
-            !resolve_announcement(),
+            resolve_cloud_announcement(),
+            "the old local-sync announcement cannot hide the new cloud feature"
+        );
+        settings.cloud_sync_announce_seen = true;
+        store::write_json(&paths::launcher_config_file(), &settings).unwrap();
+        assert!(
+            !resolve_cloud_announcement(),
             "once the window reports back that it was closed, it never returns"
         );
         assert_eq!(
@@ -1004,7 +1035,7 @@ mod tests {
         std::fs::create_dir_all(paths::instance_dir("old")).unwrap();
         std::fs::write(paths::instance_config_file("old"), "{}").unwrap();
         assert!(
-            resolve_announcement(),
+            resolve_cloud_announcement(),
             "instances prove the launcher was used before, even with no settings file"
         );
         std::fs::remove_dir_all(&no_config).unwrap();
@@ -1017,8 +1048,8 @@ mod tests {
         state.global.set(SyncOption::GameOptions, true);
         save_state(&state).unwrap();
         assert!(
-            !resolve_announcement(),
-            "someone who already turned syncing on is not told it is new"
+            resolve_cloud_announcement(),
+            "local syncing does not hide the new cross-computer feature"
         );
         std::fs::remove_dir_all(&already).unwrap();
 

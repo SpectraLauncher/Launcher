@@ -171,6 +171,9 @@ pub struct Settings {
 
     #[serde(default)]
     pub sync_announce_seen: bool,
+
+    #[serde(default)]
+    pub cloud_sync_announce_seen: bool,
 }
 
 fn default_true() -> bool {
@@ -213,6 +216,7 @@ impl Default for Settings {
             share_activity: true,
             sync_announced: false,
             sync_announce_seen: false,
+            cloud_sync_announce_seen: false,
         }
     }
 }

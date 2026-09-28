@@ -41,8 +41,9 @@ pub struct AppState {
     pub discord: Mutex<Option<discord_rich_presence::DiscordIpcClient>>,
     pub discord_playing: Mutex<HashMap<String, (String, String)>>,
     pub console: Mutex<HashMap<String, commands::launch::ConsoleBuffer>>,
-    pub announce_sync: Mutex<bool>,
+    pub announce_cloud_sync: Mutex<bool>,
     pub install_lock: tokio::sync::Mutex<()>,
+    pub cloud_sync_lock: tokio::sync::Mutex<()>,
     pub pending_share: Mutex<Option<String>>,
     pub pending_launch: Mutex<Option<String>>,
 }
@@ -113,8 +114,8 @@ pub fn run() {
 
             {
                 use tauri::Manager;
-                let announce = commands::sync::resolve_announcement();
-                if let Ok(mut flag) = app.state::<AppState>().announce_sync.lock() {
+                let announce = commands::sync::resolve_cloud_announcement();
+                if let Ok(mut flag) = app.state::<AppState>().announce_cloud_sync.lock() {
                     *flag = announce;
                 }
             }
@@ -230,8 +231,8 @@ pub fn run() {
             commands::launch::is_instance_running,
             commands::launch::read_console,
             commands::launch::clear_console,
-            commands::sync::take_sync_announcement,
-            commands::sync::mark_sync_announcement_seen,
+            commands::sync::take_cloud_sync_announcement,
+            commands::sync::mark_cloud_sync_announcement_seen,
             commands::sync::sync_get_state,
             commands::sync::sync_sources,
             commands::sync::sync_join_preview,
@@ -241,6 +242,11 @@ pub fn run() {
             commands::sync::sync_set_pack_enabled,
             commands::sync::sync_remove_pack,
             commands::sync::sync_open_folder,
+            commands::cloud_sync::cloud_sync_state,
+            commands::cloud_sync::cloud_sync_backup_folder,
+            commands::cloud_sync::cloud_sync_set_enabled,
+            commands::cloud_sync::cloud_sync_tick,
+            commands::cloud_sync::cloud_sync_resolve,
             commands::launch::stop_instance,
             commands::ping::ping_server,
             commands::meta::get_minecraft_versions,

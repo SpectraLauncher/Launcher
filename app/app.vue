@@ -75,6 +75,7 @@
       <LiveLogsModal />
       <CrashReportModal />
       <StartupUpdate />
+      <CloudSyncConflictModal />
     </template>
   </UApp>
 </template>
@@ -109,6 +110,7 @@ const telemetry = useTelemetry()
 const createModal = useCreateInstanceModal()
 const spectra = useSpectraAccount()
 const spectraNotifications = useSpectraNotifications()
+const cloud = useCloudSync()
 
 async function openAccountSettings() {
   const url = await invoke<string>('spectra_account_settings_url')
@@ -120,6 +122,7 @@ function refreshAccount() {
 }
 
 let accountRefreshTimer: ReturnType<typeof setInterval> | null = null
+let cloudTimer: ReturnType<typeof setInterval> | null = null
 
 const contentWindow = useContentWindow()
 
@@ -127,6 +130,7 @@ let unlistenContent: UnlistenFn | null = null
 let unlistenShare: UnlistenFn | null = null
 let unlistenAccount: UnlistenFn | null = null
 let unlistenLaunch: UnlistenFn | null = null
+let unlistenCloudExit: UnlistenFn | null = null
 onMounted(async () => {
   await bootGate()
 
@@ -144,8 +148,13 @@ onMounted(async () => {
   const pendingLaunch = await invoke<string | null>('take_pending_launch')
   if (pendingLaunch) playInstance(pendingLaunch)
 
+  if (!isContentWindow.value) {
+    unlistenCloudExit = await listen('mc://exited', () => { void cloud.tick().catch(() => {}) })
+  }
+
   unlistenAccount = await listen('spectra://account', async () => {
     await spectra.refresh()
+    void cloud.tick().catch(() => {})
     spectraNotifications.start()
     spectra.linkMinecraft()
   })
@@ -159,6 +168,7 @@ onBeforeUnmount(() => {
   unlistenShare?.()
   unlistenAccount?.()
   unlistenLaunch?.()
+  unlistenCloudExit?.()
   unlistenContent?.()
 })
 
@@ -185,8 +195,12 @@ onMounted(async () => {
       if (spectra.user.value?.emailVerified === false) refreshAccount()
     }, 60_000)
     window.addEventListener('focus', refreshAccount)
+    await cloud.load().catch(() => {})
+    cloudTimer = setInterval(() => { void cloud.tick().catch(() => {}) }, 180_000)
+    window.addEventListener('focus', refreshCloud)
   }
   spectra.refresh().then(() => {
+    if (!isContentWindow.value) void cloud.tick().catch(() => {})
     if (!spectra.isSignedIn.value) return
     spectraNotifications.start()
     spectra.linkMinecraft()
@@ -196,6 +210,12 @@ onBeforeUnmount(() => {
   activity.detach()
   spectraNotifications.stop()
   if (accountRefreshTimer) clearInterval(accountRefreshTimer)
+  if (cloudTimer) clearInterval(cloudTimer)
   window.removeEventListener('focus', refreshAccount)
+  window.removeEventListener('focus', refreshCloud)
 })
+
+function refreshCloud() {
+  void cloud.tick().catch(() => {})
+}
 </script>

@@ -1,6 +1,8 @@
-## Changes (v0.8.3)
+## Changes (v0.9.0)
 
 ### ✨ Features & Improvements
+- **Sync between computers**: Turn it on in Settings → Sync. Your instance list, game settings, servers, resource packs, command history and creative hotbars then move through your Spectra account. If both computers change them, you choose which copy to keep. Worlds, mods and logins stay on each computer.
+- **A new sync guide after updating**: The launcher shows what can move between computers and lets you turn it on. You can also do this later in Settings → Sync.
 - **See your launcher on the website**: Sign in again and you will see Spectra Launcher and your system in the list of signed-in devices.
 - **Sign out just the launcher**: You can remove its login on the website without signing out your browser.
 - **Email reminder**: If you have not confirmed your email address, a message stays at the top of the launcher. It has a button to open your account settings. The message goes away after you confirm your address.

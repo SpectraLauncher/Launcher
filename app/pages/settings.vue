@@ -265,6 +265,7 @@ const accounts = useAccountStore()
 const java = useJava()
 const sysMem = useSystemMemory()
 const updater = useAutoUpdate()
+const route = useRoute()
 
 type Section = 'appearance' | 'language' | 'privacy' | 'java' | 'defaults' | 'sync' | 'accounts'
 const sections: { key: Section; icon: string }[] = [
@@ -276,7 +277,10 @@ const sections: { key: Section; icon: string }[] = [
   { key: 'sync', icon: 'i-lucide-refresh-cw' },
   { key: 'accounts', icon: 'i-lucide-users' },
 ]
-const section = ref<Section>('appearance')
+const section = ref<Section>(route.query.section === 'sync' ? 'sync' : 'appearance')
+watch(() => route.query.section, (value) => {
+  if (value === 'sync') section.value = 'sync'
+})
 
 type PrivacyKey = 'track_playtime' | 'share_activity' | 'discord_rpc' | 'crash_reports' | 'anonymous_stats'
 const privacyOptions: { key: PrivacyKey; wip?: boolean }[] = [

@@ -1,5 +1,49 @@
 <template>
   <div class="space-y-6">
+    <div class="rounded-xl border border-default p-4 space-y-3">
+      <div class="flex items-start gap-3">
+        <UIcon name="i-lucide-cloud" class="mt-0.5 size-5 shrink-0 text-primary" />
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-medium">{{ $t('sync.cloud.title') }}</p>
+          <p class="mt-1 text-xs text-muted">{{ $t('sync.cloud.desc') }}</p>
+        </div>
+        <USwitch
+          :model-value="cloud.view.value.enabled && cloud.view.value.accountId === spectra.user.value?.id"
+          :loading="cloud.busy.value"
+          :disabled="!spectra.isSignedIn.value || cloud.busy.value"
+          @update:model-value="toggleCloud($event)"
+        />
+      </div>
+      <p v-if="!spectra.isSignedIn.value" class="text-xs text-amber-300">{{ $t('sync.cloud.signIn') }}</p>
+      <template v-if="cloud.view.value.enabled && cloud.view.value.accountId === spectra.user.value?.id">
+        <div class="flex items-center gap-3">
+          <p class="flex-1 text-xs text-muted">{{ $t(`sync.cloud.status.${cloud.view.value.status}`) }}</p>
+          <UButton
+            icon="i-lucide-refresh-cw"
+            color="neutral"
+            variant="soft"
+            size="xs"
+            :loading="cloud.busy.value"
+            :label="$t('sync.cloud.syncNow')"
+            @click="syncCloudNow"
+          />
+        </div>
+        <p v-if="cloud.view.value.updated" class="text-[11px] text-muted">
+          {{ $t('sync.cloud.lastSync', { date: new Date(cloud.view.value.updated).toLocaleString() }) }}
+        </p>
+        <UButton
+          icon="i-lucide-folder-open"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          :label="$t('sync.cloud.backups')"
+          @click="openCloudBackups"
+        />
+      </template>
+      <p v-if="cloud.error.value" role="alert" class="text-xs text-red-400">{{ cloud.error.value }}</p>
+      <p class="text-[11px] text-muted">{{ $t('sync.cloud.scope') }}</p>
+    </div>
+
     <div>
       <p class="text-sm font-medium">{{ $t('sync.title') }}</p>
       <p class="mt-1 text-xs text-muted">{{ $t('sync.desc') }}</p>
@@ -153,6 +197,8 @@ const OPTION_ICONS: Record<SyncOption, string> = {
 }
 
 const sync = useInstanceSync()
+const cloud = useCloudSync()
+const spectra = useSpectraAccount()
 const toast = useToast()
 const { t } = useI18n()
 
@@ -166,9 +212,22 @@ const activeOptions = computed(() => SYNC_OPTIONS.filter(o => sync.state.value.g
 const seededFrom = (option: SyncOption) => sync.state.value.seeded_from[option] ?? null
 
 onMounted(async () => {
+  await cloud.load().catch(() => {})
   await run(() => sync.ensureLoaded())
   await loadSources()
 })
+
+function toggleCloud(enabled: boolean) {
+  void cloud.setEnabled(enabled).catch(() => {})
+}
+
+function syncCloudNow() {
+  void cloud.tick().catch(() => {})
+}
+
+function openCloudBackups() {
+  void cloud.openBackups().catch(e => toast.add({ title: errorText(e), color: 'error' }))
+}
 
 async function run<T>(fn: () => Promise<T>): Promise<T | undefined> {
   try {
