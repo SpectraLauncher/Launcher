@@ -299,6 +299,7 @@ pub fn run() {
             commands::content_window::close_content_window,
             commands::content_window::content_installed,
             commands::spectra::spectra_login_url,
+            commands::spectra::spectra_account_settings_url,
             commands::spectra::spectra_profile_url,
             commands::spectra::spectra_session,
             commands::spectra::spectra_logout,

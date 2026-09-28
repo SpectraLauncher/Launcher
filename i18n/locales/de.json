@@ -691,6 +691,8 @@
     "signedOutTitle": "Spiel mit deinen Freunden",
     "signedOutHint": "Melde dich an, um eine Freundesliste zu führen und Modpacks direkt in ihren Launcher zu schicken.",
     "browserHint": "Zum Abschließen der Anmeldung öffnet sich dein Browser.",
+    "verifyEmailWarning": "Die E-Mail-Adresse deines Spectra-Kontos ist noch nicht bestätigt.",
+    "verifyEmailAction": "Kontoeinstellungen öffnen",
     "inbox": "Posteingang",
     "requests": "Freundschaftsanfragen",
     "friends": "Freunde",

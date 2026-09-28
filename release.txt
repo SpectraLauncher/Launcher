@@ -1,3 +1,10 @@
+## Changes (v0.8.3)
+
+### ✨ Features & Improvements
+- **See your launcher on the website**: Sign in again and you will see Spectra Launcher and your system in the list of signed-in devices.
+- **Sign out just the launcher**: You can remove its login on the website without signing out your browser.
+- **Email reminder**: If you have not confirmed your email address, a message stays at the top of the launcher. It has a button to open your account settings. The message goes away after you confirm your address.
+
 ## Changes (v0.8.2)
 
 ### ✨ Features & Improvements

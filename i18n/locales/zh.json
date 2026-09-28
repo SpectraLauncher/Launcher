@@ -690,6 +690,8 @@
     "signedOutTitle": "和好友一起玩",
     "signedOutHint": "登录后即可建立好友列表，并把整合包直接发送到他们的启动器。",
     "browserHint": "将打开浏览器完成登录。",
+    "verifyEmailWarning": "你的 Spectra 账户邮箱尚未验证。",
+    "verifyEmailAction": "打开账户设置",
     "inbox": "通知",
     "requests": "好友请求",
     "friends": "好友",

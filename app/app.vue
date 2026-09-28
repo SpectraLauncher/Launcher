@@ -48,12 +48,26 @@
         style="background-image:radial-gradient(rgba(255,255,255,0.035) 1px,transparent 1px);background-size:26px 26px;"
       />
 
-      <div class="relative z-[1] h-full">
-        <NuxtLayout>
-          <NuxtPage />
-        </NuxtLayout>
+      <div class="relative z-[1] flex h-full flex-col">
+        <div
+          v-if="!isContentWindow && spectra.user.value?.emailVerified === false"
+          role="status"
+          class="flex shrink-0 flex-wrap items-center justify-center gap-x-3 gap-y-1 border-b border-amber-400/25 bg-amber-400/10 px-4 py-2 text-center text-xs text-amber-100"
+        >
+          <UIcon name="i-lucide-mail-warning" class="size-4 shrink-0" />
+          <span>{{ t('spectra.verifyEmailWarning') }}</span>
+          <button type="button" class="font-semibold underline underline-offset-2 hover:text-white" @click="openAccountSettings">
+            {{ t('spectra.verifyEmailAction') }}
+          </button>
+        </div>
 
-        <AccountSidebar v-if="!isContentWindow" />
+        <div class="relative min-h-0 flex-1">
+          <NuxtLayout>
+            <NuxtPage />
+          </NuxtLayout>
+
+          <AccountSidebar v-if="!isContentWindow" />
+        </div>
       </div>
     </div>
 
@@ -95,6 +109,17 @@ const telemetry = useTelemetry()
 const createModal = useCreateInstanceModal()
 const spectra = useSpectraAccount()
 const spectraNotifications = useSpectraNotifications()
+
+async function openAccountSettings() {
+  const url = await invoke<string>('spectra_account_settings_url')
+  await openExternal(url)
+}
+
+function refreshAccount() {
+  if (spectra.isSignedIn.value) spectra.refresh()
+}
+
+let accountRefreshTimer: ReturnType<typeof setInterval> | null = null
 
 const contentWindow = useContentWindow()
 
@@ -155,6 +180,12 @@ onMounted(async () => {
   }
   instances.ensureLoaded()
   telemetry.init()
+  if (!isContentWindow.value) {
+    accountRefreshTimer = setInterval(() => {
+      if (spectra.user.value?.emailVerified === false) refreshAccount()
+    }, 60_000)
+    window.addEventListener('focus', refreshAccount)
+  }
   spectra.refresh().then(() => {
     if (!spectra.isSignedIn.value) return
     spectraNotifications.start()
@@ -164,5 +195,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   activity.detach()
   spectraNotifications.stop()
+  if (accountRefreshTimer) clearInterval(accountRefreshTimer)
+  window.removeEventListener('focus', refreshAccount)
 })
 </script>

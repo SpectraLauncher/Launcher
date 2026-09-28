@@ -691,6 +691,8 @@
     "signedOutTitle": "Play with your friends",
     "signedOutHint": "Sign in to build a friends list and send modpacks straight to their launcher.",
     "browserHint": "Your browser will open to finish signing in.",
+    "verifyEmailWarning": "Your Spectra account e-mail address has not been verified.",
+    "verifyEmailAction": "Open account settings",
     "inbox": "Inbox",
     "requests": "Friend requests",
     "friends": "Friends",

@@ -6,6 +6,7 @@ export interface SpectraUser {
   username: string | null
   image: string | null
   email?: string
+  emailVerified: boolean
   mcUsername?: string | null
   mcUuid?: string | null
 }
@@ -45,7 +46,8 @@ export const useSpectraAccount = () => {
     try {
       user.value = await invoke<SpectraUser | null>('spectra_session')
     } catch {
-      user.value = null
+      // Keep the last known account state during a temporary network failure.
+      // The native command returns null when the saved session was revoked.
     } finally {
       loading.value = false
     }

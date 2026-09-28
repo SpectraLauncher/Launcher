@@ -69,11 +69,15 @@ pub fn allowed(method: &str, path: &str) -> bool {
             | ("POST", ["api", "me", "activity" | "minecraft"])
             | ("GET", ["api", "auth", "get-session"])
             | ("POST", ["api", "auth", "sign-out"])
-            | ("POST", ["api", "auth", "one-time-token", "verify"])
+            | ("POST", ["api", "launcher", "session"])
     )
 }
 
 async fn call(method: &str, path: &str, body: Option<Value>) -> AppResult<Value> {
+    call_with_agent(method, path, body, None).await
+}
+
+async fn call_with_agent(method: &str, path: &str, body: Option<Value>, agent: Option<String>) -> AppResult<Value> {
     if !allowed(method, path) {
         return Err(AppError::invalid(format!("refusing to call {method} {path}")));
     }
@@ -85,6 +89,10 @@ async fn call(method: &str, path: &str, body: Option<Value>) -> AppResult<Value>
         other => return Err(AppError::invalid(format!("unsupported method {other}"))),
     }
     .header("origin", ORIGIN);
+
+    if let Some(agent) = agent {
+        req = req.header(reqwest::header::USER_AGENT, agent);
+    }
 
     if let Some(token) = stored_token() {
         req = req.bearer_auth(token);
@@ -157,6 +165,11 @@ pub fn spectra_login_url() -> String {
 }
 
 #[tauri::command]
+pub fn spectra_account_settings_url() -> String {
+    format!("{SITE}/dashboard/settings")
+}
+
+#[tauri::command]
 pub fn spectra_profile_url(username: String) -> String {
     let clean: String = username
         .chars()
@@ -166,14 +179,17 @@ pub fn spectra_profile_url(username: String) -> String {
 }
 
 #[tauri::command]
-pub async fn spectra_session() -> Option<Value> {
+pub async fn spectra_session() -> AppResult<Option<Value>> {
     if stored_token().is_none() {
-        return None;
+        return Ok(None);
     }
     match call("GET", "/api/auth/get-session", None).await {
-        Ok(Value::Null) => None,
-        Ok(v) => v.get("user").cloned(),
-        Err(_) => None,
+        Ok(Value::Null) => Ok(None),
+        Ok(v) => Ok(v.get("user").cloned()),
+        // `call` removes an invalid token on 401. A temporary network failure
+        // must not make the launcher forget an account (or its warning banner).
+        Err(_) if stored_token().is_none() => Ok(None),
+        Err(e) => Err(e),
     }
 }
 
@@ -211,10 +227,11 @@ pub async fn spectra_link_minecraft() -> AppResult<Option<Value>> {
 }
 
 pub async fn redeem_login(app: AppHandle, token: String) {
-    let result = call(
+    let result = call_with_agent(
         "POST",
-        "/api/auth/one-time-token/verify",
+        "/api/launcher/session",
         Some(serde_json::json!({ "token": token })),
+        Some(launcher_agent()),
     )
     .await
     .and_then(|v| {
@@ -237,6 +254,16 @@ pub async fn redeem_login(app: AppHandle, token: String) {
             let _ = app.emit("spectra://auth-failed", e);
         }
     }
+}
+
+fn launcher_agent() -> String {
+    let os = match std::env::consts::OS {
+        "windows" => "Windows",
+        "macos" => "macOS",
+        "linux" => "Linux",
+        other => other,
+    };
+    format!("Spectra-Launcher/{} ({os})", env!("CARGO_PKG_VERSION"))
 }
 
 pub fn login_token_from_url(url: &str) -> Option<String> {
@@ -273,7 +300,7 @@ mod tests {
             ("POST", "/api/me/minecraft"),
             ("GET", "/api/auth/get-session"),
             ("POST", "/api/auth/sign-out"),
-            ("POST", "/api/auth/one-time-token/verify"),
+            ("POST", "/api/launcher/session"),
         ] {
             assert!(allowed(method, path), "should be allowed: {method} {path}");
         }
@@ -291,6 +318,7 @@ mod tests {
             ("POST", "/api/auth/update-user"),
             ("POST", "/api/auth/change-password"),
             ("POST", "/api/auth/one-time-token/generate"),
+            ("POST", "/api/auth/one-time-token/verify"),
             // right shape, wrong method
             ("DELETE", "/api/presence"),
             ("GET", "/api/me/activity"),

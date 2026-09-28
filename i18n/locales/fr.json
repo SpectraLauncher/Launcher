@@ -691,6 +691,8 @@
     "signedOutTitle": "Joue avec tes amis",
     "signedOutHint": "Connecte-toi pour avoir une liste d’amis et leur envoyer des packs directement dans leur launcher.",
     "browserHint": "Ton navigateur va s’ouvrir pour terminer la connexion.",
+    "verifyEmailWarning": "L’adresse e-mail de ton compte Spectra n’a pas encore été confirmée.",
+    "verifyEmailAction": "Ouvrir les paramètres du compte",
     "inbox": "Notifications",
     "requests": "Demandes d’amis",
     "friends": "Amis",
