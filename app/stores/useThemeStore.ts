@@ -26,10 +26,11 @@ const STORAGE_KEY = 'spectra-theme'
 interface PersistedTheme {
   mode: ThemeMode
   accent: AccentColor
+  addonTheme: string | null
 }
 
 function loadPersisted(): PersistedTheme {
-  const fallback: PersistedTheme = { mode: 'dark', accent: 'sky' }
+  const fallback: PersistedTheme = { mode: 'dark', accent: 'sky', addonTheme: null }
   if (!import.meta.client) return fallback
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -55,7 +56,7 @@ export const useThemeStore = defineStore('theme', {
       if (!import.meta.client) return
       localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ mode: this.mode, accent: this.accent }),
+        JSON.stringify({ mode: this.mode, accent: this.accent, addonTheme: this.addonTheme }),
       )
     },
 
@@ -82,6 +83,17 @@ export const useThemeStore = defineStore('theme', {
 
     setMode(mode: ThemeMode) {
       this.mode = mode
+      this.addonTheme = null
+      this.persist()
+      this.apply()
+    },
+
+    applyAddonTheme(theme: { key: string; mode: ThemeMode | null; accent: string | null }) {
+      if (theme.mode) this.mode = theme.mode
+      if (theme.accent && (ACCENT_COLORS as readonly string[]).includes(theme.accent)) {
+        this.accent = theme.accent as AccentColor
+      }
+      this.addonTheme = theme.key
       this.persist()
       this.apply()
     },

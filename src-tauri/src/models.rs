@@ -174,6 +174,9 @@ pub struct Settings {
 
     #[serde(default)]
     pub cloud_sync_announce_seen: bool,
+
+    #[serde(default)]
+    pub addon_dev_mode: bool,
 }
 
 fn default_true() -> bool {
@@ -217,6 +220,7 @@ impl Default for Settings {
             sync_announced: false,
             sync_announce_seen: false,
             cloud_sync_announce_seen: false,
+            addon_dev_mode: false,
         }
     }
 }

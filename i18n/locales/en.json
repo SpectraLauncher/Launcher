@@ -368,7 +368,8 @@
       "java": "Java installations",
       "defaults": "Default instance options",
       "accounts": "Accounts",
-      "sync": "Sync"
+      "sync": "Sync",
+      "addons": "Addons"
     },
     "privacy": {
       "track_playtime": "Track playtime",
@@ -848,6 +849,51 @@
       "resource_packs": "Sync resource packs",
       "command_history": "Sync command history",
       "creative_hotbars": "Sync creative hotbars"
+    }
+  },
+  "addons": {
+    "installed": "Installed",
+    "none": "No addons installed yet.",
+    "browse": "Browse addons",
+    "search": "Search addons",
+    "closed": "Addons are in testing. Sign in with a Spectra team account to see them.",
+    "nothingFound": "No addons found.",
+    "install": "Install",
+    "update": "Update",
+    "uninstall": "Uninstall",
+    "uninstalled": "{name} removed.",
+    "reload": "Reload from folder",
+    "reloaded": "{name} reloaded.",
+    "enabled": "Enabled",
+    "unverified": "Unverified",
+    "devMode": "Developer mode",
+    "devModeDesc": "Load addons from a folder or a .zip file on this computer. Only for addons you are building or trust.",
+    "loadFolder": "Load folder",
+    "loadZip": "Install .zip",
+    "themes": "Addon themes",
+    "themesDesc": "Themes from installed addons. Picking a built-in theme above switches back.",
+    "themeBy": "from {name}",
+    "installTitle": "Install addon",
+    "checking": "Checking the addon…",
+    "updateFrom": "Replaces version {version}.",
+    "adds": "What it adds",
+    "addsTheme": "Theme: {name}",
+    "addsButton": "{title} in {place}",
+    "links": "Opens these websites",
+    "permissions": "Access",
+    "noPermissions": "It cannot read your instances, accounts or files.",
+    "installedToast": "{name} installed.",
+    "slots": {
+      "sidebarMenu": "the side menu",
+      "sidebarFooter": "the bottom of the side menu",
+      "titlebar": "the title bar",
+      "homeHeader": "the library",
+      "instanceHeader": "the instance page",
+      "instanceMenu": "the instance menu",
+      "worldsHeader": "Worlds",
+      "screenshotsHeader": "Screenshots",
+      "skinsHeader": "Skins",
+      "settingsHeader": "Settings"
     }
   }
 }

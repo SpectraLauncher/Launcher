@@ -80,6 +80,7 @@ export interface Settings {
   anonymous_stats: boolean
   snapshot_before_updates: boolean
   snapshot_keep: number
+  addon_dev_mode: boolean
 }
 
 export interface SavedSkin {
@@ -217,4 +218,60 @@ export interface ModEntry {
   project_id: string | null
   provider: 'local' | 'modrinth' | 'curseforge'
   modified: number
+}
+
+export type AddonAction =
+  | { type: 'url'; url: string }
+  | { type: 'page'; page: string }
+  | { type: 'window'; window: string }
+  | { type: 'command'; command: string }
+
+export interface AddonTheme {
+  id: string
+  name: string
+  mode: 'dark' | 'oled' | 'squared' | null
+  accent: string | null
+  background: string | null
+}
+
+export interface AddonButton {
+  id: string
+  slot: string
+  title: string
+  icon: string | null
+  action: AddonAction
+}
+
+export interface Addon {
+  id: string
+  version: string
+  source: 'catalog' | 'file' | 'folder'
+  project: string | null
+  icon: string | null
+  sha512: string | null
+  devPath: string | null
+  enabled: boolean
+  installedAt: string
+  name: string
+  description: string | null
+  dir: string
+  error: string | null
+  themes: AddonTheme[]
+  buttons: AddonButton[]
+  locales: Record<string, Record<string, string>>
+}
+
+export interface AddonPreview {
+  token: string
+  id: string
+  name: string
+  version: string
+  description: string | null
+  source: Addon['source']
+  project: string | null
+  installed: string | null
+  themes: string[]
+  buttons: { slot: string; title: string }[]
+  links: string[]
+  permissions: string[]
 }

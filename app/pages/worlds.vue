@@ -8,15 +8,18 @@
             {{ $t('worldsPage.count', { worlds: totalWorlds, instances: groups.length }) }}
           </p>
         </div>
-        <UButton
-          icon="i-lucide-refresh-cw"
-          color="neutral"
-          variant="ghost"
-          size="xs"
-          :loading="loading"
-          :label="$t('content.refresh')"
-          @click="load"
-        />
+        <div class="flex flex-wrap items-center gap-2">
+          <AddonSlot name="worlds.header" />
+          <UButton
+            icon="i-lucide-refresh-cw"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            :loading="loading"
+            :label="$t('content.refresh')"
+            @click="load"
+          />
+        </div>
       </div>
 
       <div v-if="loading" class="space-y-8">

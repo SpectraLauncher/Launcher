@@ -68,6 +68,7 @@ export const useSpectraAccount = () => {
   async function logout() {
     await invoke('spectra_logout').catch(() => {})
     user.value = null
+    useAddonsStore().checkAvailable()
   }
 
   const displayName = computed(() => user.value?.username || user.value?.name || '')

@@ -34,6 +34,7 @@
           </div>
 
           <div class="flex items-center gap-2">
+            <AddonSlot name="instance.header" />
             <UButton
               icon="i-lucide-folder"
               color="neutral"

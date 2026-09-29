@@ -368,7 +368,8 @@
       "java": "Instalaciones de Java",
       "defaults": "Opciones predeterminadas de instancia",
       "accounts": "Cuentas",
-      "sync": "Sincronizacion"
+      "sync": "Sincronizacion",
+      "addons": "Complementos"
     },
     "privacy": {
       "track_playtime": "Registrar tiempo de juego",
@@ -848,6 +849,51 @@
       "resource_packs": "Sincronizar paquetes de recursos",
       "command_history": "Sincronizar historial de comandos",
       "creative_hotbars": "Sincronizar barras creativas"
+    }
+  },
+  "addons": {
+    "installed": "Instalados",
+    "none": "Todavía no hay complementos instalados.",
+    "browse": "Explorar complementos",
+    "search": "Buscar complementos",
+    "closed": "Los complementos están en pruebas. Inicia sesión con una cuenta del equipo de Spectra para verlos.",
+    "nothingFound": "No se encontraron complementos.",
+    "install": "Instalar",
+    "update": "Actualizar",
+    "uninstall": "Desinstalar",
+    "uninstalled": "{name} eliminado.",
+    "reload": "Recargar desde la carpeta",
+    "reloaded": "{name} recargado.",
+    "enabled": "Activado",
+    "unverified": "Sin verificar",
+    "devMode": "Modo desarrollador",
+    "devModeDesc": "Carga complementos desde una carpeta o un archivo .zip de este equipo. Solo para complementos que creas o en los que confías.",
+    "loadFolder": "Cargar carpeta",
+    "loadZip": "Instalar .zip",
+    "themes": "Temas de complementos",
+    "themesDesc": "Temas de los complementos instalados. Elegir un tema integrado arriba lo restablece.",
+    "themeBy": "de {name}",
+    "installTitle": "Instalar complemento",
+    "checking": "Comprobando el complemento…",
+    "updateFrom": "Sustituye la versión {version}.",
+    "adds": "Qué añade",
+    "addsTheme": "Tema: {name}",
+    "addsButton": "{title} en {place}",
+    "links": "Abre estos sitios web",
+    "permissions": "Acceso",
+    "noPermissions": "No puede leer tus instancias, cuentas ni archivos.",
+    "installedToast": "{name} instalado.",
+    "slots": {
+      "sidebarMenu": "el menú lateral",
+      "sidebarFooter": "la parte inferior del menú lateral",
+      "titlebar": "la barra de título",
+      "homeHeader": "la biblioteca",
+      "instanceHeader": "la página de la instancia",
+      "instanceMenu": "el menú de la instancia",
+      "worldsHeader": "Mundos",
+      "screenshotsHeader": "Capturas",
+      "skinsHeader": "Skins",
+      "settingsHeader": "Ajustes"
     }
   }
 }

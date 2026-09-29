@@ -368,7 +368,8 @@
       "java": "Instalacje Javy",
       "defaults": "Domyślne opcje instancji",
       "accounts": "Konta",
-      "sync": "Synchronizacja"
+      "sync": "Synchronizacja",
+      "addons": "Addony"
     },
     "privacy": {
       "track_playtime": "Zliczanie czasu gry",
@@ -848,6 +849,51 @@
       "resource_packs": "Synchronizuj paczki zasobów",
       "command_history": "Synchronizuj historię komend",
       "creative_hotbars": "Synchronizuj paski kreatywne"
+    }
+  },
+  "addons": {
+    "installed": "Zainstalowane",
+    "none": "Nie masz jeszcze żadnych addonów.",
+    "browse": "Przeglądaj addony",
+    "search": "Szukaj addonów",
+    "closed": "Addony są w fazie testów. Zaloguj się kontem zespołu Spectra, żeby je zobaczyć.",
+    "nothingFound": "Nie znaleziono addonów.",
+    "install": "Zainstaluj",
+    "update": "Aktualizuj",
+    "uninstall": "Odinstaluj",
+    "uninstalled": "Usunięto {name}.",
+    "reload": "Wczytaj ponownie z folderu",
+    "reloaded": "Wczytano ponownie {name}.",
+    "enabled": "Włączony",
+    "unverified": "Niezweryfikowany",
+    "devMode": "Tryb dewelopera",
+    "devModeDesc": "Wczytuj addony z folderu lub pliku .zip na tym komputerze. Tylko dla addonów, które tworzysz albo którym ufasz.",
+    "loadFolder": "Wczytaj folder",
+    "loadZip": "Zainstaluj .zip",
+    "themes": "Motywy z addonów",
+    "themesDesc": "Motywy z zainstalowanych addonów. Wybranie wbudowanego motywu powyżej wraca do niego.",
+    "themeBy": "z {name}",
+    "installTitle": "Instalacja addonu",
+    "checking": "Sprawdzam addon…",
+    "updateFrom": "Zastąpi wersję {version}.",
+    "adds": "Co dodaje",
+    "addsTheme": "Motyw: {name}",
+    "addsButton": "{title}, miejsce: {place}",
+    "links": "Otwiera te strony",
+    "permissions": "Dostęp",
+    "noPermissions": "Nie widzi twoich instancji, kont ani plików.",
+    "installedToast": "Zainstalowano {name}.",
+    "slots": {
+      "sidebarMenu": "menu boczne",
+      "sidebarFooter": "dół menu bocznego",
+      "titlebar": "pasek tytułu",
+      "homeHeader": "biblioteka",
+      "instanceHeader": "strona instancji",
+      "instanceMenu": "menu instancji",
+      "worldsHeader": "Światy",
+      "screenshotsHeader": "Zrzuty ekranu",
+      "skinsHeader": "Skórki",
+      "settingsHeader": "Ustawienia"
     }
   }
 }

@@ -16,6 +16,7 @@
           </div>
           <div class="flex items-center gap-3">
             <template v-if="!isContentWindow && !booting">
+              <AddonSlot name="titlebar" variant="icon" />
               <TitlebarActivity />
               <AccountButton />
             </template>
@@ -28,6 +29,7 @@
           </div>
           <div class="flex items-center gap-3">
             <template v-if="!isContentWindow && !booting">
+              <AddonSlot name="titlebar" variant="icon" />
               <TitlebarActivity />
               <AccountButton />
             </template>
@@ -42,6 +44,12 @@
     <div class="h-10" />
 
     <div :class="['relative w-screen h-[calc(100vh-2.5rem)] overflow-hidden text-[#eef1f5]', theme.bgClass]">
+
+      <div
+        v-if="themeBackground"
+        class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-30"
+        :style="{ backgroundImage: `url('${themeBackground}')` }"
+      />
 
       <div
         class="pointer-events-none absolute inset-0"
@@ -81,7 +89,7 @@
 </template>
 
 <script setup lang="ts">
-import { invoke } from '@tauri-apps/api/core'
+import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import type { UnlistenFn } from '@tauri-apps/api/event'
 
@@ -111,6 +119,13 @@ const createModal = useCreateInstanceModal()
 const spectra = useSpectraAccount()
 const spectraNotifications = useSpectraNotifications()
 const cloud = useCloudSync()
+const addons = useAddonsStore()
+const addonInstall = useAddonInstall()
+
+const themeBackground = computed(() => {
+  const picked = addons.themes.find(t => t.key === theme.addonTheme)
+  return picked?.background ? convertFileSrc(picked.background) : null
+})
 
 async function openAccountSettings() {
   const url = await invoke<string>('spectra_account_settings_url')
@@ -131,8 +146,20 @@ let unlistenShare: UnlistenFn | null = null
 let unlistenAccount: UnlistenFn | null = null
 let unlistenLaunch: UnlistenFn | null = null
 let unlistenCloudExit: UnlistenFn | null = null
+let unlistenAddon: UnlistenFn | null = null
 onMounted(async () => {
   await bootGate()
+
+  addons.load().catch(() => {})
+  await addons.checkAvailable()
+  if (!isContentWindow.value) {
+    unlistenAddon = await listen<string>('addon://open', async (e) => {
+      await invoke('take_pending_addon').catch(() => {})
+      if (await addons.checkAvailable()) addonInstall.fromCatalog(e.payload)
+    })
+    const pendingAddon = await invoke<string | null>('take_pending_addon')
+    if (pendingAddon && addons.available) addonInstall.fromCatalog(pendingAddon)
+  }
 
   unlistenShare = await listen<string>('share://open', async (e) => {
     await invoke('take_pending_share').catch(() => {})
@@ -154,6 +181,7 @@ onMounted(async () => {
 
   unlistenAccount = await listen('spectra://account', async () => {
     await spectra.refresh()
+    addons.checkAvailable()
     void cloud.tick().catch(() => {})
     spectraNotifications.start()
     spectra.linkMinecraft()
@@ -170,6 +198,7 @@ onBeforeUnmount(() => {
   unlistenLaunch?.()
   unlistenCloudExit?.()
   unlistenContent?.()
+  unlistenAddon?.()
 })
 
 async function playInstance(instanceId: string) {

@@ -42,6 +42,8 @@ pub struct AppState {
     pub discord_playing: Mutex<HashMap<String, (String, String)>>,
     pub console: Mutex<HashMap<String, commands::launch::ConsoleBuffer>>,
     pub announce_cloud_sync: Mutex<bool>,
+    pub pending_addon: Mutex<Option<String>>,
+    pub staged_addons: Mutex<HashMap<String, commands::addons::Staged>>,
     pub install_lock: tokio::sync::Mutex<()>,
     pub cloud_sync_lock: tokio::sync::Mutex<()>,
     pub pending_share: Mutex<Option<String>>,
@@ -57,6 +59,15 @@ fn handle_deep_link(app: &tauri::AppHandle, url: &str) {
         tauri::async_runtime::spawn(async move {
             commands::spectra::redeem_login(handle, token).await;
         });
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.unminimize();
+            let _ = window.set_focus();
+        }
+        return;
+    }
+
+    if let Some(slug) = commands::addons::slug_from_url(url) {
+        commands::addons::open_from_link(app, slug);
         if let Some(window) = app.get_webview_window("main") {
             let _ = window.unminimize();
             let _ = window.set_focus();
@@ -176,6 +187,18 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
             paths::get_launcher_paths,
+            commands::addons::addons_available,
+            commands::addons::addons_list,
+            commands::addons::addons_catalog,
+            commands::addons::addons_stage_catalog,
+            commands::addons::addons_stage_file,
+            commands::addons::addons_stage_folder,
+            commands::addons::addons_commit,
+            commands::addons::addons_discard,
+            commands::addons::addons_reload,
+            commands::addons::addons_set_enabled,
+            commands::addons::addons_uninstall,
+            commands::addons::take_pending_addon,
             commands::images::get_image_thumbnail,
             commands::settings::get_settings,
             commands::settings::save_settings,

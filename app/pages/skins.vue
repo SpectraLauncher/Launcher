@@ -3,7 +3,12 @@
     <div class="min-h-0 flex-1 overflow-y-auto p-6 lg:p-8">
       <div class="mx-auto grid max-w-6xl grid-cols-1 gap-8 lg:grid-cols-[360px_1fr]">
         <div class="lg:sticky lg:top-0 lg:self-start">
-          <h1 class="mb-4 text-2xl font-bold tracking-tight">{{ $t('skins.title') }}</h1>
+          <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h1 class="text-2xl font-bold tracking-tight">{{ $t('skins.title') }}</h1>
+            <div class="flex flex-wrap items-center gap-2">
+              <AddonSlot name="skins.header" />
+            </div>
+          </div>
 
           <div class="flex flex-col items-center gap-4 rounded-2xl border border-default bg-linear-[160deg] from-primary-500/10 to-transparent p-5">
             <canvas ref="viewerCanvas" class="rounded-xl" />

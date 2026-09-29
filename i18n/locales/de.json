@@ -368,7 +368,8 @@
       "java": "Java-Installationen",
       "defaults": "Standard-Instanzoptionen",
       "accounts": "Konten",
-      "sync": "Synchronisierung"
+      "sync": "Synchronisierung",
+      "addons": "Addons"
     },
     "privacy": {
       "track_playtime": "Spielzeit erfassen",
@@ -848,6 +849,51 @@
       "resource_packs": "Ressourcenpakete synchronisieren",
       "command_history": "Befehlsverlauf synchronisieren",
       "creative_hotbars": "Kreativ-Schnellleisten synchronisieren"
+    }
+  },
+  "addons": {
+    "installed": "Installiert",
+    "none": "Noch keine Addons installiert.",
+    "browse": "Addons durchsuchen",
+    "search": "Addons suchen",
+    "closed": "Addons sind in der Testphase. Melde dich mit einem Spectra-Teamkonto an, um sie zu sehen.",
+    "nothingFound": "Keine Addons gefunden.",
+    "install": "Installieren",
+    "update": "Aktualisieren",
+    "uninstall": "Deinstallieren",
+    "uninstalled": "{name} entfernt.",
+    "reload": "Aus dem Ordner neu laden",
+    "reloaded": "{name} neu geladen.",
+    "enabled": "Aktiviert",
+    "unverified": "Nicht geprüft",
+    "devMode": "Entwicklermodus",
+    "devModeDesc": "Addons aus einem Ordner oder einer .zip-Datei auf diesem Computer laden. Nur für Addons, die du selbst baust oder denen du vertraust.",
+    "loadFolder": "Ordner laden",
+    "loadZip": ".zip installieren",
+    "themes": "Addon-Designs",
+    "themesDesc": "Designs aus installierten Addons. Ein eingebautes Design oben wählt zurück.",
+    "themeBy": "von {name}",
+    "installTitle": "Addon installieren",
+    "checking": "Addon wird geprüft…",
+    "updateFrom": "Ersetzt Version {version}.",
+    "adds": "Was es hinzufügt",
+    "addsTheme": "Design: {name}",
+    "addsButton": "{title} in {place}",
+    "links": "Öffnet diese Websites",
+    "permissions": "Zugriff",
+    "noPermissions": "Es kann deine Instanzen, Konten und Dateien nicht lesen.",
+    "installedToast": "{name} installiert.",
+    "slots": {
+      "sidebarMenu": "Seitenmenü",
+      "sidebarFooter": "unteres Seitenmenü",
+      "titlebar": "Titelleiste",
+      "homeHeader": "Bibliothek",
+      "instanceHeader": "Instanzseite",
+      "instanceMenu": "Instanzmenü",
+      "worldsHeader": "Welten",
+      "screenshotsHeader": "Screenshots",
+      "skinsHeader": "Skins",
+      "settingsHeader": "Einstellungen"
     }
   }
 }

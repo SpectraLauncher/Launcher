@@ -368,7 +368,8 @@
       "java": "Installations de Java",
       "defaults": "Options d'instance par défaut",
       "accounts": "Comptes",
-      "sync": "Synchronisation"
+      "sync": "Synchronisation",
+      "addons": "Extensions"
     },
     "privacy": {
       "track_playtime": "Suivre le temps de jeu",
@@ -848,6 +849,51 @@
       "resource_packs": "Synchroniser les packs de ressources",
       "command_history": "Synchroniser l'historique des commandes",
       "creative_hotbars": "Synchroniser les barres créatives"
+    }
+  },
+  "addons": {
+    "installed": "Installées",
+    "none": "Aucune extension installée pour le moment.",
+    "browse": "Parcourir les extensions",
+    "search": "Rechercher des extensions",
+    "closed": "Les extensions sont en test. Connecte-toi avec un compte de l’équipe Spectra pour les voir.",
+    "nothingFound": "Aucune extension trouvée.",
+    "install": "Installer",
+    "update": "Mettre à jour",
+    "uninstall": "Désinstaller",
+    "uninstalled": "{name} supprimée.",
+    "reload": "Recharger depuis le dossier",
+    "reloaded": "{name} rechargée.",
+    "enabled": "Activée",
+    "unverified": "Non vérifiée",
+    "devMode": "Mode développeur",
+    "devModeDesc": "Charge des extensions depuis un dossier ou un fichier .zip sur cet ordinateur. Uniquement pour les extensions que tu développes ou en qui tu as confiance.",
+    "loadFolder": "Charger un dossier",
+    "loadZip": "Installer un .zip",
+    "themes": "Thèmes des extensions",
+    "themesDesc": "Thèmes des extensions installées. Choisir un thème intégré ci-dessus le rétablit.",
+    "themeBy": "de {name}",
+    "installTitle": "Installer une extension",
+    "checking": "Vérification de l’extension…",
+    "updateFrom": "Remplace la version {version}.",
+    "adds": "Ce qu’elle ajoute",
+    "addsTheme": "Thème : {name}",
+    "addsButton": "{title} dans {place}",
+    "links": "Ouvre ces sites",
+    "permissions": "Accès",
+    "noPermissions": "Elle ne peut pas lire tes instances, comptes ou fichiers.",
+    "installedToast": "{name} installée.",
+    "slots": {
+      "sidebarMenu": "le menu latéral",
+      "sidebarFooter": "le bas du menu latéral",
+      "titlebar": "la barre de titre",
+      "homeHeader": "la bibliothèque",
+      "instanceHeader": "la page de l’instance",
+      "instanceMenu": "le menu de l’instance",
+      "worldsHeader": "Mondes",
+      "screenshotsHeader": "Captures",
+      "skinsHeader": "Skins",
+      "settingsHeader": "Paramètres"
     }
   }
 }

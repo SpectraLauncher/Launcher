@@ -18,6 +18,7 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" v-html="item.icon"></svg>
             <p>{{ $t(item.label) }}</p>
           </NuxtLink>
+          <AddonSlot name="sidebar.menu" variant="sidebar" />
         </div>
 
         <div class="flex flex-1 min-h-0 flex-col gap-2 py-4 mt-4 border-t border-gray-800">
@@ -38,6 +39,7 @@
             />
           </div>
 
+          <AddonSlot name="sidebar.footer" variant="sidebar" />
           <button class="w-full py-1 px-3 duration-300 hover:bg-primary-500/5 flex justify-start items-center gap-2 rounded-lg" @click="openCreate()">
             + {{ $t('nav.newInstance') }}
           </button>
@@ -55,6 +57,7 @@
     <BlockedModsModal />
     <OnboardingModal />
     <SyncAnnouncementModal />
+    <AddonInstallModal />
 
     <Transition name="fade">
       <div v-if="dragging" class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">

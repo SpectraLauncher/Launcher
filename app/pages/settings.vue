@@ -1,7 +1,12 @@
 <template>
   <div class="h-full flex flex-col p-6 lg:p-8">
     <div class="mx-auto w-full max-w-5xl flex flex-1 min-h-0 flex-col gap-6">
-      <h1 class="shrink-0 text-2xl font-bold tracking-tight">{{ t('settings.title') }}</h1>
+      <div class="flex shrink-0 flex-wrap items-center justify-between gap-2">
+        <h1 class="text-2xl font-bold tracking-tight">{{ t('settings.title') }}</h1>
+        <div class="flex flex-wrap items-center gap-2">
+          <AddonSlot name="settings.header" />
+        </div>
+      </div>
 
       <div class="grid min-h-0 flex-1 grid-cols-1 gap-6 md:grid-cols-[220px_1fr]">
         <nav class="flex flex-col gap-1 relative">
@@ -52,6 +57,24 @@
                   :style="{ background: accentHex[c] }"
                   @click="theme.setAccent(c)"
                 />
+              </div>
+            </div>
+            <div v-if="addons.themes.length">
+              <p class="text-sm font-medium">{{ t('addons.themes') }}</p>
+              <p class="mb-2 text-xs text-muted">{{ t('addons.themesDesc') }}</p>
+              <div class="flex flex-wrap gap-3">
+                <button
+                  v-for="th in addons.themes"
+                  :key="th.key"
+                  type="button"
+                  class="w-44 rounded-lg border px-4 py-3 text-left transition"
+                  :class="theme.addonTheme === th.key ? 'border-primary-500 ring-1 ring-primary-500 bg-primary-500/10' : 'border-default hover:border-neutral-500'"
+                  @click="theme.applyAddonTheme(th)"
+                >
+                  <span class="block truncate text-sm font-medium">{{ addons.text(th.addonId, th.name, locale) }}</span>
+                  <span class="block truncate text-xs text-muted">{{ t('addons.themeBy', { name: th.addonName }) }}</span>
+                  <span class="mt-2 block h-6 rounded bg-cover bg-center" :style="themeSwatch(th)" />
+                </button>
               </div>
             </div>
             <div v-if="sponsor.sponsors.length > 0" class="flex items-center justify-between gap-4">
@@ -185,6 +208,21 @@
             <SyncSettings />
           </template>
 
+          <template v-else-if="section === 'addons'">
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <p class="text-sm font-medium">{{ t('addons.devMode') }}</p>
+                <p class="text-xs text-muted">{{ t('addons.devModeDesc') }}</p>
+              </div>
+              <USwitch
+                :model-value="settings?.addon_dev_mode ?? false"
+                :disabled="!settings"
+                @update:model-value="setDevMode"
+              />
+            </div>
+            <AddonSettings :dev-mode="settings?.addon_dev_mode ?? false" />
+          </template>
+
           <template v-else-if="section === 'accounts'">
             <p v-if="!accounts.accounts.length" class="text-sm text-muted">{{ t('settings.accounts.noAccounts') }}</p>
             <ul v-else class="space-y-2">
@@ -252,11 +290,12 @@
 </template>
 
 <script setup lang="ts">
-import { invoke } from '@tauri-apps/api/core'
+import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 import { getVersion } from '@tauri-apps/api/app'
 import { open } from '@tauri-apps/plugin-dialog'
 import { ACCENT_COLORS, type ThemeMode } from '~/stores/useThemeStore'
 import type { Account, Settings } from '~/types/launcher'
+import type { InstalledTheme } from '~/stores/useAddonsStore'
 
 const { t, locale, locales, setLocale } = useI18n()
 const theme = useThemeStore()
@@ -266,9 +305,10 @@ const java = useJava()
 const sysMem = useSystemMemory()
 const updater = useAutoUpdate()
 const route = useRoute()
+const addons = useAddonsStore()
 
-type Section = 'appearance' | 'language' | 'privacy' | 'java' | 'defaults' | 'sync' | 'accounts'
-const sections: { key: Section; icon: string }[] = [
+type Section = 'appearance' | 'language' | 'privacy' | 'java' | 'defaults' | 'sync' | 'accounts' | 'addons'
+const allSections: { key: Section; icon: string }[] = [
   { key: 'appearance', icon: 'i-lucide-palette' },
   { key: 'language', icon: 'i-lucide-languages' },
   { key: 'privacy', icon: 'i-lucide-shield' },
@@ -276,7 +316,9 @@ const sections: { key: Section; icon: string }[] = [
   { key: 'defaults', icon: 'i-lucide-sliders-horizontal' },
   { key: 'sync', icon: 'i-lucide-refresh-cw' },
   { key: 'accounts', icon: 'i-lucide-users' },
+  { key: 'addons', icon: 'i-lucide-puzzle' },
 ]
+const sections = computed(() => allSections.filter(s => s.key !== 'addons' || addons.available))
 const section = ref<Section>(route.query.section === 'sync' ? 'sync' : 'appearance')
 watch(() => route.query.section, (value) => {
   if (value === 'sync') section.value = 'sync'
@@ -343,6 +385,18 @@ const accentHex: Record<string, string> = {
   purple: '#a855f7', pink: '#ec4899', rose: '#f43f5e', red: '#ef4444',
   orange: '#f97316', amber: '#f59e0b', green: '#22c55e', emerald: '#10b981',
   teal: '#14b8a6', cyan: '#06b6d4',
+}
+
+function themeSwatch(th: InstalledTheme) {
+  if (th.background) return { backgroundImage: `url('${convertFileSrc(th.background)}')` }
+  if (th.accent && accentHex[th.accent]) return { background: accentHex[th.accent] }
+  return { background: th.mode === 'oled' ? '#000000' : '#0a0a0b' }
+}
+
+async function setDevMode(on: boolean) {
+  if (!settings.value) return
+  settings.value.addon_dev_mode = on
+  await invoke('save_settings', { settings: JSON.parse(JSON.stringify(settings.value)) }).catch(() => {})
 }
 
 const localeItems = computed(() =>

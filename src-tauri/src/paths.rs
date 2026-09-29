@@ -117,6 +117,18 @@ pub fn symbols_dir() -> PathBuf {
     data_root().join("symbols")
 }
 
+pub fn addons_dir() -> PathBuf {
+    data_root().join("addons")
+}
+
+pub fn addons_state_file() -> PathBuf {
+    addons_dir().join("installed.json")
+}
+
+pub fn addons_staging_dir() -> PathBuf {
+    addons_dir().join(".staging")
+}
+
 pub fn logs_dir() -> PathBuf {
     data_root().join("logs")
 }

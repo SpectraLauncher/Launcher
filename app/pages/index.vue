@@ -9,6 +9,7 @@
         <div class="flex flex-wrap items-center gap-2">
           <UInput v-model="search" icon="i-lucide-search" variant="soft" :placeholder="$t('library.search')" class="w-56" />
           <USelect v-model="loaderFilter" variant="soft" :items="loaderFilterItems" class="w-40" />
+          <AddonSlot name="home.header" />
           <UButton icon="i-lucide-plus" :label="$t('nav.newInstance')" @click="openCreate()" />
         </div>
       </div>
@@ -213,7 +214,7 @@
 </template>
 
 <script setup lang="ts">
-import { invoke } from '@tauri-apps/api/core'
+import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 import { VueDraggable } from 'vue-draggable-plus'
 import type { Instance, LoaderType } from '~/types/launcher'
 import type { DisplayGroup } from '~/composables/useLibraryLayout'
@@ -224,7 +225,7 @@ const mc = useMinecraftLaunch()
 const activity = useActivityCenter()
 const router = useRouter()
 const toast = useToast()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { open: openCreate } = useCreateInstanceModal()
 const sponsor = useSponsor()
 const browser = useContentWindow()
@@ -349,7 +350,18 @@ const emptyMenu = computed(() => [[
   { label: t('nav.newInstance'), icon: 'i-lucide-plus', onSelect: () => openCreate() },
 ]])
 
+const addons = useAddonsStore()
+
+function addonMenu() {
+  return addons.buttons('instance.menu').map(b => ({
+    label: addons.text(b.addonId, b.title, locale.value),
+    ...(b.icon ? { avatar: { src: convertFileSrc(b.icon) } } : { icon: 'i-lucide-puzzle' }),
+    onSelect: () => addons.run(b),
+  }))
+}
+
 function instanceMenu(item: Instance) {
+  const extra = addonMenu()
   return [
     [
       { label: t('ctx.play'), icon: 'i-lucide-play', onSelect: () => play(item) },
@@ -361,6 +373,7 @@ function instanceMenu(item: Instance) {
       { label: t('ctx.openFolder'), icon: 'i-lucide-folder', onSelect: () => openFolder(item) },
       { label: t('ctx.copyPath'), icon: 'i-lucide-clipboard', onSelect: () => copyPath(item) },
     ],
+    ...(extra.length ? [extra] : []),
     [
       { label: t('common.remove'), icon: 'i-lucide-trash-2', color: 'error' as const, onSelect: () => instances.remove(item.id) },
     ],
