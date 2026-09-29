@@ -35,6 +35,8 @@ export interface Instance {
   pre_launch?: string
   wrapper?: string
   post_exit?: string
+  modpack_project_id?: string | null
+  modpack_version_id?: string | null
 }
 
 export interface EnvVar {

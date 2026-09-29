@@ -280,7 +280,7 @@
           >
             <UCheckbox
               :model-value="depsChecked.has(d.filename)"
-              @update:model-value="toggleDep(d.filename, $event)"
+              @update:model-value="toggleDep(d.filename, $event === true)"
             />
             <img v-if="d.icon_url" :src="d.icon_url" class="size-8 shrink-0 rounded-md object-cover" :alt="d.name" >
             <div v-else class="flex size-8 shrink-0 items-center justify-center rounded-md bg-white/5">

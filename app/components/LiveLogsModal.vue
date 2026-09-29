@@ -5,7 +5,7 @@
         <div class="flex flex-wrap items-center gap-2">
           <USelectMenu
             v-if="runningOptions.length > 1"
-            v-model="selected"
+            v-model="selectedValue"
             :items="runningOptions"
             value-key="value"
             class="w-56"
@@ -73,6 +73,10 @@ const toast = useToast()
 
 const open = ac.liveLogsOpen
 const selected = ac.liveLogsInstance
+const selectedValue = computed({
+  get: () => selected.value ?? undefined,
+  set: (value: string | undefined) => { selected.value = value ?? null },
+})
 
 const runningOptions = computed(() =>
   ac.list.value

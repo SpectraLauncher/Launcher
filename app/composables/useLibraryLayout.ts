@@ -44,7 +44,7 @@ export const useLibraryLayout = () => {
     const idx = groups.value.findIndex(g => g.name === null)
     if (idx !== -1 && idx !== groups.value.length - 1) {
       const [ung] = groups.value.splice(idx, 1)
-      groups.value.push(ung)
+      if (ung) groups.value.push(ung)
     }
   }
 
@@ -96,8 +96,9 @@ export const useLibraryLayout = () => {
 
   function removeGroup(id: string) {
     const i = groups.value.findIndex(g => g.id === id)
-    if (i === -1 || groups.value[i].name === null) return
+    if (i === -1 || groups.value[i]?.name === null) return
     const [removed] = groups.value.splice(i, 1)
+    if (!removed) return
     let ungrouped = groups.value.find(g => g.name === null)
     if (!ungrouped) {
       ungrouped = { id: UNGROUPED_ID, name: null, collapsed: false, items: [] }

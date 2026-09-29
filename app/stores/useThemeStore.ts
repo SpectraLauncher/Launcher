@@ -75,7 +75,6 @@ export const useThemeStore = defineStore('theme', {
 
       try {
         const appConfig = useAppConfig()
-        // @ts-expect-error – ui.colors is augmented by @nuxt/ui
         appConfig.ui.colors.primary = this.accent
       } catch {
       }

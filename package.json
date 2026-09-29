@@ -26,6 +26,7 @@
     "dompurify": "^3.4.11",
     "marked": "^18.0.5",
     "nuxt": "^4.4.8",
+    "pinia": "^3.0.4",
     "skinview3d": "^3.4.1",
     "tailwindcss": "^4.3.1",
     "vue": "^3.5.35",
