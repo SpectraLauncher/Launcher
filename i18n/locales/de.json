@@ -914,6 +914,8 @@
     "checkUpdates": "Nach Updates suchen",
     "upToDate": "Alle Addons sind aktuell.",
     "updateTo": "Auf {version} aktualisieren",
-    "updatesFound": "Addon-Updates verfügbar: {n}"
+    "updatesFound": "Addon-Updates verfügbar: {n}",
+    "revoked": "Von der Moderation entfernt",
+    "revokedToast": "Die Moderation hat {names} entfernt, deshalb wurde das Addon deaktiviert."
   }
 }

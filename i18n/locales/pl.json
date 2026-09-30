@@ -914,6 +914,8 @@
     "checkUpdates": "Sprawdź aktualizacje",
     "upToDate": "Wszystkie addony są aktualne.",
     "updateTo": "Aktualizuj do {version}",
-    "updatesFound": "Dostępne aktualizacje addonów: {n}"
+    "updatesFound": "Dostępne aktualizacje addonów: {n}",
+    "revoked": "Zdjęty przez moderację",
+    "revokedToast": "Moderacja zdjęła {names}, więc addon został wyłączony."
   }
 }

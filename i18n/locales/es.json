@@ -914,6 +914,8 @@
     "checkUpdates": "Buscar actualizaciones",
     "upToDate": "Todos los complementos están actualizados.",
     "updateTo": "Actualizar a {version}",
-    "updatesFound": "Actualizaciones de complementos disponibles: {n}"
+    "updatesFound": "Actualizaciones de complementos disponibles: {n}",
+    "revoked": "Retirado por moderación",
+    "revokedToast": "La moderación retiró {names}, así que el complemento se desactivó."
   }
 }

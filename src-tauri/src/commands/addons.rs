@@ -642,6 +642,8 @@ pub struct Installed {
     pub dev_path: Option<String>,
     pub enabled: bool,
     pub installed_at: String,
+    #[serde(default)]
+    pub revoked: bool,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -764,6 +766,7 @@ pub fn install(staged: &Staged) -> AppResult<Installed> {
         dev_path: staged.dev_path.clone(),
         enabled,
         installed_at: chrono::Utc::now().to_rfc3339(),
+        revoked: false,
     };
     state.push(entry.clone());
     save_state(state)?;
@@ -1002,6 +1005,26 @@ pub fn only_addons(mut body: serde_json::Value) -> serde_json::Value {
     body
 }
 
+pub fn mark_revoked(state: &mut [Installed], revoked: &[String]) -> Vec<String> {
+    let mut newly = Vec::new();
+    for entry in state.iter_mut().filter(|a| a.source == "catalog") {
+        let Some(sha512) = entry.sha512.as_deref() else { continue };
+        let hit = revoked.iter().any(|r| r.eq_ignore_ascii_case(sha512));
+        if hit && !entry.revoked {
+            entry.enabled = false;
+            newly.push(entry.id.clone());
+        }
+        entry.revoked = hit;
+    }
+    newly
+}
+
+#[derive(Debug, Deserialize)]
+struct RevokedResponse {
+    #[serde(default)]
+    revoked: Vec<String>,
+}
+
 async fn catalog_get(path: &str) -> AppResult<reqwest::Response> {
     let mut request = crate::http().get(format!("{}{path}", spectra::SITE)).header("origin", spectra::ORIGIN);
     if let Some(token) = spectra::stored_token() {
@@ -1175,6 +1198,41 @@ pub async fn addons_check_updates() -> AppResult<Vec<UpdateInfo>> {
 }
 
 #[tauri::command]
+pub async fn addons_check_revoked(app: tauri::AppHandle) -> AppResult<Vec<String>> {
+    let installed = crate::blocking(load_state).await?;
+    let hashes: Vec<String> =
+        installed.iter().filter(|a| a.source == "catalog").filter_map(|a| a.sha512.clone()).collect();
+    if hashes.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut request = crate::http()
+        .post(format!("{}/api/catalog/addons/revoked", spectra::SITE))
+        .header("origin", spectra::ORIGIN)
+        .json(&serde_json::json!({ "hashes": hashes }));
+    if let Some(token) = spectra::stored_token() {
+        request = request.bearer_auth(token);
+    }
+    let response = request.send().await.map_err(|e| AppError::network(format!("network error: {e}")))?;
+    if !response.status().is_success() {
+        return Ok(Vec::new());
+    }
+    let body: RevokedResponse =
+        response.json().await.map_err(|e| AppError::network(format!("bad server reply: {e}")))?;
+    let newly = crate::blocking(move || {
+        let mut state = load_state()?;
+        let newly = mark_revoked(&mut state, &body.revoked);
+        save_state(state)?;
+        Ok(newly)
+    })
+    .await?;
+    for id in &newly {
+        crate::commands::addon_host::close_windows(&app, id);
+        crate::commands::addon_host::forget_backend(id);
+    }
+    Ok(newly)
+}
+
+#[tauri::command]
 pub async fn addons_stage_file(state: State<'_, AppState>, path: String) -> AppResult<Preview> {
     ensure_dev_mode()?;
     let copy = staging_file()?;
@@ -1274,6 +1332,9 @@ pub async fn addons_set_enabled(app: tauri::AppHandle, id: String, enabled: bool
             .iter_mut()
             .find(|a| a.id == id)
             .ok_or_else(|| AppError::not_found("this addon is not installed"))?;
+        if enabled && entry.revoked {
+            return Err(AppError::new("revoked", "Moderation took this addon down, so it stays off."));
+        }
         entry.enabled = enabled;
         save_state(state)
     })
@@ -1626,6 +1687,7 @@ mod tests {
             dev_path: None,
             enabled: true,
             installed_at: String::new(),
+            revoked: false,
         };
         let version = |number: &str, sha: &str, permissions: serde_json::Value| CatalogVersion {
             number: number.into(),
@@ -1656,6 +1718,39 @@ mod tests {
         let slugs: Vec<&str> = kept["hits"].as_array().unwrap().iter().map(|h| h["slug"].as_str().unwrap()).collect();
         assert_eq!(slugs, vec!["a"]);
         assert_eq!(only_addons(serde_json::json!({ "hits": [], "closed": true }))["closed"], true);
+    }
+
+    #[test]
+    fn moderation_turns_an_addon_off_once_and_keeps_it_off() {
+        let entry = |id: &str, source: &str, sha: &str| Installed {
+            id: id.into(),
+            version: "1.0.0".into(),
+            source: source.into(),
+            project: None,
+            icon: None,
+            sha512: Some(sha.into()),
+            dev_path: None,
+            enabled: true,
+            installed_at: String::new(),
+            revoked: false,
+        };
+        let mut state = vec![entry("bad", "catalog", "aaa"), entry("good", "catalog", "bbb"), entry("local", "file", "aaa")];
+
+        assert_eq!(mark_revoked(&mut state, &["AAA".into()]), vec!["bad".to_string()]);
+        assert!(state[0].revoked && !state[0].enabled);
+        assert!(state[1].enabled && !state[1].revoked);
+        assert!(state[2].enabled && !state[2].revoked);
+
+        assert!(mark_revoked(&mut state, &["aaa".into()]).is_empty());
+
+        mark_revoked(&mut state, &[]);
+        assert!(!state[0].revoked && !state[0].enabled);
+    }
+
+    #[test]
+    fn an_old_state_file_reads_as_not_revoked() {
+        let old = r#"{"id":"a","version":"1.0.0","source":"catalog","enabled":true,"installedAt":""}"#;
+        assert!(!serde_json::from_str::<Installed>(old).unwrap().revoked);
     }
 
     #[test]

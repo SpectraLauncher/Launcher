@@ -270,6 +270,7 @@ export interface Addon {
   devPath: string | null
   enabled: boolean
   installedAt: string
+  revoked: boolean
   name: string
   description: string | null
   dir: string

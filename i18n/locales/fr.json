@@ -914,6 +914,8 @@
     "checkUpdates": "Rechercher des mises à jour",
     "upToDate": "Toutes les extensions sont à jour.",
     "updateTo": "Mettre à jour vers {version}",
-    "updatesFound": "Mises à jour d’extensions disponibles : {n}"
+    "updatesFound": "Mises à jour d’extensions disponibles : {n}",
+    "revoked": "Retirée par la modération",
+    "revokedToast": "La modération a retiré {names}, l’extension a donc été désactivée."
   }
 }

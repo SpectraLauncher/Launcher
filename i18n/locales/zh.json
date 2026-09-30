@@ -913,6 +913,8 @@
     "checkUpdates": "检查更新",
     "upToDate": "所有插件都是最新的。",
     "updateTo": "更新到 {version}",
-    "updatesFound": "可更新的插件：{n}"
+    "updatesFound": "可更新的插件：{n}",
+    "revoked": "已被审核下架",
+    "revokedToast": "{names} 已被审核下架，因此已停用。"
   }
 }

@@ -49,6 +49,13 @@ export const useAddonsStore = defineStore('addons', {
       return this.updates
     },
 
+    async checkRevoked(): Promise<string[]> {
+      const ids = await invoke<string[]>('addons_check_revoked')
+      if (!ids.length) return []
+      await this.load()
+      return ids.map(id => this.addons.find(a => a.id === id)?.name ?? id)
+    },
+
     updateFor(id: string): AddonUpdate | undefined {
       return this.updates.find(u => u.id === id)
     },

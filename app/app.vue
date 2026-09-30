@@ -192,6 +192,11 @@ onMounted(async () => {
   addons.load().catch(() => {})
   await addons.checkAvailable()
   if (!isContentWindow.value && addons.available) {
+    addons.checkRevoked()
+      .then((names) => {
+        if (names.length) toast.add({ title: t('addons.revokedToast', { names: names.join(', ') }), color: 'error' })
+      })
+      .catch(() => {})
     addons.checkUpdates()
       .then((updates) => {
         if (updates.length) toast.add({ title: t('addons.updatesFound', { n: updates.length }), color: 'info' })

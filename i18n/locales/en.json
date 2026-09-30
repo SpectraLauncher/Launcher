@@ -914,6 +914,8 @@
     "checkUpdates": "Check for updates",
     "upToDate": "All addons are up to date.",
     "updateTo": "Update to {version}",
-    "updatesFound": "Addon updates available: {n}"
+    "updatesFound": "Addon updates available: {n}",
+    "revoked": "Taken down",
+    "revokedToast": "Moderation took down {names}, so it was turned off."
   }
 }

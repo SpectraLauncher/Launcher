@@ -40,6 +40,7 @@
                 <p class="truncate text-sm font-medium">{{ a.name }}</p>
                 <span class="font-mono text-xs text-muted">{{ a.version }}</span>
                 <UBadge v-if="a.source !== 'catalog'" color="warning" variant="soft" size="sm" :label="t('addons.unverified')" />
+                <UBadge v-if="a.revoked" color="error" variant="soft" size="sm" :label="t('addons.revoked')" />
               </div>
               <p v-if="a.error" class="text-xs text-error">{{ a.error }}</p>
               <p v-else-if="a.description" class="truncate text-xs text-muted">{{ a.description }}</p>
@@ -73,6 +74,7 @@
             />
             <USwitch
               :model-value="a.enabled"
+              :disabled="a.revoked"
               :aria-label="t('addons.enabled')"
               @update:model-value="(v: boolean) => toggle(a, v)"
             />
