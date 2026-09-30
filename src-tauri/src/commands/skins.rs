@@ -116,6 +116,50 @@ pub async fn get_skin_data_url(id: String) -> AppResult<String> {
     .await
 }
 
+pub fn png_from_data_url(data_url: &str) -> AppResult<Vec<u8>> {
+    let encoded = data_url
+        .strip_prefix("data:image/png;base64,")
+        .ok_or_else(|| AppError::invalid("the skin is not a PNG"))?;
+    base64::engine::general_purpose::STANDARD
+        .decode(encoded.trim())
+        .map_err(|_| AppError::invalid("the skin is not a PNG"))
+}
+
+pub fn skin_editor_url(site: &str, id: &str, model: &str) -> String {
+    let model = if model == "slim" { "slim" } else { "classic" };
+    format!("{site}/tools/skin-editor?share={id}&model={model}")
+}
+
+#[derive(Deserialize)]
+struct SkinShare {
+    id: String,
+}
+
+#[tauri::command]
+pub async fn open_skin_editor(skin: String, model: String) -> AppResult<()> {
+    let png = png_from_data_url(&skin)?;
+    let site = crate::commands::spectra::SITE;
+    let response = http()?
+        .post(format!("{site}/api/tools/skin-share"))
+        .header("origin", crate::commands::spectra::ORIGIN)
+        .header("content-type", "image/png")
+        .body(png)
+        .send()
+        .await
+        .map_err(|e| AppError::network(format!("network error: {e}")))?;
+    if response.status() == reqwest::StatusCode::BAD_REQUEST {
+        return Err(AppError::invalid("the skin editor only takes 64×64 and 64×32 skins"));
+    }
+    if !response.status().is_success() {
+        return Err(AppError::network(format!("request failed ({})", response.status())));
+    }
+    let share: SkinShare = response.json().await.map_err(|e| AppError::network(format!("bad server reply: {e}")))?;
+    if share.id.len() != 16 || !share.id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_') {
+        return Err(AppError::network("bad server reply"));
+    }
+    crate::commands::instances::open_external(skin_editor_url(site, &share.id, &model))
+}
+
 #[tauri::command]
 pub async fn fetch_skin_data_url(url: String) -> AppResult<String> {
     let bytes = http()?.get(&url).send().await.map_err(|e| e.to_string())?
@@ -473,5 +517,27 @@ mod default_skin_tests {
         assert_eq!(extract_defaults_from(&empty, &out), 0);
 
         std::fs::remove_dir_all(&root).unwrap();
+    }
+}
+
+#[cfg(test)]
+mod skin_editor_tests {
+    use super::{png_from_data_url, skin_editor_url};
+
+    #[test]
+    fn a_skin_goes_to_the_editor_as_a_short_link() {
+        assert_eq!(
+            skin_editor_url("https://usespectra.app", "AbCdEfGh_-123456", "slim"),
+            "https://usespectra.app/tools/skin-editor?share=AbCdEfGh_-123456&model=slim"
+        );
+        assert!(skin_editor_url("https://x", "id", "anything").ends_with("model=classic"));
+    }
+
+    #[test]
+    fn only_a_png_data_url_is_sent() {
+        assert_eq!(png_from_data_url("data:image/png;base64,iVBORw==").unwrap(), vec![0x89, 0x50, 0x4e, 0x47]);
+        assert!(png_from_data_url("data:image/jpeg;base64,AAAA").is_err());
+        assert!(png_from_data_url("https://example.com/skin.png").is_err());
+        assert!(png_from_data_url("data:image/png;base64,***").is_err());
     }
 }

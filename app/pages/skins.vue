@@ -56,6 +56,7 @@
                 color="neutral"
                 variant="soft"
                 :disabled="!shown"
+                :loading="openingEditor"
                 :label="$t('skins.editOnline')"
                 @click="editOnline"
               />
@@ -257,24 +258,17 @@ async function loadIntoViewer(skin: string, model: 'classic' | 'slim') {
   await viewer.loadSkin(skin, { model: svModel(model) })
 }
 
-async function compactPng(dataUrl: string): Promise<string> {
-  const image = new Image()
-  image.src = dataUrl
-  await image.decode()
-  const canvas = document.createElement('canvas')
-  canvas.width = image.naturalWidth
-  canvas.height = image.naturalHeight
-  canvas.getContext('2d')!.drawImage(image, 0, 0)
-  return canvas.toDataURL('image/png').split(',')[1] ?? ''
-}
+const openingEditor = ref(false)
 
 async function editOnline() {
   if (!shown.value) return
+  openingEditor.value = true
   try {
-    const hash = new URLSearchParams({ skin: await compactPng(shown.value.skin), model: shown.value.model })
-    await openExternal(`${SPECTRA_SITE}/tools/skin-editor#${hash}`)
+    await invoke('open_skin_editor', { skin: shown.value.skin, model: shown.value.model })
   } catch (e) {
     toast.add({ title: errorText(e), color: 'error' })
+  } finally {
+    openingEditor.value = false
   }
 }
 

@@ -359,6 +359,7 @@ pub fn run() {
             commands::skins::get_skin_path,
             commands::skins::get_skin_data_url,
             commands::skins::fetch_skin_data_url,
+            commands::skins::open_skin_editor,
             commands::skins::get_player_skin,
             commands::skins::import_player_skin,
             commands::skins::apply_skin,
