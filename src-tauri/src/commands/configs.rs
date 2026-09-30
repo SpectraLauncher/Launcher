@@ -552,13 +552,35 @@ impl<'a> JsonParser<'a> {
         }
     }
 
-    fn members(&mut self, path: &[String], close: u8) -> AppResult<()> {
+    fn note(&mut self, key: &str, at: usize) -> Option<Vec<String>> {
+        let label = match key {
+            "comment" | "_comment" | "__comment" => "",
+            _ => key.strip_prefix("//")?,
+        };
+        let text = match (&self.nodes.get(at)?.value, self.nodes.len() == at + 1) {
+            (Json::String(s), true) => s.clone(),
+            (Json::Bool(_) | Json::Number(_), true) if !label.is_empty() => self.nodes[at].value.to_string(),
+            _ => return None,
+        };
+        let mut lines = self.nodes.pop()?.comment;
+        for line in text.lines() {
+            lines.push(if label.is_empty() { line.to_string() } else { format!("{label}: {line}") });
+        }
+        Some(lines)
+    }
+
+    fn members(&mut self, path: &[String], close: u8, section: Option<usize>) -> AppResult<()> {
+        let mut noted = false;
         loop {
             self.skip();
             if self.i >= self.s.len() {
                 return if close == 0 { Ok(()) } else { self.fail("an unclosed object") };
             }
             if self.s[self.i] == close {
+                if let (true, Some(section)) = (noted, section) {
+                    let lines = std::mem::take(&mut self.comments);
+                    self.nodes[section].comment.extend(lines);
+                }
                 self.i += 1;
                 return Ok(());
             }
@@ -580,9 +602,22 @@ impl<'a> JsonParser<'a> {
                 _ => return self.fail("a missing ':'"),
             }
             let mut at = path.to_vec();
-            at.push(key);
+            at.push(key.clone());
+            let before = self.nodes.len();
             self.value(&at, comment)?;
             self.comments.clear();
+            if let Some(lines) = self.note(&key, before) {
+                self.comments = lines;
+                noted = true;
+            } else {
+                if let (true, Some(section)) = (noted, section) {
+                    if self.nodes[before].kind == Kind::Section {
+                        let lines = std::mem::take(&mut self.nodes[before].comment);
+                        self.nodes[section].comment.extend(lines);
+                    }
+                }
+                noted = false;
+            }
             self.separator(close)?;
         }
     }
@@ -594,12 +629,13 @@ impl<'a> JsonParser<'a> {
         }
         match self.s[self.i] {
             b'{' => {
-                if !path.is_empty() {
+                let section = (!path.is_empty()).then(|| {
                     self.nodes.push(Node::new(path.to_vec(), Kind::Section, Json::Null, (self.i, self.i), comment));
-                }
+                    self.nodes.len() - 1
+                });
                 self.i += 1;
                 self.comments.clear();
-                self.members(path, b'}')?;
+                self.members(path, b'}', section)?;
                 Ok(false)
             }
             b'[' => {
@@ -656,7 +692,7 @@ fn parse_json(src: &str, dialect: Dialect) -> AppResult<Vec<Node>> {
         return Ok(Vec::new());
     }
     if dialect == Dialect::Hocon && !matches!(p.s.get(p.i), Some(b'{') | Some(b'[')) {
-        p.members(&[], 0)?;
+        p.members(&[], 0, None)?;
     } else {
         p.value(&[], Vec::new())?;
     }
@@ -1381,6 +1417,27 @@ mod tests {
         assert!(allowed_rel("config/ftbchunks-client.snbt"));
         assert!(allowed_rel("config/servercore/config.yml"));
         assert!(allowed_rel("config/bobby.conf"));
+    }
+
+    #[test]
+    fn comment_keys_in_json_become_comments() {
+        let attributefix = "{\n  \"modify_range\": {\n    \"//\": \"Determines if the range should be modified.\",\n    \"//default\": false,\n    \"value\": false\n  },\n  \"max\": {\n    \"//\": \"The highest possible value.\",\n    \"//default\": 1024.0,\n    \"//range\": \">=0\",\n    \"value\": 1024.0\n  }\n}";
+        let entries = read_doc(attributefix, Format::Json).unwrap();
+        assert!(entries.iter().all(|e| !e.path.last().unwrap().starts_with("//")));
+        let modify = find(&entries, &["modify_range", "value"]);
+        assert_eq!(modify.comment.as_deref(), Some("Determines if the range should be modified."));
+        assert_eq!(modify.default, Some(json!(false)));
+        let max = find(&entries, &["max", "value"]);
+        assert_eq!((max.default.clone(), max.min), (Some(json!(1024.0)), Some(0.0)));
+        let out = write_doc(attributefix, Format::Json, &[change(&["max", "value"], json!(2048.0))]).unwrap();
+        assert_eq!(out, attributefix.replace("\"value\": 1024.0", "\"value\": 2048.0"));
+
+        let railways = "{\n  \"misc\": {\n    \"comment\": \"Miscellaneous settings\",\n    \"strictCoupler\": {\n      \"comment\": \"Allowed Values: DEFAULT, DISABLE\",\n      \"value\": \"DEFAULT\"\n    }\n  },\n  \"comment\": 5\n}";
+        let entries = read_doc(railways, Format::Json).unwrap();
+        assert_eq!(find(&entries, &["misc"]).comment.as_deref(), Some("Miscellaneous settings"));
+        assert_eq!(find(&entries, &["misc", "strictCoupler"]).comment, None);
+        assert_eq!(find(&entries, &["misc", "strictCoupler", "value"]).options, vec!["DEFAULT", "DISABLE"]);
+        assert_eq!(find(&entries, &["comment"]).value, json!(5));
     }
 
     #[test]
