@@ -1,7 +1,8 @@
 <template>
   <div class="mb-6 rounded-[15px] border border-primary-500/25 bg-linear-[160deg] from-primary-500/15 to-primary-500/5 p-[13px]">
-    <div class="mb-[9px] text-[10px] font-semibold tracking-[0.12em] text-primary-300">
-      {{ $t('instanceCard.title') }}
+    <div class="mb-[9px] flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.12em] text-primary-300">
+      <span v-if="playing" class="size-1.5 rounded-full bg-[#3fb877] shadow-[0_0_6px_#3fb877]" />
+      {{ playing ? $t('instanceCard.nowPlaying') : $t('instanceCard.title') }}
     </div>
 
     <template v-if="selected">
@@ -17,6 +18,17 @@
       </div>
 
       <button
+        v-if="playing"
+        type="button"
+        :disabled="launching || stopping"
+        class="flex w-full items-center justify-center gap-2 rounded-[11px] bg-[#e5484d] py-[11px] text-[14px] font-bold tracking-[0.02em] text-white transition hover:bg-[#ec5d62] active:scale-[0.98] disabled:opacity-60"
+        @click="stop"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1.5" /></svg>
+        {{ stopping ? $t('common.loading') : $t('instanceCard.stop') }}
+      </button>
+      <button
+        v-else
         type="button"
         :disabled="launching"
         class="flex w-full items-center justify-center gap-2 rounded-[11px] bg-[#3fb877] py-[11px] text-[14px] font-bold tracking-[0.02em] text-[#06210f] transition hover:bg-[#4bcb86] active:scale-[0.98] disabled:opacity-60"
@@ -34,19 +46,29 @@
 </template>
 
 <script setup lang="ts">
+import { invoke } from '@tauri-apps/api/core'
 import type { Instance } from '~/types/launcher'
 
 const instances = useInstancesStore()
+const activity = useActivityCenter()
+const toast = useToast()
 
 onMounted(() => {
   if (!instances.instances.length) instances.load()
 })
 
-const selected = computed<Instance | undefined>(() => {
-  const played = instances.instances.filter(i => i.last_played)
-  if (!played.length) return undefined
-  return [...played].sort((a, b) => (b.last_played || '').localeCompare(a.last_played || ''))[0]
+const newestFirst = (list: Instance[]) =>
+  [...list].sort((a, b) => (b.last_played || '').localeCompare(a.last_played || ''))
+
+const running = computed(() => {
+  const ids = new Set(activity.list.value.filter(a => a.kind === 'running').map(a => a.instanceId))
+  return newestFirst(instances.instances.filter(i => ids.has(i.id)))[0]
 })
+
+const lastPlayed = computed(() => newestFirst(instances.instances.filter(i => i.last_played))[0])
+
+const selected = computed<Instance | undefined>(() => running.value ?? lastPlayed.value)
+const playing = computed(() => !!running.value)
 
 const mc = useMinecraftLaunch(() => selected.value?.id)
 const launching = computed(() => mc.launching.value)
@@ -58,5 +80,21 @@ const play = async () => {
   try {
     await mc.launch(selected.value.id)
   } catch {  }
+}
+
+const stopping = ref(false)
+
+const stop = async () => {
+  const id = selected.value?.id
+  if (!id) return
+  stopping.value = true
+  try {
+    await invoke('stop_instance', { id, force: false })
+    if (!(await invoke<boolean>('is_instance_running', { id }))) activity.clear(id)
+  } catch (e) {
+    toast.add({ title: errorText(e), color: 'error' })
+  } finally {
+    stopping.value = false
+  }
 }
 </script>

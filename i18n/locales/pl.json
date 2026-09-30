@@ -10,7 +10,9 @@
   },
   "instanceCard": {
     "title": "OSTATNIO GRANE",
+    "nowPlaying": "TERAZ GRASZ",
     "play": "GRAJ",
+    "stop": "ZATRZYMAJ",
     "empty": "Jeszcze nie grałeś"
   },
   "create": {

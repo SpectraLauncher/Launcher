@@ -10,7 +10,9 @@
   },
   "instanceCard": {
     "title": "ZULETZT GESPIELT",
+    "nowPlaying": "LÄUFT GERADE",
     "play": "SPIELEN",
+    "stop": "BEENDEN",
     "empty": "Du hast noch nicht gespielt"
   },
   "create": {
