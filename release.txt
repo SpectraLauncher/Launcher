@@ -1,15 +1,16 @@
 ## Changes (v1.0.0)
 
 ### ✨ Features & Improvements
-- **Addons**: Add new themes, buttons, pages and windows to the launcher. Find them in Settings → Addons, as a grid or a list, and look at any addon before you install it. An addon can only do what you allow it to.
+- **Addons**: Add new themes, buttons, pages and windows to the launcher. Find them in Settings → Addons, as a grid or a list, and look at any addon before you install it. An addon can only do what you allow it to, such as editing your resource packs or using one folder of an instance.
 - **Now playing**: The card above the menu shows the game you are playing right now, with a button to stop it.
 - **Jump back in**: A new button next to Play starts the game and takes you straight to the world or server you played last (Minecraft 1.20 and newer).
 - **Console in its own window**: Click the status in the title bar to see the game console in a separate window. It can also open by itself when the game starts (Settings → Default instance options) and close by itself when the game closes.
-- **Mod settings without opening files**: A new Configuration tab on each instance lets you change mod settings with switches, sliders and lists. Comments in the file stay, and the old file is kept as a backup.
+- **Mod settings without opening files**: A new Configuration tab on each instance lets you change mod settings with switches, sliders and lists. It reads most mod config files, FTB and YAML ones too, and shows the descriptions written in them. Comments in the file stay, and the old file is kept as a backup.
 - **Edit your skin online**: A new button on the Skins page opens the skin editor on usespectra.app with your skin ready to edit.
 
 ### 🐛 Bug Fixes
 - **Quick play on new Minecraft versions**: Playing a world or joining a server straight from the launcher now works on the newest Minecraft versions too.
+- **Links open in your browser again**: Some links opened your Documents folder instead of the web page.
 
 ## Changes (v0.9.0)
 
