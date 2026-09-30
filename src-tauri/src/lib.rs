@@ -117,14 +117,14 @@ pub fn run() {
 
     builder
         .manage(AppState::default())
-        .register_asynchronous_uri_scheme_protocol(commands::addon_host::SCHEME, |_ctx, request, responder| {
-            let path = request.uri().path().to_string();
-            tauri::async_runtime::spawn_blocking(move || responder.respond(commands::addon_host::response(&path)));
-        })
         .plugin(tauri_plugin_deep_link::init())
         .setup(|app| {
             if let Err(e) = paths::ensure_base_dirs() {
                 log::error!("failed to create data directories: {e}");
+            }
+
+            if let Err(e) = commands::addon_host::start_server() {
+                log::error!("addon file server could not start: {e}");
             }
 
             {

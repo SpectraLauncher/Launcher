@@ -33,6 +33,7 @@ td.detail { color: var(--muted); font-family: ui-monospace, Consolas, monospace;
 .pass { background: rgba(62, 207, 142, .15); color: var(--pass); }
 .fail { background: rgba(255, 107, 107, .15); color: var(--fail); }
 .wait { background: rgba(245, 196, 81, .15); color: var(--wait); }
+.info { background: rgba(139, 153, 173, .15); color: var(--muted); }
 
 .summary { margin: 16px 0; font-weight: 600; }
 button { background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }

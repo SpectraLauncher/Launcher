@@ -23,10 +23,32 @@ const fails = async (promise, code) => {
   }
 }
 
+const tryInvoke = (command) => {
+  const internals = window.__TAURI_INTERNALS__
+  if (!internals?.invoke) return Promise.resolve('no bridge')
+  return Promise.race([
+    new Promise(resolve => resolve(internals.invoke(command, {}))).then(() => 'answered', () => 'refused'),
+    new Promise(resolve => setTimeout(() => resolve('no answer'), 3000)),
+  ])
+}
+
+const INFO = Symbol('info')
+
 const CHECKS = [
-  ['Tauri IPC is not in this frame', () =>
-    (typeof window.__TAURI_INTERNALS__ === 'undefined' && typeof window.__TAURI__ === 'undefined')
-    || 'Tauri globals are visible'],
+  ['Launcher commands cannot be called from here', async () => {
+    const outcomes = {
+      get_launcher_paths: await tryInvoke('get_launcher_paths'),
+      addons_list: await tryInvoke('addons_list'),
+      'plugin:app|version': await tryInvoke('plugin:app|version'),
+    }
+    const answered = Object.entries(outcomes).filter(([, outcome]) => outcome === 'answered').map(([command]) => command)
+    return answered.length === 0 || `answered: ${answered.join(', ')}`
+  }],
+  ['Tauri scripts in this frame', () => [INFO,
+    typeof window.__TAURI_INTERNALS__ === 'undefined'
+      ? 'absent'
+      : 'present - WebView2 adds them to every frame; the row above shows they cannot be used']],
+  ['Served from outside the launcher origin', () => location.hostname === '127.0.0.1' || `served from ${location.host}`],
   ['The frame has an opaque origin', () => window.origin === 'null' || `origin is ${window.origin}`],
   ['The launcher page is out of reach', () => {
     try {
@@ -79,11 +101,12 @@ const render = (results) => {
     row.append(...cells)
     return row
   }))
+  const checks = results.filter(r => r[1] !== 'info').length
   const failed = results.filter(r => r[1] === 'fail').length
   const waiting = results.filter(r => r[1] === 'wait').length
   summary.textContent = waiting
     ? 'Running…'
-    : failed ? `${failed} of ${results.length} checks failed` : `All ${results.length} checks passed`
+    : failed ? `${failed} of ${checks} checks failed` : `All ${checks} checks passed`
 }
 
 const run = async () => {
@@ -92,7 +115,8 @@ const run = async () => {
   await Promise.all(CHECKS.map(async ([name, check], i) => {
     try {
       const outcome = await check()
-      results[i] = [name, outcome === true ? 'pass' : 'fail', outcome === true ? '' : String(outcome)]
+      if (Array.isArray(outcome) && outcome[0] === INFO) results[i] = [name, 'info', outcome[1]]
+      else results[i] = [name, outcome === true ? 'pass' : 'fail', outcome === true ? '' : String(outcome)]
     } catch (error) {
       results[i] = [name, 'fail', error.message]
     }

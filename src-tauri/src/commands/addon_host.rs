@@ -1,15 +1,14 @@
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
 use serde_json::{json, Map, Value};
 use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::commands::addons::{self, Manifest};
 use crate::error::{AppError, AppResult};
 use crate::models::Instance;
 use crate::{paths, store, AppState};
-
-pub const SCHEME: &str = "addon";
 
 const SDK: &str = include_str!("addon_sdk.js");
 const SDK_PATH: &str = "__spectra/sdk.js";
@@ -40,13 +39,105 @@ pub const HOST_METHODS: &[&str] = &[
 ];
 
 static STORAGE_LOCK: Mutex<()> = Mutex::new(());
+static PORT: OnceLock<u16> = OnceLock::new();
 
-pub fn origin() -> &'static str {
-    if cfg!(any(windows, target_os = "android")) {
-        "http://addon.localhost"
-    } else {
-        "addon://localhost"
+const MAX_REQUEST_HEAD: usize = 16 * 1024;
+
+pub fn origin() -> String {
+    format!("http://127.0.0.1:{}", PORT.get().copied().unwrap_or(0))
+}
+
+pub fn start_server() -> std::io::Result<u16> {
+    let listener = std::net::TcpListener::bind(("127.0.0.1", 0))?;
+    listener.set_nonblocking(true)?;
+    let port = listener.local_addr()?.port();
+    if PORT.set(port).is_err() {
+        return Ok(*PORT.get().unwrap_or(&port));
     }
+    tauri::async_runtime::spawn(async move {
+        let listener = match tokio::net::TcpListener::from_std(listener) {
+            Ok(listener) => listener,
+            Err(e) => {
+                log::error!("addon file server could not start: {e}");
+                return;
+            }
+        };
+        loop {
+            if let Ok((stream, _)) = listener.accept().await {
+                tauri::async_runtime::spawn(handle_connection(stream, port));
+            }
+        }
+    });
+    Ok(port)
+}
+
+async fn handle_connection(mut stream: tokio::net::TcpStream, port: u16) {
+    let mut head = Vec::with_capacity(1024);
+    let mut chunk = [0u8; 2048];
+    while !head.windows(4).any(|w| w == b"\r\n\r\n") {
+        let read = tokio::time::timeout(Duration::from_secs(5), stream.read(&mut chunk)).await;
+        match read {
+            Ok(Ok(n)) if n > 0 => head.extend_from_slice(&chunk[..n]),
+            _ => return,
+        }
+        if head.len() > MAX_REQUEST_HEAD {
+            return;
+        }
+    }
+    let request = String::from_utf8_lossy(&head).into_owned();
+    let bytes = tauri::async_runtime::spawn_blocking(move || answer(&request, port)).await.unwrap_or_default();
+    let _ = stream.write_all(&bytes).await;
+    let _ = stream.shutdown().await;
+}
+
+pub fn answer(request: &str, port: u16) -> Vec<u8> {
+    let mut lines = request.split("\r\n");
+    let mut first = lines.next().unwrap_or_default().split(' ');
+    let method = first.next().unwrap_or_default();
+    let target = first.next().unwrap_or_default();
+    let host = lines
+        .take_while(|line| !line.is_empty())
+        .find_map(|line| {
+            let (name, value) = line.split_once(':')?;
+            name.trim().eq_ignore_ascii_case("host").then(|| value.trim().to_string())
+        })
+        .unwrap_or_default();
+
+    let served = if host != format!("127.0.0.1:{port}") {
+        Served { status: 421, mime: "text/plain; charset=utf-8", body: b"wrong host".to_vec(), csp: None }
+    } else if method != "GET" && method != "HEAD" {
+        Served { status: 405, mime: "text/plain; charset=utf-8", body: b"method not allowed".to_vec(), csp: None }
+    } else {
+        serve(target.split('?').next().unwrap_or_default())
+    };
+    encode(served, method == "HEAD")
+}
+
+fn encode(served: Served, head_only: bool) -> Vec<u8> {
+    let reason = match served.status {
+        200 => "OK",
+        404 => "Not Found",
+        405 => "Method Not Allowed",
+        421 => "Misdirected Request",
+        _ => "Error",
+    };
+    let mut out = format!(
+        "HTTP/1.1 {} {reason}\r\nContent-Type: {}\r\nContent-Length: {}\r\nAccess-Control-Allow-Origin: *\r\n\
+         Cross-Origin-Resource-Policy: cross-origin\r\nX-Content-Type-Options: nosniff\r\nCache-Control: no-store\r\n\
+         Connection: close\r\n",
+        served.status,
+        served.mime,
+        served.body.len(),
+    );
+    if let Some(policy) = served.csp {
+        out.push_str(&format!("Content-Security-Policy: {policy}\r\n"));
+    }
+    out.push_str("\r\n");
+    let mut bytes = out.into_bytes();
+    if !head_only {
+        bytes.extend_from_slice(&served.body);
+    }
+    bytes
 }
 
 #[derive(Debug)]
@@ -181,20 +272,6 @@ pub fn serve(raw_path: &str) -> Served {
         return Served { status: 200, mime, body: html.into_bytes(), csp: Some(csp(id)) };
     }
     Served { status: 200, mime, body: bytes, csp: None }
-}
-
-pub fn response(raw_path: &str) -> tauri::http::Response<Vec<u8>> {
-    let served = serve(raw_path);
-    let mut builder = tauri::http::Response::builder()
-        .status(served.status)
-        .header("Content-Type", served.mime)
-        .header("Access-Control-Allow-Origin", "*")
-        .header("X-Content-Type-Options", "nosniff")
-        .header("Cache-Control", "no-store");
-    if let Some(policy) = served.csp {
-        builder = builder.header("Content-Security-Policy", policy);
-    }
-    builder.body(served.body).unwrap_or_else(|_| tauri::http::Response::new(Vec::new()))
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -629,7 +706,7 @@ pub async fn addons_open_window(app: AppHandle, addon: String, window: String) -
 
 #[tauri::command]
 pub fn addon_origin() -> String {
-    origin().to_string()
+    origin()
 }
 
 #[cfg(test)]
@@ -839,6 +916,37 @@ mod tests {
         forget_storage("one");
         assert!(!storage_file("one").exists());
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn the_file_server_answers_only_reads_for_its_own_host() {
+        use std::io::Read;
+        let port = start_server().unwrap();
+        assert_eq!(origin(), format!("http://127.0.0.1:{port}"));
+
+        let ask = |request: String| {
+            let mut stream = std::net::TcpStream::connect(("127.0.0.1", port)).unwrap();
+            stream.write_all(request.as_bytes()).unwrap();
+            let mut out = String::new();
+            stream.read_to_string(&mut out).unwrap();
+            out
+        };
+
+        let sdk = ask(format!("GET /__spectra/sdk.js?x=1 HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n\r\n"));
+        assert!(sdk.starts_with("HTTP/1.1 200 OK\r\n"), "{sdk}");
+        assert!(sdk.contains("window.spectra"));
+
+        let rebound = ask("GET /__spectra/sdk.js HTTP/1.1\r\nHost: evil.example\r\n\r\n".to_string());
+        assert!(rebound.starts_with("HTTP/1.1 421"), "{rebound}");
+
+        let post = ask(format!("POST /__spectra/sdk.js HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n\r\n"));
+        assert!(post.starts_with("HTTP/1.1 405"), "{post}");
+
+        let head = ask(format!("HEAD /__spectra/sdk.js HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n\r\n"));
+        assert!(head.starts_with("HTTP/1.1 200") && !head.contains("window.spectra"), "{head}");
+
+        let missing = ask(format!("GET /nope/x.html HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n\r\n"));
+        assert!(missing.starts_with("HTTP/1.1 404"), "{missing}");
     }
 
     #[test]
