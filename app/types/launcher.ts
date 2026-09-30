@@ -244,6 +244,22 @@ export interface AddonButton {
   action: AddonAction
 }
 
+export interface AddonView {
+  id: string
+  title: string
+  entry: string
+  icon: string | null
+}
+
+export interface AddonWindow {
+  id: string
+  title: string
+  entry: string
+  width: number | null
+  height: number | null
+  resizable: boolean
+}
+
 export interface Addon {
   id: string
   version: string
@@ -261,6 +277,12 @@ export interface Addon {
   themes: AddonTheme[]
   buttons: AddonButton[]
   locales: Record<string, Record<string, string>>
+  main: string | null
+  pages: AddonView[]
+  instanceTabs: AddonView[]
+  settings: string | null
+  windows: AddonWindow[]
+  permissions: string[]
 }
 
 export interface AddonPreview {
@@ -276,4 +298,5 @@ export interface AddonPreview {
   buttons: { slot: string; title: string }[]
   links: string[]
   permissions: string[]
+  runsCode: boolean
 }

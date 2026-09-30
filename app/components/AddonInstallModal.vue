@@ -42,10 +42,17 @@
 
         <div>
           <p class="mb-1.5 text-sm font-medium">{{ $t('addons.permissions') }}</p>
-          <ul v-if="preview.permissions.length" class="space-y-1 font-mono text-xs text-muted">
-            <li v-for="p in preview.permissions" :key="p">{{ p }}</li>
+          <ul v-if="preview.permissions.length" class="space-y-1 text-sm text-muted">
+            <li v-for="p in preview.permissions" :key="p" class="flex items-center gap-2">
+              <UIcon :name="p.startsWith('network:') ? 'i-lucide-globe' : 'i-lucide-key-round'" class="size-4 shrink-0" />
+              {{ permissionLabel(p) }}
+            </li>
           </ul>
           <p v-else class="text-sm text-muted">{{ $t('addons.noPermissions') }}</p>
+          <p v-if="preview.runsCode" class="mt-2 flex items-center gap-2 text-xs text-muted">
+            <UIcon name="i-lucide-shield-check" class="size-4 shrink-0" />
+            {{ $t('addons.runsCode') }}
+          </p>
         </div>
       </div>
     </template>
@@ -70,6 +77,11 @@ const toast = useToast()
 const { t } = useI18n()
 
 const slotKey = (slot: string) => slot.replace(/\.(\w)/g, (_, c: string) => c.toUpperCase())
+
+function permissionLabel(permission: string) {
+  if (permission.startsWith('network:')) return t('addons.permissionNetwork', { host: permission.slice(8) })
+  return t(`addons.permissionNames.${permission.replace(/:(\w)/, (_, c: string) => c.toUpperCase())}`)
+}
 
 async function onConfirm() {
   const name = await confirm()

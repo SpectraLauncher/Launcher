@@ -20,6 +20,7 @@ export const useAddonsStore = defineStore('addons', {
     addons: [] as Addon[],
     loaded: false,
     available: false,
+    origin: '',
   }),
   getters: {
     active(state): Addon[] {
@@ -31,8 +32,15 @@ export const useAddonsStore = defineStore('addons', {
   },
   actions: {
     async load() {
+      if (!this.origin) this.origin = await invoke<string>('addon_origin')
       this.addons = await invoke<Addon[]>('addons_list')
       this.loaded = true
+    },
+
+    fileUrl(addonId: string, path: string, query: Record<string, string> = {}): string {
+      const file = path.split('/').map(encodeURIComponent).join('/')
+      const search = new URLSearchParams(query).toString()
+      return `${this.origin}/${encodeURIComponent(addonId)}/${file}${search ? `?${search}` : ''}`
     },
 
     async checkAvailable() {
@@ -55,10 +63,6 @@ export const useAddonsStore = defineStore('addons', {
       const key = match[1]!
       const locales = this.addons.find(a => a.id === addonId)?.locales ?? {}
       return locales[locale]?.[key] ?? locales[locale.split('-')[0]!]?.[key] ?? locales.en?.[key] ?? key
-    },
-
-    async run(button: SlotButton) {
-      if (button.action.type === 'url') await openExternal(button.action.url)
     },
 
     async setEnabled(id: string, enabled: boolean) {

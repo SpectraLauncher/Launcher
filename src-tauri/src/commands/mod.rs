@@ -1,3 +1,4 @@
+pub mod addon_host;
 pub mod addons;
 pub mod auth;
 pub mod cloud_sync;

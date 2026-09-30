@@ -894,6 +894,21 @@
       "screenshotsHeader": "Screenshots",
       "skinsHeader": "Skins",
       "settingsHeader": "Einstellungen"
+    },
+    "runsCode": "Führt eigenen Code in einem isolierten Rahmen aus. Er bekommt nur, was die Liste oben erlaubt.",
+    "pageMissing": "Diese Addon-Seite ist nicht verfügbar.",
+    "openSettings": "Addon-Einstellungen",
+    "commandMissing": "Das Addon hat nicht geantwortet. Versuche es gleich noch einmal.",
+    "openUrlAsk": "{name} möchte {url} öffnen. Öffnen?",
+    "permissionNetwork": "Verbindet sich mit {host}",
+    "permissionNames": {
+      "instancesRead": "Sieht deine Instanzen, ihre Inhalte und Welten",
+      "instancesWrite": "Ändert Instanzeinstellungen und schaltet Inhalte ein oder aus",
+      "instancesLaunch": "Startet und beendet das Spiel",
+      "logsRead": "Liest Spielprotokolle",
+      "serversPing": "Prüft Minecraft-Server",
+      "accountRead": "Kennt die Namen deiner Minecraft- und Spectra-Konten",
+      "skinsRead": "Sieht deine Skins"
     }
   }
 }

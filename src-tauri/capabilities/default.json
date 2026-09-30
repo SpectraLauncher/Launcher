@@ -5,7 +5,8 @@
   "windows": [
     "main",
     "msa-login",
-    "content-browser"
+    "content-browser",
+    "addon:*"
   ],
   "permissions": [
     "core:default",

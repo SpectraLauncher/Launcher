@@ -80,6 +80,7 @@
     </div>
 
     <template v-if="!isContentWindow">
+      <AddonMains />
       <LiveLogsModal />
       <CrashReportModal />
       <StartupUpdate />
@@ -90,15 +91,24 @@
 
 <script setup lang="ts">
 import { convertFileSrc, invoke } from '@tauri-apps/api/core'
-import { listen } from '@tauri-apps/api/event'
+import { emitTo, listen } from '@tauri-apps/api/event'
 import type { UnlistenFn } from '@tauri-apps/api/event'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const theme = useThemeStore()
+const toast = useToast()
 
 const route = useRoute()
-const isContentWindow = computed(() => route.path.startsWith('/browser'))
-const windowTitle = computed(() => (isContentWindow.value ? 'Spectra — content' : 'Spectra Launcher'))
+const isAddonWindow = computed(() => route.path.startsWith('/addon-window'))
+const isContentWindow = computed(() => route.path.startsWith('/browser') || isAddonWindow.value)
+const windowTitle = computed(() => {
+  if (isAddonWindow.value) {
+    const addon = addons.active.find(a => a.id === route.query.addon)
+    const win = addon?.windows.find(w => w.id === route.query.window)
+    return addon && win ? `${win.title} — ${addon.name}` : 'Spectra'
+  }
+  return isContentWindow.value ? 'Spectra — content' : 'Spectra Launcher'
+})
 
 const { platform } = usePlatform()
 const isMac = computed(() => platform.value === 'macos')
@@ -121,6 +131,34 @@ const spectraNotifications = useSpectraNotifications()
 const cloud = useCloudSync()
 const addons = useAddonsStore()
 const addonInstall = useAddonInstall()
+
+initAddonBridge({
+  toast: value => toast.add(value),
+  navigate: (addonId, page) => {
+    if (isContentWindow.value) emitTo('main', 'addon://navigate', { addonId, page }).catch(() => {})
+    else router.push(`/addon/${addonId}/${page}`)
+  },
+  launch: instanceId => (isContentWindow.value ? emitTo('main', 'addon://launch', instanceId) : mc.launch(instanceId)),
+  locale: () => locale.value,
+  theme: () => ({ mode: theme.mode, accent: theme.accent }),
+  addonName: id => addons.addons.find(a => a.id === id)?.name ?? id,
+  openUrl: url => openExternal(url),
+  t: (key, params) => t(key, params ?? {}),
+})
+
+let knownInstances: Set<string> | null = null
+watch(() => (instances.loaded ? instances.instances.map(i => i.id) : null), (ids) => {
+  if (!ids || isContentWindow.value) return
+  if (knownInstances) {
+    for (const id of ids) {
+      if (!knownInstances.has(id)) broadcastAddonEvent('instance:created', { instanceId: id })
+    }
+    for (const id of knownInstances) {
+      if (!ids.includes(id)) broadcastAddonEvent('instance:removed', { instanceId: id })
+    }
+  }
+  knownInstances = new Set(ids)
+})
 
 const themeBackground = computed(() => {
   const picked = addons.themes.find(t => t.key === theme.addonTheme)
@@ -147,12 +185,29 @@ let unlistenAccount: UnlistenFn | null = null
 let unlistenLaunch: UnlistenFn | null = null
 let unlistenCloudExit: UnlistenFn | null = null
 let unlistenAddon: UnlistenFn | null = null
+const addonUnlisteners: UnlistenFn[] = []
 onMounted(async () => {
   await bootGate()
 
   addons.load().catch(() => {})
   await addons.checkAvailable()
+  addonUnlisteners.push(
+    await listen<{ name: string; payload: Record<string, unknown> }>('addon://event', (e) => {
+      emitAddonEvent(e.payload.name, e.payload.payload)
+    }),
+    await listen<{ instance_id: string; code: number | null }>('mc://exited', (e) => {
+      emitAddonEvent('game:exit', { instanceId: e.payload.instance_id, code: e.payload.code })
+    }),
+  )
   if (!isContentWindow.value) {
+    addonUnlisteners.push(
+      await listen<{ addonId: string; page: string }>('addon://navigate', (e) => {
+        router.push(`/addon/${e.payload.addonId}/${e.payload.page}`)
+      }),
+      await listen<string>('addon://launch', (e) => {
+        mc.launch(e.payload).catch(() => {})
+      }),
+    )
     unlistenAddon = await listen<string>('addon://open', async (e) => {
       await invoke('take_pending_addon').catch(() => {})
       if (await addons.checkAvailable()) addonInstall.fromCatalog(e.payload)
@@ -199,6 +254,7 @@ onBeforeUnmount(() => {
   unlistenCloudExit?.()
   unlistenContent?.()
   unlistenAddon?.()
+  for (const unlisten of addonUnlisteners) unlisten()
 })
 
 async function playInstance(instanceId: string) {

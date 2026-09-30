@@ -894,6 +894,21 @@
       "screenshotsHeader": "Capturas",
       "skinsHeader": "Skins",
       "settingsHeader": "Ajustes"
+    },
+    "runsCode": "Ejecuta su propio código en un marco aislado. Solo recibe lo que permite la lista de arriba.",
+    "pageMissing": "Esta página del complemento no está disponible.",
+    "openSettings": "Ajustes del complemento",
+    "commandMissing": "El complemento no respondió. Inténtalo de nuevo en un momento.",
+    "openUrlAsk": "{name} quiere abrir {url}. ¿Abrirlo?",
+    "permissionNetwork": "Se conecta a {host}",
+    "permissionNames": {
+      "instancesRead": "Ve tus instancias, su contenido y sus mundos",
+      "instancesWrite": "Cambia los ajustes de las instancias y activa o desactiva contenido",
+      "instancesLaunch": "Inicia y detiene el juego",
+      "logsRead": "Lee los registros del juego",
+      "serversPing": "Comprueba servidores de Minecraft",
+      "accountRead": "Conoce los nombres de tus cuentas de Minecraft y Spectra",
+      "skinsRead": "Ve tus skins"
     }
   }
 }

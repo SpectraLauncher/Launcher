@@ -894,6 +894,21 @@
       "screenshotsHeader": "Zrzuty ekranu",
       "skinsHeader": "Skórki",
       "settingsHeader": "Ustawienia"
+    },
+    "runsCode": "Uruchamia własny kod w odizolowanej ramce. Dostaje tylko to, na co pozwala lista powyżej.",
+    "pageMissing": "Ta strona addonu jest niedostępna.",
+    "openSettings": "Ustawienia addonu",
+    "commandMissing": "Addon nie odpowiedział. Spróbuj za chwilę.",
+    "openUrlAsk": "{name} chce otworzyć {url}. Otworzyć?",
+    "permissionNetwork": "Łączy się z {host}",
+    "permissionNames": {
+      "instancesRead": "Widzi twoje instancje, ich zawartość i światy",
+      "instancesWrite": "Zmienia ustawienia instancji i włącza lub wyłącza zawartość",
+      "instancesLaunch": "Uruchamia i zatrzymuje grę",
+      "logsRead": "Czyta logi gry",
+      "serversPing": "Sprawdza serwery Minecraft",
+      "accountRead": "Zna nazwy twoich kont Minecraft i Spectra",
+      "skinsRead": "Widzi twoje skórki"
     }
   }
 }

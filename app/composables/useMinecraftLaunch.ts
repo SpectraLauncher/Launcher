@@ -43,6 +43,7 @@ export const useMinecraftLaunch = (instanceId?: MaybeRefOrGetter<string | undefi
     ac.markRunning(launchId)
     try {
       await invoke('launch_instance', { id: launchId, quickPlay: quickPlay ?? null })
+      broadcastAddonEvent('game:launch', { instanceId: launchId })
       telemetry.track('launch', { loader: inst?.loader.type, mc: inst?.mc_version })
       instances.load()
     } catch (e) {

@@ -152,7 +152,7 @@ struct ThemeFile {
     background: Option<String>,
 }
 
-fn valid_id(value: &str) -> bool {
+pub fn valid_id(value: &str) -> bool {
     let bytes = value.as_bytes();
     !bytes.is_empty()
         && bytes.len() <= 64
@@ -392,7 +392,7 @@ pub fn fits_launcher(range: Option<&str>, version: &semver::Version) -> bool {
     }
 }
 
-pub fn needs_code(manifest: &Manifest) -> bool {
+pub fn runs_code(manifest: &Manifest) -> bool {
     let c = &manifest.contributes;
     manifest.main.is_some()
         || manifest.backend.is_some()
@@ -623,10 +623,10 @@ pub fn check_runs_here(manifest: &Manifest) -> AppResult<()> {
             format!("This addon needs Spectra {}.", manifest.launcher.as_deref().unwrap_or_default()),
         ));
     }
-    if needs_code(manifest) {
+    if manifest.backend.is_some() {
         return Err(AppError::new(
             "unsupported",
-            "This addon runs code, which this version of Spectra cannot run yet.",
+            "This addon ships backend.wasm, which this version of Spectra cannot run yet.",
         ));
     }
     Ok(())
@@ -697,6 +697,7 @@ pub struct Preview {
     pub buttons: Vec<PreviewButton>,
     pub links: Vec<String>,
     pub permissions: Vec<String>,
+    pub runs_code: bool,
 }
 
 pub fn preview(token: &str, staged: &Staged) -> AppResult<Preview> {
@@ -704,6 +705,7 @@ pub fn preview(token: &str, staged: &Staged) -> AppResult<Preview> {
     check_runs_here(&inspected.manifest)?;
     let manifest = inspected.manifest;
     let installed = load_state()?.into_iter().find(|a| a.id == manifest.id).map(|a| a.version);
+    let code = runs_code(&manifest);
 
     let links: BTreeSet<String> = manifest
         .contributes
@@ -733,6 +735,7 @@ pub fn preview(token: &str, staged: &Staged) -> AppResult<Preview> {
             .collect(),
         links: links.into_iter().collect(),
         permissions: manifest.permissions,
+        runs_code: code,
     })
 }
 
@@ -801,6 +804,16 @@ pub struct AddonInfo {
     pub themes: Vec<ThemeInfo>,
     pub buttons: Vec<ButtonInfo>,
     pub locales: BTreeMap<String, BTreeMap<String, String>>,
+    pub main: Option<String>,
+    pub pages: Vec<View>,
+    pub instance_tabs: Vec<View>,
+    pub settings: Option<String>,
+    pub windows: Vec<WindowDef>,
+    pub permissions: Vec<String>,
+}
+
+fn with_icon(dir: &Path, view: View) -> View {
+    View { icon: view.icon.as_deref().map(|i| absolute(dir, i.trim().trim_start_matches("./"))), ..view }
 }
 
 fn absolute(dir: &Path, name: &str) -> String {
@@ -812,6 +825,19 @@ pub fn describe(installed: Installed) -> AddonInfo {
     let checked = inspect(&Package::Folder(dir.clone())).and_then(|i| check_runs_here(&i.manifest).map(|_| i));
     match checked {
         Ok(inspected) => AddonInfo {
+            main: inspected.manifest.main.clone(),
+            pages: inspected.manifest.contributes.pages.iter().cloned().map(|v| with_icon(&dir, v)).collect(),
+            instance_tabs: inspected
+                .manifest
+                .contributes
+                .instance_tabs
+                .iter()
+                .cloned()
+                .map(|v| with_icon(&dir, v))
+                .collect(),
+            settings: inspected.manifest.contributes.settings.clone(),
+            windows: inspected.manifest.contributes.windows.clone(),
+            permissions: inspected.manifest.permissions.clone(),
             name: inspected.manifest.name.clone(),
             description: inspected.manifest.description.clone(),
             dir: dir.to_string_lossy().into_owned(),
@@ -845,9 +871,33 @@ pub fn describe(installed: Installed) -> AddonInfo {
             themes: Vec::new(),
             buttons: Vec::new(),
             locales: BTreeMap::new(),
+            main: None,
+            pages: Vec::new(),
+            instance_tabs: Vec::new(),
+            settings: None,
+            windows: Vec::new(),
+            permissions: Vec::new(),
             installed,
         },
     }
+}
+
+pub fn active_manifest(id: &str) -> AppResult<Manifest> {
+    if !valid_id(id) {
+        return Err(AppError::not_found("no such addon"));
+    }
+    let entry = load_state()?
+        .into_iter()
+        .find(|a| a.id == id)
+        .ok_or_else(|| AppError::not_found("no such addon"))?;
+    if !entry.enabled {
+        return Err(AppError::not_found("this addon is turned off"));
+    }
+    read_manifest(&Package::Folder(paths::addons_dir().join(id)))
+}
+
+pub fn is_enabled(id: &str) -> bool {
+    valid_id(id) && load_state().is_ok_and(|state| state.iter().any(|a| a.id == id && a.enabled))
 }
 
 pub fn slug_from_url(url: &str) -> Option<String> {
@@ -1146,7 +1196,10 @@ pub async fn addons_reload(id: String) -> AppResult<Installed> {
 }
 
 #[tauri::command]
-pub async fn addons_set_enabled(id: String, enabled: bool) -> AppResult<()> {
+pub async fn addons_set_enabled(app: tauri::AppHandle, id: String, enabled: bool) -> AppResult<()> {
+    if !enabled {
+        crate::commands::addon_host::close_windows(&app, &id);
+    }
     crate::blocking(move || {
         let mut state = load_state()?;
         let entry = state
@@ -1160,7 +1213,8 @@ pub async fn addons_set_enabled(id: String, enabled: bool) -> AppResult<()> {
 }
 
 #[tauri::command]
-pub async fn addons_uninstall(id: String) -> AppResult<()> {
+pub async fn addons_uninstall(app: tauri::AppHandle, id: String) -> AppResult<()> {
+    crate::commands::addon_host::close_windows(&app, &id);
     crate::blocking(move || {
         if !valid_id(&id) {
             return Err(AppError::invalid("not an addon id"));
@@ -1172,6 +1226,7 @@ pub async fn addons_uninstall(id: String) -> AppResult<()> {
         if dir.exists() {
             std::fs::remove_dir_all(dir)?;
         }
+        crate::commands::addon_host::forget_storage(&id);
         Ok(())
     })
     .await
@@ -1244,15 +1299,15 @@ mod tests {
     fn a_theme_and_link_addon_is_valid_and_needs_no_code() {
         let m = manifest(theme_addon());
         validate(&m, &theme_files()).unwrap();
-        assert!(!needs_code(&m));
+        assert!(!runs_code(&m));
     }
 
     #[test]
-    fn anything_with_a_view_or_script_needs_code() {
+    fn anything_with_a_view_or_script_runs_code() {
         let mut code = theme_addon();
         code["contributes"]["pages"] = serde_json::json!([{ "id": "p", "title": "P", "entry": "p.html" }]);
-        assert!(needs_code(&manifest(code)));
-        assert!(needs_code(&manifest(base())));
+        assert!(runs_code(&manifest(code)));
+        assert!(runs_code(&manifest(base())));
     }
 
     #[test]
@@ -1442,10 +1497,10 @@ mod tests {
         write_zip(&traversal, &[("addon.json", b"{}"), ("../evil.txt", b"x")]);
         assert!(install(&staged(&traversal, false)).unwrap_err().message.contains("outside"));
 
-        let with_code = root.join("code.zip");
-        let code = serde_json::to_vec(&base()).unwrap();
-        write_zip(&with_code, &[("addon.json", &code), ("main.js", b"")]);
-        assert_eq!(install(&staged(&with_code, false)).unwrap_err().code, "unsupported");
+        let with_backend = root.join("backend.zip");
+        let backend = serde_json::to_vec(&with(base(), "backend", "b.wasm".into())).unwrap();
+        write_zip(&with_backend, &[("addon.json", &backend), ("main.js", b""), ("b.wasm", b"wasm")]);
+        assert_eq!(install(&staged(&with_backend, false)).unwrap_err().code, "unsupported");
 
         let not_zip = root.join("plain.zip");
         std::fs::write(&not_zip, b"not a zip").unwrap();

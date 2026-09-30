@@ -34,7 +34,7 @@
           </div>
 
           <div class="flex items-center gap-2">
-            <AddonSlot name="instance.header" />
+            <AddonSlot name="instance.header" :context="{ instanceId: id }" />
             <UButton
               icon="i-lucide-folder"
               color="neutral"
@@ -140,17 +140,41 @@
           :key="tab.key"
           type="button"
           class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition"
-          :class="activeTab === tab.key
+          :class="activeTab === tab.key && !addonTab
             ? 'bg-primary-500/15 text-primary-400'
             : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'"
-          @click="activeTab = tab.key"
+          @click="activeTab = tab.key; addonTab = null"
         >
           <UIcon :name="tab.icon" class="size-4" />
           {{ $t(tab.label) }}
         </button>
+        <button
+          v-for="tab in addonTabs"
+          :key="tab.key"
+          type="button"
+          class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition"
+          :class="addonTab === tab.key
+            ? 'bg-primary-500/15 text-primary-400'
+            : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'"
+          @click="addonTab = tab.key"
+        >
+          <img v-if="tab.icon" :src="convertFileSrc(tab.icon)" alt="" class="size-4 object-contain">
+          <UIcon v-else name="i-lucide-puzzle" class="size-4" />
+          {{ tab.label }}
+        </button>
       </div>
 
-      <div>
+      <AddonFrame
+        v-if="currentAddonTab"
+        :key="`${currentAddonTab.key}@${id}`"
+        :addon-id="currentAddonTab.addonId"
+        :entry="currentAddonTab.entry"
+        :context="{ instanceId: id }"
+        :title="currentAddonTab.label"
+        class="h-[70vh] w-full rounded-xl border border-default"
+      />
+
+      <div v-else>
         <InstanceLogs v-if="activeTab === 'logs'" :instance-id="id" :initial-rel="initialCrashRel" />
 
         <InstanceContent v-else-if="activeTab === 'content'" :instance-id="id" :initial-kind="initialKind" />
@@ -195,7 +219,7 @@
 </template>
 
 <script setup lang="ts">
-import { invoke } from '@tauri-apps/api/core'
+import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 import type { ModpackUpdate } from '~/types/modrinth'
 import type { QuickPlay } from '~/types/launcher'
 
@@ -205,7 +229,7 @@ const instances = useInstancesStore()
 const accounts = useAccountStore()
 const sysMem = useSystemMemory()
 const toast = useToast()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const exportModal = useExportModal()
 const changeLoaderModal = useChangeLoaderModal()
 
@@ -323,6 +347,17 @@ const tabs: { key: TabKey; label: string; icon: string }[] = [
 ]
 const activeTab = ref<TabKey>('content')
 const settingsOpen = ref(false)
+
+const addons = useAddonsStore()
+const addonTab = ref<string | null>(null)
+const addonTabs = computed(() => addons.active.flatMap(a => a.instanceTabs.map(tab => ({
+  key: `${a.id}:${tab.id}`,
+  addonId: a.id,
+  entry: tab.entry,
+  icon: tab.icon,
+  label: addons.text(a.id, tab.title, locale.value),
+}))))
+const currentAddonTab = computed(() => addonTabs.value.find(tab => tab.key === addonTab.value) ?? null)
 
 type ContentTabKind = 'mod' | 'resourcepack' | 'shader' | 'datapack'
 const MERGED_TABS: Record<string, ContentTabKind> = {

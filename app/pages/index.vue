@@ -352,16 +352,22 @@ const emptyMenu = computed(() => [[
 
 const addons = useAddonsStore()
 
-function addonMenu() {
+function addonMenu(item: Instance) {
   return addons.buttons('instance.menu').map(b => ({
     label: addons.text(b.addonId, b.title, locale.value),
     ...(b.icon ? { avatar: { src: convertFileSrc(b.icon) } } : { icon: 'i-lucide-puzzle' }),
-    onSelect: () => addons.run(b),
+    onSelect: async () => {
+      try {
+        if (!await runAddonButton(b, { instanceId: item.id })) toast.add({ title: t('addons.commandMissing'), color: 'warning' })
+      } catch (e) {
+        toast.add({ title: errorText(e), color: 'error' })
+      }
+    },
   }))
 }
 
 function instanceMenu(item: Instance) {
-  const extra = addonMenu()
+  const extra = addonMenu(item)
   return [
     [
       { label: t('ctx.play'), icon: 'i-lucide-play', onSelect: () => play(item) },

@@ -7,8 +7,9 @@
         <li
           v-for="a in addons.addons"
           :key="a.id"
-          class="flex items-center gap-3 rounded-xl border border-default px-3 py-2"
+          class="rounded-xl border border-default px-3 py-2"
         >
+          <div class="flex items-center gap-3">
           <img v-if="a.icon" :src="a.icon" alt="" class="size-9 shrink-0 rounded-lg object-cover">
           <div v-else class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/5">
             <UIcon name="i-lucide-puzzle" class="size-4" />
@@ -22,6 +23,16 @@
             <p v-if="a.error" class="text-xs text-error">{{ a.error }}</p>
             <p v-else-if="a.description" class="truncate text-xs text-muted">{{ a.description }}</p>
           </div>
+          <UButton
+            v-if="a.settings && a.enabled && !a.error"
+            icon="i-lucide-sliders-horizontal"
+            size="xs"
+            color="neutral"
+            :variant="openSettings === a.id ? 'soft' : 'ghost'"
+            :title="t('addons.openSettings')"
+            :aria-label="t('addons.openSettings')"
+            @click="openSettings = openSettings === a.id ? null : a.id"
+          />
           <UButton
             v-if="a.source === 'folder' && devMode"
             icon="i-lucide-rotate-cw"
@@ -45,6 +56,15 @@
             :title="t('addons.uninstall')"
             :aria-label="t('addons.uninstall')"
             @click="remove(a)"
+          />
+          </div>
+          <AddonFrame
+            v-if="openSettings === a.id && a.settings && a.enabled && !a.error"
+            :key="`${a.id}@${a.version}`"
+            :addon-id="a.id"
+            :entry="a.settings"
+            :title="a.name"
+            class="mt-3 h-80 w-full rounded-lg border border-default"
           />
         </li>
       </ul>
@@ -105,6 +125,7 @@ const toast = useToast()
 const addons = useAddonsStore()
 const install = useAddonInstall()
 
+const openSettings = ref<string | null>(null)
 const query = ref('')
 const hits = ref<CatalogHit[]>([])
 const closed = ref(false)

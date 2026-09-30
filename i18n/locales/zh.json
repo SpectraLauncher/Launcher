@@ -893,6 +893,21 @@
       "screenshotsHeader": "截图",
       "skinsHeader": "皮肤",
       "settingsHeader": "设置"
+    },
+    "runsCode": "在隔离的框架中运行自己的代码，只能获得上方列表允许的内容。",
+    "pageMissing": "此插件页面不可用。",
+    "openSettings": "插件设置",
+    "commandMissing": "插件没有响应，请稍后再试。",
+    "openUrlAsk": "{name} 想要打开 {url}。是否打开？",
+    "permissionNetwork": "连接到 {host}",
+    "permissionNames": {
+      "instancesRead": "查看你的实例、内容和世界",
+      "instancesWrite": "修改实例设置并启用或禁用内容",
+      "instancesLaunch": "启动和停止游戏",
+      "logsRead": "读取游戏日志",
+      "serversPing": "检测 Minecraft 服务器",
+      "accountRead": "知道你的 Minecraft 和 Spectra 账号名称",
+      "skinsRead": "查看你的皮肤"
     }
   }
 }

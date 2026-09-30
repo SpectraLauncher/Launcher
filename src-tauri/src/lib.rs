@@ -117,6 +117,10 @@ pub fn run() {
 
     builder
         .manage(AppState::default())
+        .register_asynchronous_uri_scheme_protocol(commands::addon_host::SCHEME, |_ctx, request, responder| {
+            let path = request.uri().path().to_string();
+            tauri::async_runtime::spawn_blocking(move || responder.respond(commands::addon_host::response(&path)));
+        })
         .plugin(tauri_plugin_deep_link::init())
         .setup(|app| {
             if let Err(e) = paths::ensure_base_dirs() {
@@ -187,6 +191,9 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
             paths::get_launcher_paths,
+            commands::addon_host::addon_call,
+            commands::addon_host::addons_open_window,
+            commands::addon_host::addon_origin,
             commands::addons::addons_available,
             commands::addons::addons_list,
             commands::addons::addons_catalog,
