@@ -58,7 +58,7 @@ chrono = { version = "0.4", features = ["serde"] }
 base64 = "0.22"
 
 # Total system memory (for the RAM allocation slider)
-sysinfo = { version = "0.33", default-features = false, features = ["system"] }
+sysinfo = { version = "0.39", default-features = false, features = ["system"] }
 
 # Discord Rich Presence (privacy-gated)
 discord-rich-presence = "0.2"
