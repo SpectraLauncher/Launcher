@@ -5,6 +5,7 @@
 - **Now playing**: The card above the menu shows the game you are playing right now, with a button to stop it.
 - **Jump back in**: A new button next to Play starts the game and takes you straight to the world or server you played last (Minecraft 1.20 and newer).
 - **Console in its own window**: Click the status in the title bar to see the game console in a separate window. It can also open by itself when the game starts (Settings → Default instance options) and close by itself when the game closes.
+- **Mod settings without opening files**: A new Configuration tab on each instance lets you change mod settings with switches, sliders and lists. Comments in the file stay, and the old file is kept as a backup.
 - **Edit your skin online**: A new button on the Skins page opens the skin editor on usespectra.app with your skin ready to edit.
 
 ### 🐛 Bug Fixes
