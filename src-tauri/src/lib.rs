@@ -265,6 +265,8 @@ pub fn run() {
             commands::launch::is_instance_running,
             commands::launch::read_console,
             commands::launch::clear_console,
+            commands::launch::open_console_window,
+            commands::launch::running_instances,
             commands::sync::take_cloud_sync_announcement,
             commands::sync::mark_cloud_sync_announcement_seen,
             commands::sync::sync_get_state,

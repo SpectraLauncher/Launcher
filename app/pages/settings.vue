@@ -167,6 +167,13 @@
               </div>
               <USwitch v-model="settings.default_fullscreen" />
             </div>
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <p class="text-sm font-medium">{{ t('settings.defaults.consoleOnLaunch') }}</p>
+                <p class="text-xs text-muted">{{ t('settings.defaults.consoleOnLaunchDesc') }}</p>
+              </div>
+              <USwitch v-model="settings.open_console_on_launch" />
+            </div>
             <div class="flex gap-4">
               <UFormField :label="t('instSettings.width')" :description="t('instSettings.widthDesc')">
                 <UInput v-model.number="settings.default_width" type="number" placeholder="854" class="w-36" />

@@ -6,6 +6,7 @@
     "main",
     "msa-login",
     "content-browser",
+    "console",
     "addon:*"
   ],
   "permissions": [

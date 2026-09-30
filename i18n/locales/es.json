@@ -155,6 +155,7 @@
     "crash": "Fallo",
     "selectHint": "Selecciona un archivo de registro para ver su contenido.",
     "live": "Registros en vivo",
+    "window": "Consola del juego",
     "autoscroll": "Desplazamiento automático",
     "clear": "Limpiar",
     "waiting": "Esperando la salida del juego…",
@@ -361,7 +362,9 @@
       "title": "Opciones predeterminadas de instancia",
       "memory": "Memoria predeterminada",
       "javaPath": "Ruta de Java predeterminada",
-      "memoryDesc": "Memoria predeterminada para instancias sin su propia configuración."
+      "memoryDesc": "Memoria predeterminada para instancias sin su propia configuración.",
+      "consoleOnLaunch": "Abrir la consola al iniciar el juego",
+      "consoleOnLaunchDesc": "Muestra el registro del juego en su propia ventana cada vez que se inicia una instancia."
     },
     "sections": {
       "appearance": "Apariencia",

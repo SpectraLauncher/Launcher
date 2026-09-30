@@ -177,6 +177,9 @@ pub struct Settings {
 
     #[serde(default)]
     pub addon_dev_mode: bool,
+
+    #[serde(default)]
+    pub open_console_on_launch: bool,
 }
 
 fn default_true() -> bool {
@@ -221,6 +224,7 @@ impl Default for Settings {
             sync_announce_seen: false,
             cloud_sync_announce_seen: false,
             addon_dev_mode: false,
+            open_console_on_launch: false,
         }
     }
 }

@@ -83,6 +83,7 @@ export interface Settings {
   snapshot_before_updates: boolean
   snapshot_keep: number
   addon_dev_mode: boolean
+  open_console_on_launch: boolean
 }
 
 export interface SavedSkin {

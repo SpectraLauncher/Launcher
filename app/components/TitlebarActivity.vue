@@ -54,6 +54,8 @@
 </template>
 
 <script setup lang="ts">
+import { invoke } from '@tauri-apps/api/core'
+
 const ac = useActivityCenter()
 const instances = useInstancesStore()
 const updater = useAutoUpdate()
@@ -100,6 +102,6 @@ const clickable = computed(() => runningInstance.value !== null)
 
 function onClick() {
   if (!clickable.value) return
-  ac.openLiveLogs(runningInstance.value ?? undefined)
+  void invoke('open_console_window', { id: runningInstance.value }).catch(() => {})
 }
 </script>

@@ -155,6 +155,7 @@
     "crash": "Plantage",
     "selectHint": "Sélectionne un fichier journal pour voir son contenu.",
     "live": "Journaux en direct",
+    "window": "Console du jeu",
     "autoscroll": "Défilement automatique",
     "clear": "Effacer",
     "waiting": "En attente de la sortie du jeu…",
@@ -361,7 +362,9 @@
       "title": "Options d'instance par défaut",
       "memory": "Mémoire par défaut",
       "javaPath": "Chemin Java par défaut",
-      "memoryDesc": "Mémoire par défaut pour les instances sans réglage propre."
+      "memoryDesc": "Mémoire par défaut pour les instances sans réglage propre.",
+      "consoleOnLaunch": "Ouvrir la console au lancement du jeu",
+      "consoleOnLaunchDesc": "Affiche le journal du jeu dans sa propre fenêtre à chaque lancement d’une instance."
     },
     "sections": {
       "appearance": "Apparence",

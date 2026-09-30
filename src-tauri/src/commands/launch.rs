@@ -7,7 +7,7 @@ use lyceris::minecraft::loader::{
     fabric::Fabric, forge::Forge, neoforge::NeoForge, quilt::Quilt, Loader as LyLoader,
 };
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter as _, Manager, State};
+use tauri::{AppHandle, Emitter as _, Manager, State, WebviewUrl, WebviewWindowBuilder};
 
 use crate::commands::auth::refresh_active_account;
 use crate::commands::instances;
@@ -31,6 +31,55 @@ struct MultiProgress {
 }
 
 const CONSOLE_CAPACITY: usize = 5_000;
+const CONSOLE_WINDOW: &str = "console";
+
+pub fn console_window_url(id: Option<&str>) -> String {
+    let mut url = reqwest::Url::parse("http://console.local/console").expect("static url");
+    if let Some(id) = id {
+        url.query_pairs_mut().append_pair("instance", id);
+    }
+    match url.query() {
+        Some(query) => format!("console?{query}"),
+        None => "console".to_string(),
+    }
+}
+
+#[tauri::command]
+pub async fn open_console_window(app: AppHandle, id: Option<String>) -> AppResult<()> {
+    if let Some(window) = app.get_webview_window(CONSOLE_WINDOW) {
+        if let Some(id) = &id {
+            let _ = window.emit("console://select", id);
+        }
+        let _ = window.unminimize();
+        window.show().map_err(|e| e.to_string())?;
+        window.set_focus().map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+
+    let builder = WebviewWindowBuilder::new(&app, CONSOLE_WINDOW, WebviewUrl::App(console_window_url(id.as_deref()).into()))
+        .title("Spectra — console")
+        .inner_size(960.0, 620.0)
+        .min_inner_size(520.0, 320.0);
+
+    #[cfg(target_os = "macos")]
+    let builder = builder
+        .decorations(true)
+        .title_bar_style(tauri::TitleBarStyle::Overlay)
+        .hidden_title(true)
+        .traffic_light_position(tauri::LogicalPosition::new(12.0, 18.0));
+
+    #[cfg(not(target_os = "macos"))]
+    let builder = builder.decorations(false);
+
+    builder.build().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn running_instances(state: State<'_, AppState>) -> AppResult<Vec<String>> {
+    let running = state.running.lock().map_err(|e| e.to_string())?;
+    Ok(running.iter().cloned().collect())
+}
 
 #[derive(Default)]
 pub struct ConsoleBuffer {
@@ -389,6 +438,12 @@ async fn launch_inner(app: &AppHandle, id: &str, quick_play: Option<QuickPlay>) 
                 .map_err(|e| format!("launch failed: {e}"))?
         }
     };
+
+    if settings.open_console_on_launch {
+        if let Err(e) = open_console_window(app.clone(), Some(id.to_string())).await {
+            log::warn!("could not open the console window: {}", e.message);
+        }
+    }
 
     let track_playtime = settings.track_playtime;
     let discord_rpc = settings.discord_rpc;
@@ -887,5 +942,15 @@ mod kill_tests {
             assert!(Instant::now() < deadline, "child survived the kill");
             std::thread::sleep(Duration::from_millis(20));
         }
+    }
+}
+
+#[cfg(test)]
+mod console_window_tests {
+    #[test]
+    fn the_console_window_gets_its_instance_in_the_address() {
+        assert_eq!(super::console_window_url(None), "console");
+        assert_eq!(super::console_window_url(Some("abc-123")), "console?instance=abc-123");
+        assert_eq!(super::console_window_url(Some("My pack & more")), "console?instance=My+pack+%26+more");
     }
 }

@@ -158,13 +158,6 @@ export const useActivityCenter = () => {
 
   const taskLabels = computed(() => Object.values(tasks.value))
 
-  const liveLogsOpen = useState('mc-livelogs-open', () => false)
-  const liveLogsInstance = useState<string | null>('mc-livelogs-instance', () => null)
-  function openLiveLogs(instanceId?: string) {
-    liveLogsInstance.value = instanceId ?? top.value?.instanceId ?? null
-    liveLogsOpen.value = true
-  }
-
   const crashOpen = useState('mc-crash-open', () => false)
   const crashInstance = useState<string | null>('mc-crash-instance', () => null)
   const crashFor = (id: string) => computed(() => crashes.value[id] ?? null)
@@ -175,5 +168,5 @@ export const useActivityCenter = () => {
     crashes.value = next
   }
 
-  return { activities, logs, tasks, taskLabels, startTask, endTask, withTask, attach, detach, list, top, activityFor, logsFor, clear, clearLog, markRunning, modpack, liveLogsOpen, liveLogsInstance, openLiveLogs, crashOpen, crashInstance, crashFor, clearCrash }
+  return { activities, logs, tasks, taskLabels, startTask, endTask, withTask, attach, detach, list, top, activityFor, logsFor, clear, clearLog, markRunning, modpack, crashOpen, crashInstance, crashFor, clearCrash }
 }

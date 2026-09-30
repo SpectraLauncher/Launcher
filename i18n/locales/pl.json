@@ -155,6 +155,7 @@
     "crash": "Crash",
     "selectHint": "Wybierz plik logu, aby zobaczyć jego zawartość.",
     "live": "Logi na żywo",
+    "window": "Konsola gry",
     "autoscroll": "Auto-przewijanie",
     "clear": "Wyczyść",
     "waiting": "Oczekiwanie na wyjście gry…",
@@ -361,7 +362,9 @@
       "title": "Domyślne opcje instancji",
       "memory": "Domyślna pamięć",
       "javaPath": "Domyślna ścieżka Javy",
-      "memoryDesc": "Domyślna pamięć dla instancji bez własnego ustawienia."
+      "memoryDesc": "Domyślna pamięć dla instancji bez własnego ustawienia.",
+      "consoleOnLaunch": "Otwieraj konsolę przy starcie gry",
+      "consoleOnLaunchDesc": "Pokazuje log gry w osobnym oknie przy każdym uruchomieniu instancji."
     },
     "sections": {
       "appearance": "Wygląd",

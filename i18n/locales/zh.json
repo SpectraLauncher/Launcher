@@ -155,6 +155,7 @@
     "crash": "崩溃",
     "selectHint": "选择一个日志文件以查看其内容。",
     "live": "实时日志",
+    "window": "游戏控制台",
     "autoscroll": "自动滚动",
     "clear": "清空",
     "waiting": "等待游戏输出…",
@@ -361,7 +362,9 @@
       "title": "默认实例选项",
       "memory": "默认内存",
       "javaPath": "默认 Java 路径",
-      "memoryDesc": "没有自己设置的实例的默认内存。"
+      "memoryDesc": "没有自己设置的实例的默认内存。",
+      "consoleOnLaunch": "启动游戏时打开控制台",
+      "consoleOnLaunchDesc": "每次启动实例时，在单独的窗口中显示游戏日志。"
     },
     "sections": {
       "appearance": "外观",

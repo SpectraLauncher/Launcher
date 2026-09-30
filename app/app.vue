@@ -81,7 +81,6 @@
 
     <template v-if="!isContentWindow">
       <AddonMains />
-      <LiveLogsModal />
       <CrashReportModal />
       <StartupUpdate />
       <CloudSyncConflictModal />
@@ -100,13 +99,15 @@ const toast = useToast()
 
 const route = useRoute()
 const isAddonWindow = computed(() => route.path.startsWith('/addon-window'))
-const isContentWindow = computed(() => route.path.startsWith('/browser') || isAddonWindow.value)
+const isConsoleWindow = computed(() => route.path.startsWith('/console'))
+const isContentWindow = computed(() => route.path.startsWith('/browser') || isAddonWindow.value || isConsoleWindow.value)
 const windowTitle = computed(() => {
   if (isAddonWindow.value) {
     const addon = addons.active.find(a => a.id === route.query.addon)
     const win = addon?.windows.find(w => w.id === route.query.window)
     return addon && win ? `${win.title} — ${addon.name}` : 'Spectra'
   }
+  if (isConsoleWindow.value) return t('logs.window')
   return isContentWindow.value ? 'Spectra — content' : 'Spectra Launcher'
 })
 

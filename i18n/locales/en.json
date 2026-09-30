@@ -155,6 +155,7 @@
     "crash": "Crash",
     "selectHint": "Select a log file to view its contents.",
     "live": "Live logs",
+    "window": "Game console",
     "autoscroll": "Auto-scroll",
     "clear": "Clear",
     "waiting": "Waiting for game output…",
@@ -361,7 +362,9 @@
       "title": "Default instance options",
       "memory": "Default memory",
       "javaPath": "Default Java path",
-      "memoryDesc": "Default memory for instances without their own setting."
+      "memoryDesc": "Default memory for instances without their own setting.",
+      "consoleOnLaunch": "Open the console when the game starts",
+      "consoleOnLaunchDesc": "Shows the game log in its own window every time an instance starts."
     },
     "sections": {
       "appearance": "Appearance",
