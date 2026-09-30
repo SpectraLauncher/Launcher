@@ -1,6 +1,7 @@
 pub mod addon_host;
 pub mod addons;
 pub mod auth;
+pub mod configs;
 pub mod cloud_sync;
 pub mod content;
 pub mod content_window;

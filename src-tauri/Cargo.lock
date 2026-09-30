@@ -147,6 +147,7 @@ dependencies = [
  "tokio",
  "tokio-util",
  "toml 0.8.2",
+ "toml_edit 0.25.12+spec-1.1.0",
  "uuid 1.23.3",
  "windows 0.61.3",
  "windows-registry",
@@ -6497,6 +6498,7 @@ dependencies = [
  "indexmap 2.14.0",
  "toml_datetime 1.1.1+spec-1.1.0",
  "toml_parser",
+ "toml_writer",
  "winnow 1.0.3",
 ]
 
