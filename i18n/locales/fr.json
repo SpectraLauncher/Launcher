@@ -121,6 +121,7 @@
       "worlds": "Mondes",
       "screenshots": "Captures d'écran",
       "servers": "Serveurs",
+      "configs": "Configuration",
       "logs": "Journaux",
       "settings": "Paramètres",
       "share": "Partager",
@@ -936,5 +937,23 @@
     "updatesFound": "Mises à jour d’extensions disponibles : {n}",
     "revoked": "Retirée par la modération",
     "revokedToast": "La modération a retiré {names}, l’extension a donc été désactivée."
+  },
+  "configs": {
+    "searchFiles": "Rechercher des fichiers",
+    "searchSettings": "Rechercher des réglages",
+    "empty": "Pas encore de fichiers de configuration. Les mods les créent au premier lancement du jeu.",
+    "pick": "Choisis un fichier à gauche pour modifier ses réglages.",
+    "unreadable": "Ce fichier ne peut pas être affiché comme formulaire : {reason}",
+    "reveal": "Afficher dans le dossier",
+    "save": "Enregistrer",
+    "discard": "Annuler",
+    "changes": "{n} modification non enregistrée | {n} modifications non enregistrées",
+    "saved": "Enregistré. L'ancien fichier est conservé dans le dossier config-backups de l'instance.",
+    "running": "Ferme le jeu pour modifier les réglages. Le jeu réécrit ses fichiers de configuration à la fermeture.",
+    "reset": "Rétablir la valeur par défaut",
+    "default": "Par défaut : {value}",
+    "editInFile": "À modifier dans le fichier",
+    "discardAsk": "Abandonner les modifications non enregistrées dans {file} ?",
+    "noMatch": "Aucun réglage ne correspond."
   }
 }

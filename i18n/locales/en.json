@@ -121,6 +121,7 @@
       "worlds": "Worlds",
       "screenshots": "Screenshots",
       "servers": "Servers",
+      "configs": "Configuration",
       "logs": "Logs",
       "settings": "Settings",
       "share": "Share",
@@ -936,5 +937,23 @@
     "updatesFound": "Addon updates available: {n}",
     "revoked": "Taken down",
     "revokedToast": "Moderation took down {names}, so it was turned off."
+  },
+  "configs": {
+    "searchFiles": "Search files",
+    "searchSettings": "Search settings",
+    "empty": "No config files yet. Mods create them the first time the game starts.",
+    "pick": "Pick a file on the left to change its settings.",
+    "unreadable": "This file can't be shown as a form: {reason}",
+    "reveal": "Show in folder",
+    "save": "Save",
+    "discard": "Discard",
+    "changes": "{n} unsaved change | {n} unsaved changes",
+    "saved": "Saved. The previous file is kept in the instance's config-backups folder.",
+    "running": "Close the game to change settings. The game rewrites its config files when it closes.",
+    "reset": "Reset to default",
+    "default": "Default: {value}",
+    "editInFile": "Edit this one in the file",
+    "discardAsk": "Discard your unsaved changes in {file}?",
+    "noMatch": "No settings match."
   }
 }

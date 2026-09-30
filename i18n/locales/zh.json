@@ -121,6 +121,7 @@
       "worlds": "世界",
       "screenshots": "截图",
       "servers": "服务器",
+      "configs": "配置",
       "logs": "日志",
       "settings": "设置",
       "share": "分享",
@@ -935,5 +936,23 @@
     "updatesFound": "可更新的插件：{n}",
     "revoked": "已被审核下架",
     "revokedToast": "{names} 已被审核下架，因此已停用。"
+  },
+  "configs": {
+    "searchFiles": "搜索文件",
+    "searchSettings": "搜索设置",
+    "empty": "还没有配置文件。模组会在第一次启动游戏时创建它们。",
+    "pick": "在左侧选择一个文件来修改它的设置。",
+    "unreadable": "无法以表单形式显示此文件：{reason}",
+    "reveal": "在文件夹中显示",
+    "save": "保存",
+    "discard": "放弃",
+    "changes": "{n} 项未保存的更改",
+    "saved": "已保存。之前的文件保存在实例的 config-backups 文件夹中。",
+    "running": "请先关闭游戏再修改设置。游戏关闭时会重写它的配置文件。",
+    "reset": "恢复默认值",
+    "default": "默认：{value}",
+    "editInFile": "请在文件中修改此项",
+    "discardAsk": "放弃 {file} 中未保存的更改？",
+    "noMatch": "没有匹配的设置。"
   }
 }

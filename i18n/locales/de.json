@@ -121,6 +121,7 @@
       "worlds": "Welten",
       "screenshots": "Screenshots",
       "servers": "Server",
+      "configs": "Konfiguration",
       "logs": "Logs",
       "settings": "Einstellungen",
       "share": "Teilen",
@@ -936,5 +937,23 @@
     "updatesFound": "Addon-Updates verfügbar: {n}",
     "revoked": "Von der Moderation entfernt",
     "revokedToast": "Die Moderation hat {names} entfernt, deshalb wurde das Addon deaktiviert."
+  },
+  "configs": {
+    "searchFiles": "Dateien suchen",
+    "searchSettings": "Einstellungen suchen",
+    "empty": "Noch keine Konfigurationsdateien. Mods legen sie beim ersten Spielstart an.",
+    "pick": "Wähle links eine Datei, um ihre Einstellungen zu ändern.",
+    "unreadable": "Diese Datei lässt sich nicht als Formular anzeigen: {reason}",
+    "reveal": "Im Ordner zeigen",
+    "save": "Speichern",
+    "discard": "Verwerfen",
+    "changes": "{n} ungespeicherte Änderung | {n} ungespeicherte Änderungen",
+    "saved": "Gespeichert. Die vorherige Datei liegt im Ordner config-backups der Instanz.",
+    "running": "Schließe das Spiel, um Einstellungen zu ändern. Das Spiel überschreibt seine Konfigurationsdateien beim Beenden.",
+    "reset": "Auf Standard zurücksetzen",
+    "default": "Standard: {value}",
+    "editInFile": "Diese Einstellung in der Datei ändern",
+    "discardAsk": "Ungespeicherte Änderungen in {file} verwerfen?",
+    "noMatch": "Keine passenden Einstellungen."
   }
 }

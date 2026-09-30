@@ -121,6 +121,7 @@
       "worlds": "Światy",
       "screenshots": "Zrzuty ekranu",
       "servers": "Serwery",
+      "configs": "Konfiguracja",
       "logs": "Logi",
       "settings": "Ustawienia",
       "share": "Udostępnij",
@@ -936,5 +937,23 @@
     "updatesFound": "Dostępne aktualizacje addonów: {n}",
     "revoked": "Zdjęty przez moderację",
     "revokedToast": "Moderacja zdjęła {names}, więc addon został wyłączony."
+  },
+  "configs": {
+    "searchFiles": "Szukaj plików",
+    "searchSettings": "Szukaj ustawień",
+    "empty": "Nie ma jeszcze plików konfiguracyjnych. Mody tworzą je przy pierwszym uruchomieniu gry.",
+    "pick": "Wybierz plik po lewej, żeby zmienić jego ustawienia.",
+    "unreadable": "Tego pliku nie da się pokazać jako formularza: {reason}",
+    "reveal": "Pokaż w folderze",
+    "save": "Zapisz",
+    "discard": "Odrzuć",
+    "changes": "Niezapisane zmiany: {n}",
+    "saved": "Zapisano. Poprzednia wersja pliku jest w folderze config-backups instancji.",
+    "running": "Zamknij grę, żeby zmienić ustawienia. Gra nadpisuje swoje pliki konfiguracyjne przy zamknięciu.",
+    "reset": "Przywróć domyślną",
+    "default": "Domyślnie: {value}",
+    "editInFile": "To ustawienie zmienisz w pliku",
+    "discardAsk": "Odrzucić niezapisane zmiany w {file}?",
+    "noMatch": "Żadne ustawienie nie pasuje."
   }
 }

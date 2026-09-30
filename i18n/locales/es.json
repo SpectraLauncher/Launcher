@@ -121,6 +121,7 @@
       "worlds": "Mundos",
       "screenshots": "Capturas",
       "servers": "Servidores",
+      "configs": "Configuración",
       "logs": "Registros",
       "settings": "Ajustes",
       "share": "Compartir",
@@ -936,5 +937,23 @@
     "updatesFound": "Actualizaciones de complementos disponibles: {n}",
     "revoked": "Retirado por moderación",
     "revokedToast": "La moderación retiró {names}, así que el complemento se desactivó."
+  },
+  "configs": {
+    "searchFiles": "Buscar archivos",
+    "searchSettings": "Buscar ajustes",
+    "empty": "Aún no hay archivos de configuración. Los mods los crean la primera vez que se inicia el juego.",
+    "pick": "Elige un archivo a la izquierda para cambiar sus ajustes.",
+    "unreadable": "Este archivo no se puede mostrar como formulario: {reason}",
+    "reveal": "Mostrar en la carpeta",
+    "save": "Guardar",
+    "discard": "Descartar",
+    "changes": "{n} cambio sin guardar | {n} cambios sin guardar",
+    "saved": "Guardado. El archivo anterior queda en la carpeta config-backups de la instancia.",
+    "running": "Cierra el juego para cambiar ajustes. El juego reescribe sus archivos de configuración al cerrarse.",
+    "reset": "Restablecer valor predeterminado",
+    "default": "Predeterminado: {value}",
+    "editInFile": "Este se edita en el archivo",
+    "discardAsk": "¿Descartar los cambios sin guardar en {file}?",
+    "noMatch": "Ningún ajuste coincide."
   }
 }

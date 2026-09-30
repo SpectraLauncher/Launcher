@@ -181,6 +181,8 @@
 
         <InstanceGameFiles v-else-if="isGameFileTab" :instance-id="id" :tab="activeTab as GameFileTab" @quick-play="handleQuickPlay" />
 
+        <InstanceConfigs v-else-if="activeTab === 'configs'" :instance-id="id" />
+
         <InstanceShare
           v-else-if="activeTab === 'share'"
           :instance-id="id"
@@ -335,12 +337,13 @@ async function stopInstance(force: boolean) {
   }
 }
 
-type TabKey = 'content' | 'worlds' | 'screenshots' | 'servers' | 'logs' | 'share' | 'snapshots'
+type TabKey = 'content' | 'worlds' | 'screenshots' | 'servers' | 'configs' | 'logs' | 'share' | 'snapshots'
 const tabs: { key: TabKey; label: string; icon: string }[] = [
   { key: 'content', label: 'instance.tabs.content', icon: 'i-lucide-blocks' },
   { key: 'worlds', label: 'instance.tabs.worlds', icon: 'i-lucide-globe' },
   { key: 'screenshots', label: 'instance.tabs.screenshots', icon: 'i-lucide-camera' },
   { key: 'servers', label: 'instance.tabs.servers', icon: 'i-lucide-server' },
+  { key: 'configs', label: 'instance.tabs.configs', icon: 'i-lucide-sliders-horizontal' },
   { key: 'logs', label: 'instance.tabs.logs', icon: 'i-lucide-scroll-text' },
   { key: 'share', label: 'instance.tabs.share', icon: 'i-lucide-share-2' },
   { key: 'snapshots', label: 'instance.tabs.snapshots', icon: 'i-lucide-history' },
