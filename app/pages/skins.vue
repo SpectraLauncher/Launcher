@@ -50,6 +50,15 @@
                 :label="$t('skins.capesButton')"
                 @click="openCapes"
               />
+
+              <UButton
+                icon="i-lucide-brush"
+                color="neutral"
+                variant="soft"
+                :disabled="!shown"
+                :label="$t('skins.editOnline')"
+                @click="editOnline"
+              />
             </div>
 
             <div v-if="activeCape" class="flex items-center gap-2 text-xs text-muted">
@@ -240,9 +249,33 @@ let viewer: any = null
 
 const svModel = (m: 'classic' | 'slim') => (m === 'slim' ? 'slim' : 'default')
 
+const shown = ref<{ skin: string, model: 'classic' | 'slim' } | null>(null)
+
 async function loadIntoViewer(skin: string, model: 'classic' | 'slim') {
+  shown.value = { skin, model }
   if (!viewer) return
   await viewer.loadSkin(skin, { model: svModel(model) })
+}
+
+async function compactPng(dataUrl: string): Promise<string> {
+  const image = new Image()
+  image.src = dataUrl
+  await image.decode()
+  const canvas = document.createElement('canvas')
+  canvas.width = image.naturalWidth
+  canvas.height = image.naturalHeight
+  canvas.getContext('2d')!.drawImage(image, 0, 0)
+  return canvas.toDataURL('image/png').split(',')[1] ?? ''
+}
+
+async function editOnline() {
+  if (!shown.value) return
+  try {
+    const hash = new URLSearchParams({ skin: await compactPng(shown.value.skin), model: shown.value.model })
+    await openExternal(`${SPECTRA_SITE}/tools/skin-editor#${hash}`)
+  } catch (e) {
+    toast.add({ title: errorText(e), color: 'error' })
+  }
 }
 
 async function skinDataUrl(d: DefaultSkin): Promise<string> {
