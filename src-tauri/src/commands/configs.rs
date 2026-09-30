@@ -19,6 +19,9 @@ pub enum Format {
     Cfg,
     Ini,
     Options,
+    Snbt,
+    Yaml,
+    Hocon,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -80,6 +83,9 @@ pub fn format_of(rel: &str) -> Option<Format> {
         "properties" => Format::Properties,
         "cfg" => Format::Cfg,
         "ini" => Format::Ini,
+        "snbt" => Format::Snbt,
+        "yml" | "yaml" => Format::Yaml,
+        "conf" => Format::Hocon,
         _ => return None,
     })
 }
@@ -94,7 +100,7 @@ pub fn allowed_rel(rel: &str) -> bool {
         || rel.starts_with("config/")
         || rel.starts_with("defaultconfigs/")
         || (rel.starts_with("saves/") && rel.split('/').nth(2) == Some("serverconfig"));
-    safe && place && format_of(rel).is_some()
+    safe && place && !rel.contains("/ftbquests/quests/") && format_of(rel).is_some()
 }
 
 fn walk(game: &Path, dir: &Path, depth: u32, out: &mut Vec<ConfigFile>) {
@@ -297,11 +303,11 @@ fn walk_toml(src: &str, table: &toml_edit::Table, path: &[String], out: &mut Vec
                 let (kind, value) = toml_value(v);
                 let Some(span) = v.span() else { continue };
                 let comment = comment_lines(raw_text(src, decor.and_then(|d| d.prefix())), &['#']);
-                out.push(Node { path: at, kind, value, span: (span.start, span.end), comment, quoted: false });
+                out.push(Node::new(at, kind, value, (span.start, span.end), comment));
             }
             toml_edit::Item::Table(t) => {
                 let comment = comment_lines(raw_text(src, t.decor().prefix()), &['#']);
-                out.push(Node { path: at.clone(), kind: Kind::Section, value: Json::Null, span: (0, 0), comment, quoted: false });
+                out.push(Node::new(at.clone(), Kind::Section, Json::Null, (0, 0), comment));
                 walk_toml(src, t, &at, out);
             }
             _ => {}
@@ -325,6 +331,20 @@ struct Node {
     span: (usize, usize),
     comment: Vec<String>,
     quoted: bool,
+    affix: String,
+}
+
+impl Node {
+    fn new(path: Vec<String>, kind: Kind, value: Json, span: (usize, usize), comment: Vec<String>) -> Self {
+        Node { path, kind, value, span, comment, quoted: false, affix: String::new() }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Dialect {
+    Json,
+    Snbt,
+    Hocon,
 }
 
 struct JsonParser<'a> {
@@ -333,22 +353,45 @@ struct JsonParser<'a> {
     i: usize,
     nodes: Vec<Node>,
     comments: Vec<String>,
+    dialect: Dialect,
 }
 
 impl<'a> JsonParser<'a> {
     fn fail<T>(&self, what: &str) -> AppResult<T> {
         let line = self.src[..self.i.min(self.src.len())].matches('\n').count() + 1;
-        Err(AppError::invalid(format!("the file is not valid JSON ({what} on line {line})")))
+        let name = match self.dialect {
+            Dialect::Json => "JSON",
+            Dialect::Snbt => "SNBT",
+            Dialect::Hocon => "HOCON",
+        };
+        Err(AppError::invalid(format!("the file is not valid {name} ({what} on line {line})")))
+    }
+
+    fn hash_comments(&self) -> bool {
+        self.dialect != Dialect::Json
+    }
+
+    fn line_end(&self) -> usize {
+        self.src[self.i..].find('\n').map_or(self.s.len(), |n| self.i + n)
     }
 
     fn skip(&mut self) {
         loop {
+            let mut newlines = 0;
             while self.i < self.s.len() && self.s[self.i].is_ascii_whitespace() {
+                newlines += usize::from(self.s[self.i] == b'\n');
                 self.i += 1;
             }
+            if newlines > 1 {
+                self.comments.clear();
+            }
             if self.s[self.i..].starts_with(b"//") {
-                let end = self.src[self.i..].find('\n').map_or(self.s.len(), |n| self.i + n);
+                let end = self.line_end();
                 self.comments.push(self.src[self.i + 2..end].trim().to_string());
+                self.i = end;
+            } else if self.hash_comments() && self.s.get(self.i) == Some(&b'#') {
+                let end = self.line_end();
+                self.comments.extend(comment_lines(&self.src[self.i..end], &['#']));
                 self.i = end;
             } else if self.s[self.i..].starts_with(b"/*") {
                 let end = self.src[self.i + 2..].find("*/").map_or(self.s.len(), |n| self.i + 2 + n);
@@ -405,35 +448,82 @@ impl<'a> JsonParser<'a> {
         &self.src[start..self.i]
     }
 
+    fn unquoted(&mut self) -> &'a str {
+        let start = self.i;
+        let mut end = start;
+        while end < self.s.len() && !b"\n\r,}]#".contains(&self.s[end]) && !self.s[end..].starts_with(b"//") {
+            end += 1;
+        }
+        let text = self.src[start..end].trim_end();
+        self.i = start + text.len();
+        text
+    }
+
+    fn number_word(&self, word: &str) -> Option<(Kind, Json, String)> {
+        let lower = word.to_ascii_lowercase();
+        let unsigned = lower.trim_start_matches(['-', '+']);
+        if let Some(hex) = unsigned.strip_prefix("0x") {
+            let n = i64::from_str_radix(hex, 16).ok()?;
+            return Some((Kind::Int, Json::from(if lower.starts_with('-') { -n } else { n }), String::new()));
+        }
+        if !word.contains(['.', 'e', 'E']) {
+            if let Ok(n) = word.parse::<i64>() {
+                return Some((Kind::Int, Json::from(n), String::new()));
+            }
+        }
+        if let Some(n) = number(word).and_then(serde_json::Number::from_f64) {
+            return Some((Kind::Float, Json::Number(n), String::new()));
+        }
+        if self.dialect == Dialect::Snbt {
+            let suffix = word.chars().last().filter(|c| "bBsSlLfFdD".contains(*c))?;
+            let body = &word[..word.len() - 1];
+            let (kind, value, _) = self.number_word(body)?;
+            let kind = if "fFdD".contains(suffix) { Kind::Float } else { kind };
+            let value = if kind == Kind::Float { serde_json::Number::from_f64(number(body)?).map(Json::Number)? } else { value };
+            return Some((kind, value, suffix.to_string()));
+        }
+        None
+    }
+
     fn scalar(&mut self, path: &[String], comment: Vec<String>) -> AppResult<bool> {
         let start = self.i;
+        let mut affix = String::new();
         let (kind, value, quoted) = if self.s[self.i] == b'"' || self.s[self.i] == b'\'' {
             let text = self.string()?;
             (Kind::String, Json::from(text), true)
+        } else if self.dialect == Dialect::Hocon {
+            let text = self.unquoted();
+            if text.is_empty() {
+                return self.fail("a missing value");
+            }
+            if text == "null" {
+                (Kind::Other, Json::Null, false)
+            } else {
+                let (kind, value) = infer(text);
+                (kind, value, false)
+            }
         } else {
             let word = self.word();
             if word.is_empty() {
                 return self.fail("an unexpected character");
             }
-            let lower = word.to_ascii_lowercase();
-            let unsigned = lower.trim_start_matches(['-', '+']);
+            let unsigned = word.to_ascii_lowercase();
+            let unsigned = unsigned.trim_start_matches(['-', '+']);
             if word == "true" || word == "false" {
                 (Kind::Bool, Json::from(word == "true"), false)
             } else if word == "null" || unsigned == "infinity" || unsigned == "nan" {
                 (Kind::Other, Json::Null, false)
-            } else if let Some(hex) = unsigned.strip_prefix("0x") {
-                let n = i64::from_str_radix(hex, 16).or_else(|_| self.fail("a bad number"))?;
-                (Kind::Int, Json::from(if lower.starts_with('-') { -n } else { n }), false)
-            } else if !word.contains(['.', 'e', 'E']) && word.parse::<i64>().is_ok() {
-                (Kind::Int, Json::from(word.parse::<i64>().unwrap()), false)
-            } else if let Some(n) = number(word).and_then(serde_json::Number::from_f64) {
-                (Kind::Float, Json::Number(n), false)
+            } else if let Some((kind, value, suffix)) = self.number_word(word) {
+                affix = suffix;
+                (kind, value, false)
+            } else if self.dialect == Dialect::Snbt {
+                (Kind::String, Json::from(word), false)
             } else {
                 return self.fail("a bad value");
             }
         };
         if !path.is_empty() {
-            self.nodes.push(Node { path: path.to_vec(), kind, value, span: (start, self.i), comment, quoted });
+            self.nodes.push(Node { quoted, affix, ..Node::new(path.to_vec(), kind, value, (start, self.i), comment) });
         }
         Ok(true)
     }
@@ -442,8 +532,58 @@ impl<'a> JsonParser<'a> {
         while self.i < self.s.len() && (self.s[self.i] == b' ' || self.s[self.i] == b'\t') {
             self.i += 1;
         }
-        if self.s[self.i..].starts_with(b"//") {
-            self.i = self.src[self.i..].find('\n').map_or(self.s.len(), |n| self.i + n);
+        if self.s[self.i..].starts_with(b"//") || (self.hash_comments() && self.s.get(self.i) == Some(&b'#')) {
+            self.i = self.line_end();
+        }
+    }
+
+    fn separator(&mut self, close: u8) -> AppResult<()> {
+        self.skip();
+        match self.s.get(self.i) {
+            Some(b',') => {
+                self.i += 1;
+                self.after_comma();
+                Ok(())
+            }
+            Some(c) if *c == close => Ok(()),
+            None if self.dialect == Dialect::Hocon && close == 0 => Ok(()),
+            _ if self.dialect != Dialect::Json => Ok(()),
+            _ => self.fail("a missing ','"),
+        }
+    }
+
+    fn members(&mut self, path: &[String], close: u8) -> AppResult<()> {
+        loop {
+            self.skip();
+            if self.i >= self.s.len() {
+                return if close == 0 { Ok(()) } else { self.fail("an unclosed object") };
+            }
+            if self.s[self.i] == close {
+                self.i += 1;
+                return Ok(());
+            }
+            let key = if self.s[self.i] == b'"' || self.s[self.i] == b'\'' {
+                self.string()?
+            } else {
+                let word = self.word();
+                if word.is_empty() {
+                    return self.fail("a missing key");
+                }
+                word.to_string()
+            };
+            let comment = std::mem::take(&mut self.comments);
+            self.skip();
+            match self.s.get(self.i) {
+                Some(b':') => self.i += 1,
+                Some(b'=') if self.dialect == Dialect::Hocon => self.i += 1,
+                Some(b'{') if self.dialect == Dialect::Hocon => {}
+                _ => return self.fail("a missing ':'"),
+            }
+            let mut at = path.to_vec();
+            at.push(key);
+            self.value(&at, comment)?;
+            self.comments.clear();
+            self.separator(close)?;
         }
     }
 
@@ -455,52 +595,23 @@ impl<'a> JsonParser<'a> {
         match self.s[self.i] {
             b'{' => {
                 if !path.is_empty() {
-                    self.nodes.push(Node { path: path.to_vec(), kind: Kind::Section, value: Json::Null, span: (self.i, self.i), comment, quoted: false });
+                    self.nodes.push(Node::new(path.to_vec(), Kind::Section, Json::Null, (self.i, self.i), comment));
                 }
                 self.i += 1;
-                loop {
-                    self.skip();
-                    if self.i >= self.s.len() {
-                        return self.fail("an unclosed object");
-                    }
-                    if self.s[self.i] == b'}' {
-                        self.i += 1;
-                        return Ok(false);
-                    }
-                    let key = if self.s[self.i] == b'"' || self.s[self.i] == b'\'' {
-                        self.string()?
-                    } else {
-                        let word = self.word();
-                        if word.is_empty() {
-                            return self.fail("a missing key");
-                        }
-                        word.to_string()
-                    };
-                    let comment = std::mem::take(&mut self.comments);
-                    self.skip();
-                    if self.s.get(self.i) != Some(&b':') {
-                        return self.fail("a missing ':'");
-                    }
-                    self.i += 1;
-                    let mut at = path.to_vec();
-                    at.push(key);
-                    self.value(&at, comment)?;
-                    self.comments.clear();
-                    self.skip();
-                    match self.s.get(self.i) {
-                        Some(b',') => {
-                            self.i += 1;
-                            self.after_comma();
-                        }
-                        Some(b'}') => {}
-                        _ => return self.fail("a missing ','"),
-                    }
-                }
+                self.comments.clear();
+                self.members(path, b'}')?;
+                Ok(false)
             }
             b'[' => {
                 let start = self.i;
                 let before = self.nodes.len();
                 self.i += 1;
+                let typed = self.dialect == Dialect::Snbt
+                    && self.s.get(self.i).is_some_and(|c| b"BIL".contains(c))
+                    && self.s.get(self.i + 1) == Some(&b';');
+                if typed {
+                    self.i += 2;
+                }
                 let mut scalars = true;
                 let mut index = 0usize;
                 loop {
@@ -517,21 +628,19 @@ impl<'a> JsonParser<'a> {
                     let scalar = self.value(&at, Vec::new())?;
                     scalars &= scalar;
                     index += 1;
-                    self.skip();
-                    match self.s.get(self.i) {
-                        Some(b',') => {
-                            self.i += 1;
-                            self.after_comma();
-                        }
-                        Some(b']') => {}
-                        _ => return self.fail("a missing ','"),
-                    }
+                    self.separator(b']')?;
                 }
-                if scalars && !path.is_empty() {
+                if path.is_empty() {
+                    return Ok(false);
+                }
+                if typed {
+                    self.nodes.truncate(before);
+                    self.nodes.push(Node::new(path.to_vec(), Kind::Other, Json::Null, (start, self.i), comment));
+                } else if scalars {
                     let values = self.nodes.drain(before..).map(|n| n.value).collect();
-                    self.nodes.push(Node { path: path.to_vec(), kind: Kind::List, value: Json::Array(values), span: (start, self.i), comment, quoted: false });
-                } else if !path.is_empty() {
-                    self.nodes.insert(before, Node { path: path.to_vec(), kind: Kind::Section, value: Json::Null, span: (start, start), comment, quoted: false });
+                    self.nodes.push(Node::new(path.to_vec(), Kind::List, Json::Array(values), (start, self.i), comment));
+                } else {
+                    self.nodes.insert(before, Node::new(path.to_vec(), Kind::Section, Json::Null, (start, start), comment));
                 }
                 Ok(false)
             }
@@ -540,14 +649,211 @@ impl<'a> JsonParser<'a> {
     }
 }
 
-fn parse_json(src: &str) -> AppResult<Vec<Node>> {
-    let mut p = JsonParser { s: src.as_bytes(), src, i: 0, nodes: Vec::new(), comments: Vec::new() };
-    p.value(&[], Vec::new())?;
+fn parse_json(src: &str, dialect: Dialect) -> AppResult<Vec<Node>> {
+    let mut p = JsonParser { s: src.as_bytes(), src, i: 0, nodes: Vec::new(), comments: Vec::new(), dialect };
+    p.skip();
+    if p.i >= p.s.len() {
+        return Ok(Vec::new());
+    }
+    if dialect == Dialect::Hocon && !matches!(p.s.get(p.i), Some(b'{') | Some(b'[')) {
+        p.members(&[], 0)?;
+    } else {
+        p.value(&[], Vec::new())?;
+    }
     p.skip();
     if p.i < p.s.len() {
         return p.fail("text after the end");
     }
     Ok(p.nodes)
+}
+
+fn strip_yaml_comment(text: &str) -> &str {
+    let mut quote: Option<char> = None;
+    let mut previous = ' ';
+    for (at, c) in text.char_indices() {
+        match quote {
+            Some(q) if c == q => quote = None,
+            Some(_) => {}
+            None if (c == '"' || c == '\'') && previous.is_whitespace() => quote = Some(c),
+            None if c == '#' && previous.is_whitespace() => return text[..at].trim_end(),
+            None => {}
+        }
+        previous = c;
+    }
+    text.trim_end()
+}
+
+fn yaml_scalar(text: &str) -> (Kind, Json, bool) {
+    if text.starts_with('"') {
+        return match serde_json::from_str::<String>(text) {
+            Ok(s) => (Kind::String, Json::from(s), true),
+            Err(_) => (Kind::Other, Json::Null, false),
+        };
+    }
+    if let Some(inner) = text.strip_prefix('\'').and_then(|t| t.strip_suffix('\'')) {
+        return (Kind::String, Json::from(inner.replace("''", "'")), true);
+    }
+    match text {
+        "true" | "True" | "TRUE" => (Kind::Bool, Json::from(true), false),
+        "false" | "False" | "FALSE" => (Kind::Bool, Json::from(false), false),
+        "" | "~" | "null" | "Null" | "NULL" => (Kind::Other, Json::Null, false),
+        _ if text.starts_with(['[', '{', '&', '*', '!', '|', '>']) => (Kind::Other, Json::Null, false),
+        _ => {
+            let (kind, value) = infer(text);
+            (kind, value, false)
+        }
+    }
+}
+
+fn yaml_key(line: &str) -> Option<(String, usize)> {
+    let indent = line.len() - line.trim_start().len();
+    let rest = &line[indent..];
+    if let Some(quote) = rest.chars().next().filter(|c| *c == '"' || *c == '\'') {
+        let close = rest[1..].find(quote)? + 1;
+        let after = rest[close + 1..].trim_start();
+        let colon = rest.len() - after.len();
+        return after.starts_with(':').then(|| (rest[1..close].to_string(), indent + colon + 1));
+    }
+    let at = rest.find(": ").or_else(|| rest.ends_with(':').then(|| rest.len() - 1))?;
+    let key = rest[..at].trim();
+    (!key.is_empty() && !key.starts_with(['-', '?', '#'])).then(|| (key.to_string(), indent + at + 1))
+}
+
+fn parse_yaml(src: &str) -> Vec<Node> {
+    let lines = lines_with_offsets(src);
+    let significant = |j: usize| {
+        let t = lines[j].1.trim();
+        !t.is_empty() && !t.starts_with('#')
+    };
+    let indent_of = |line: &str| line.len() - line.trim_start().len();
+    let mut nodes = Vec::new();
+    let mut comment: Vec<String> = Vec::new();
+    let mut stack: Vec<(usize, String)> = Vec::new();
+    let mut i = 0;
+    while i < lines.len() {
+        let (offset, line) = lines[i];
+        let t = line.trim();
+        if t.is_empty() {
+            comment.clear();
+            i += 1;
+            continue;
+        }
+        if t.starts_with('#') {
+            comment.extend(comment_lines(t, &['#']));
+            i += 1;
+            continue;
+        }
+        let indent = indent_of(line);
+        if t == "---" || t == "..." || t.starts_with('-') {
+            comment.clear();
+            i += 1;
+            continue;
+        }
+        while stack.last().is_some_and(|(depth, _)| *depth >= indent) {
+            stack.pop();
+        }
+        let Some((key, colon)) = yaml_key(line) else {
+            comment.clear();
+            i += 1;
+            continue;
+        };
+        let mut path: Vec<String> = stack.iter().map(|(_, k)| k.clone()).collect();
+        path.push(key.clone());
+        let comment_now = std::mem::take(&mut comment);
+        let raw = strip_yaml_comment(&line[colon..]);
+        let value = raw.trim_start();
+        if value.is_empty() {
+            let next = (i + 1..lines.len()).find(|&j| significant(j));
+            if let Some(j) = next {
+                let next_line = lines[j].1;
+                let next_indent = indent_of(next_line);
+                let next_t = next_line.trim();
+                if next_t.starts_with('-') && next_indent >= indent {
+                    let mut items = Vec::new();
+                    let mut scalars = true;
+                    let mut last = j;
+                    let mut k = j;
+                    while k < lines.len() {
+                        let l = lines[k].1;
+                        let lt = l.trim();
+                        if lt.is_empty() || lt.starts_with('#') {
+                            k += 1;
+                            continue;
+                        }
+                        let li = indent_of(l);
+                        if li < next_indent || (li == next_indent && !lt.starts_with('-')) {
+                            break;
+                        }
+                        if li == next_indent {
+                            let item = strip_yaml_comment(lt[1..].trim_start());
+                            let (kind, value, _) = yaml_scalar(item);
+                            if item.is_empty() || yaml_key(&format!(" {item}")).is_some() || matches!(kind, Kind::Other) {
+                                scalars = false;
+                            }
+                            items.push(value);
+                        } else {
+                            scalars = false;
+                        }
+                        last = k;
+                        k += 1;
+                    }
+                    let span = (lines[j].0, lines[last].0 + lines[last].1.len());
+                    let node = if scalars {
+                        Node { affix: format!("{}- ", " ".repeat(next_indent)), ..Node::new(path, Kind::List, Json::Array(items), span, comment_now) }
+                    } else {
+                        Node::new(path, Kind::Other, Json::Null, span, comment_now)
+                    };
+                    nodes.push(node);
+                    i = k;
+                    continue;
+                }
+                if next_indent > indent && !next_t.starts_with(['[', '{', '|', '>']) {
+                    nodes.push(Node::new(path, Kind::Section, Json::Null, (offset, offset), comment_now));
+                    stack.push((indent, key));
+                    i += 1;
+                    continue;
+                }
+            }
+            nodes.push(Node::new(path, Kind::Other, Json::Null, (offset, offset), comment_now));
+            i += 1;
+            continue;
+        }
+        let start = offset + line.len() - line[colon..].trim_start().len();
+        let span = (start, start + value.len());
+        if value.starts_with(['|', '>']) {
+            nodes.push(Node::new(path, Kind::Other, Json::Null, span, comment_now));
+            i += 1;
+            while i < lines.len() && (!significant(i) || indent_of(lines[i].1) > indent) {
+                i += 1;
+            }
+            continue;
+        }
+        let (kind, parsed, quoted) = yaml_scalar(value);
+        nodes.push(Node { quoted, ..Node::new(path, kind, parsed, span, comment_now) });
+        i += 1;
+    }
+    nodes
+}
+
+fn yaml_plain(s: &str) -> bool {
+    !s.is_empty()
+        && s == s.trim()
+        && !s.contains(['\n', '\r', '\t'])
+        && !s.starts_with(['-', '?', ':', ',', '[', ']', '{', '}', '#', '&', '*', '!', '|', '>', '\'', '"', '%', '@', '`'])
+        && !s.contains(": ")
+        && !s.contains(" #")
+        && !s.ends_with(':')
+        && yaml_scalar(s).0 == Kind::String
+}
+
+fn yaml_text(value: &Json) -> Option<String> {
+    Some(match value {
+        Json::String(s) if yaml_plain(s) => s.clone(),
+        Json::String(s) => serde_json::to_string(s).ok()?,
+        Json::Bool(b) => b.to_string(),
+        Json::Number(n) => n.to_string(),
+        _ => return None,
+    })
 }
 
 fn is_forge_typed(line: &str) -> bool {
@@ -607,7 +913,7 @@ fn parse_key_values(src: &str, format: Format) -> Vec<Node> {
         }
         if sections && t.starts_with('[') && t.ends_with(']') {
             let name = t[1..t.len() - 1].trim().to_string();
-            nodes.push(Node { path: vec![name.clone()], kind: Kind::Section, value: Json::Null, span: (offset, offset), comment: std::mem::take(&mut comment), quoted: false });
+            nodes.push(Node::new(vec![name.clone()], Kind::Section, Json::Null, (offset, offset), std::mem::take(&mut comment)));
             section = Some(name);
             continue;
         }
@@ -639,7 +945,7 @@ fn parse_key_values(src: &str, format: Format) -> Vec<Node> {
         };
         let mut path: Vec<String> = section.iter().cloned().collect();
         path.push(key);
-        nodes.push(Node { path, kind, value, span, comment: std::mem::take(&mut comment), quoted });
+        nodes.push(Node { quoted, ..Node::new(path, kind, value, span, std::mem::take(&mut comment)) });
     }
     nodes
 }
@@ -670,7 +976,7 @@ fn parse_forge_cfg(src: &str) -> Vec<Node> {
         }
         if let Some(name) = t.strip_suffix('{') {
             path.push(name.trim().trim_matches('"').to_string());
-            nodes.push(Node { path: path.clone(), kind: Kind::Section, value: Json::Null, span: (offset, offset), comment: std::mem::take(&mut comment), quoted: false });
+            nodes.push(Node::new(path.clone(), Kind::Section, Json::Null, (offset, offset), std::mem::take(&mut comment)));
             continue;
         }
         if !is_forge_typed(t) {
@@ -692,7 +998,7 @@ fn parse_forge_cfg(src: &str) -> Vec<Node> {
         at.push(name);
         if after.starts_with('<') {
             in_list = !after.contains('>');
-            nodes.push(Node { path: at, kind: Kind::Other, value: Json::Null, span: (offset, offset), comment: std::mem::take(&mut comment), quoted: false });
+            nodes.push(Node::new(at, Kind::Other, Json::Null, (offset, offset), std::mem::take(&mut comment)));
             continue;
         }
         if !after.starts_with('=') {
@@ -710,7 +1016,7 @@ fn parse_forge_cfg(src: &str) -> Vec<Node> {
         };
         let value = typed(kind, raw).unwrap_or(Json::Null);
         let kind = if value.is_null() { Kind::Other } else { kind };
-        nodes.push(Node { path: at, kind, value, span, comment: std::mem::take(&mut comment), quoted: false });
+        nodes.push(Node::new(at, kind, value, span, std::mem::take(&mut comment)));
     }
     nodes
 }
@@ -732,7 +1038,10 @@ fn unique(mut nodes: Vec<Node>) -> Vec<Node> {
 fn nodes_of(src: &str, format: Format) -> AppResult<Vec<Node>> {
     Ok(unique(match format {
         Format::Toml => parse_toml(src)?,
-        Format::Json | Format::Json5 | Format::Jsonc => parse_json(src)?,
+        Format::Json | Format::Json5 | Format::Jsonc => parse_json(src, Dialect::Json)?,
+        Format::Snbt => parse_json(src, Dialect::Snbt)?,
+        Format::Hocon => parse_json(src, Dialect::Hocon)?,
+        Format::Yaml => parse_yaml(src),
         Format::Cfg if src.lines().any(|l| is_forge_typed(l.trim_start())) => parse_forge_cfg(src),
         _ => parse_key_values(src, format),
     }))
@@ -746,12 +1055,25 @@ fn float_text(f: f64) -> String {
     }
 }
 
-fn literal(node: &Node, format: Format, value: &Json) -> Option<String> {
-    let json = matches!(format, Format::Json | Format::Json5 | Format::Jsonc | Format::Toml);
+fn literal(node: &Node, format: Format, value: &Json, newline: &str) -> Option<String> {
+    let json = matches!(format, Format::Json | Format::Json5 | Format::Jsonc | Format::Toml | Format::Snbt | Format::Hocon);
+    if format == Format::Yaml {
+        return Some(match (node.kind, value) {
+            (Kind::String, Json::String(s)) if node.quoted || !yaml_plain(s) => serde_json::to_string(s).ok()?,
+            (Kind::List, Json::Array(items)) if items.is_empty() => format!("{}[]", " ".repeat(node.affix.len())),
+            (Kind::List, Json::Array(items)) => {
+                let lines: Option<Vec<String>> = items.iter().map(|i| yaml_text(i).map(|t| format!("{}{t}", node.affix))).collect();
+                lines?.join(newline)
+            }
+            (Kind::Float, Json::Number(n)) => float_text(n.as_f64()?),
+            (Kind::Int | Kind::Bool | Kind::String, _) => yaml_text(value).filter(|_| matches!((node.kind, value), (Kind::Int, Json::Number(n)) if n.is_i64()) || matches!((node.kind, value), (Kind::Bool, Json::Bool(_)) | (Kind::String, Json::String(_))))?,
+            _ => return None,
+        });
+    }
     Some(match (node.kind, value) {
         (Kind::Bool, Json::Bool(b)) => b.to_string(),
-        (Kind::Int, Json::Number(n)) => n.as_i64()?.to_string(),
-        (Kind::Float, Json::Number(n)) => float_text(n.as_f64()?),
+        (Kind::Int, Json::Number(n)) => format!("{}{}", n.as_i64()?, node.affix),
+        (Kind::Float, Json::Number(n)) => format!("{}{}", float_text(n.as_f64()?), node.affix),
         (Kind::String, Json::String(s)) if json || node.quoted => serde_json::to_string(s).ok()?,
         (Kind::String, Json::String(s)) if !s.contains(['\n', '\r']) => s.clone(),
         (Kind::List, Json::Array(items)) if json && items.iter().all(|i| !i.is_array() && !i.is_object()) => {
@@ -764,6 +1086,7 @@ fn literal(node: &Node, format: Format, value: &Json) -> Option<String> {
 
 fn splice_write(src: &str, format: Format, changes: &[Change]) -> AppResult<String> {
     let nodes = nodes_of(src, format)?;
+    let newline = if src.contains("\r\n") { "\r\n" } else { "\n" };
     let mut edits = Vec::new();
     for change in changes {
         let node = nodes
@@ -773,7 +1096,7 @@ fn splice_write(src: &str, format: Format, changes: &[Change]) -> AppResult<Stri
         if node.value == change.value {
             continue;
         }
-        let text = literal(node, format, &change.value).ok_or_else(|| mismatch(&change.path))?;
+        let text = literal(node, format, &change.value, newline).ok_or_else(|| mismatch(&change.path))?;
         edits.push((node.span, text));
     }
     edits.sort_by(|a, b| b.0 .0.cmp(&a.0 .0));
@@ -981,6 +1304,85 @@ mod tests {
         assert!(write_doc(options, Format::Options, &[change(&["lang"], json!("a\nb"))]).is_err());
     }
 
+    const SNBT: &str = "# FTB Essentials config file\n\n{\n\t# If true, registers an alias\n\t# Default: false\n\tregister_alias: false\n\t\n\t# Admin commands\n\tadmin: {\n\t\t# Default: 500\n\t\t# Range: 0 ~ 10000\n\t\ttimer: 500\n\t\tscale: 1.0d\n\t\tbig: 10L\n\t\tname: \"x\"\n\t\tids: [I; 1, 2]\n\t\ttags: [\"a\", \"b\"]\n\t}\n}\n";
+
+    #[test]
+    fn ftb_snbt_keeps_its_number_types() {
+        let entries = read_doc(SNBT, Format::Snbt).unwrap();
+        assert_eq!(find(&entries, &["register_alias"]).comment.as_deref(), Some("If true, registers an alias"));
+        let timer = find(&entries, &["admin", "timer"]);
+        assert_eq!((timer.kind, timer.min, timer.max), (Kind::Int, Some(0.0), Some(10000.0)));
+        assert_eq!(find(&entries, &["admin", "scale"]).kind, Kind::Float);
+        assert_eq!(find(&entries, &["admin", "big"]).value, json!(10));
+        assert_eq!(find(&entries, &["admin", "ids"]).kind, Kind::Other);
+        let out = write_doc(
+            SNBT,
+            Format::Snbt,
+            &[change(&["admin", "scale"], json!(0.5)), change(&["admin", "big"], json!(20)), change(&["admin", "tags"], json!(["c"])), change(&["register_alias"], json!(true))],
+        )
+        .unwrap();
+        assert!(out.contains("\t\tscale: 0.5d\n\t\tbig: 20L\n"));
+        assert!(out.contains("\t\ttags: [\"c\"]\n"));
+        assert!(out.contains("\tregister_alias: true\n"));
+    }
+
+    #[test]
+    fn hocon_with_and_without_braces() {
+        let bobby = "# Delete regions after X days.\n# \n# Set to -1 to disable.\ndelete-unused-regions-after-days=-1\nenabled=true\ntitle = Hello world # note\nnested {\n    depth = 2\n}\n";
+        let entries = read_doc(bobby, Format::Hocon).unwrap();
+        assert_eq!(find(&entries, &["delete-unused-regions-after-days"]).value, json!(-1));
+        assert_eq!(find(&entries, &["title"]).value, json!("Hello world"));
+        assert_eq!(find(&entries, &["nested", "depth"]).value, json!(2));
+        let out = write_doc(bobby, Format::Hocon, &[change(&["title"], json!("Bye")), change(&["nested", "depth"], json!(3))]).unwrap();
+        assert!(out.contains("title = \"Bye\" # note\n"));
+        assert!(out.contains("    depth = 3\n"));
+
+        let respack = "{\n    debugCommands: false,\n    // Logs some information. (requires restart)\n    debugLogs: false,\n    ioLogs: false\n}";
+        let entries = read_doc(respack, Format::Hocon).unwrap();
+        assert_eq!(find(&entries, &["debugLogs"]).comment.as_deref(), Some("Logs some information. (requires restart)"));
+    }
+
+    const YAML: &str = "# The main file.\n\n# Toggles.\nfeatures:\n  # Prevents lag.\n  prevent-moving: false\n  autosave-interval-seconds: 300 # every 5 min\n  name: 'it''s'\n  lobotomize:\n    enabled: false\n# A list of ids.\nblacklist:\n- ars_nouveau:animated_block\n- \"quoted: item\"\nempty:\nscale: 1.5\n";
+
+    #[test]
+    fn yaml_reads_nesting_lists_and_comments() {
+        let entries = read_doc(YAML, Format::Yaml).unwrap();
+        assert_eq!(find(&entries, &["features"]).kind, Kind::Section);
+        assert_eq!(find(&entries, &["features", "prevent-moving"]).comment.as_deref(), Some("Prevents lag."));
+        assert_eq!(find(&entries, &["features", "autosave-interval-seconds"]).value, json!(300));
+        assert_eq!(find(&entries, &["features", "name"]).value, json!("it's"));
+        assert_eq!(find(&entries, &["features", "lobotomize", "enabled"]).kind, Kind::Bool);
+        assert_eq!(find(&entries, &["blacklist"]).value, json!(["ars_nouveau:animated_block", "quoted: item"]));
+        assert_eq!(find(&entries, &["empty"]).kind, Kind::Other);
+        assert_eq!(find(&entries, &["scale"]).kind, Kind::Float);
+
+        let out = write_doc(
+            YAML,
+            Format::Yaml,
+            &[
+                change(&["features", "autosave-interval-seconds"], json!(60)),
+                change(&["features", "name"], json!("x")),
+                change(&["blacklist"], json!(["a:b", "has # hash", "c"])),
+                change(&["features", "lobotomize", "enabled"], json!(true)),
+            ],
+        )
+        .unwrap();
+        assert!(out.contains("  autosave-interval-seconds: 60 # every 5 min\n"));
+        assert!(out.contains("  name: \"x\"\n"));
+        assert!(out.contains("blacklist:\n- a:b\n- \"has # hash\"\n- c\nempty:\n"));
+        assert!(out.contains("    enabled: true\n"));
+        let emptied = write_doc(YAML, Format::Yaml, &[change(&["blacklist"], json!([]))]).unwrap();
+        assert!(emptied.contains("blacklist:\n  []\nempty:"));
+    }
+
+    #[test]
+    fn quest_data_is_not_a_config() {
+        assert!(!allowed_rel("config/ftbquests/quests/chapters/intro.snbt"));
+        assert!(allowed_rel("config/ftbchunks-client.snbt"));
+        assert!(allowed_rel("config/servercore/config.yml"));
+        assert!(allowed_rel("config/bobby.conf"));
+    }
+
     #[test]
     fn only_config_places_can_be_opened() {
         for ok in ["options.txt", "config/c2me.toml", "config/sub/x.json5", "defaultconfigs/a.toml", "saves/World/serverconfig/a-server.toml"] {
@@ -1020,7 +1422,7 @@ mod real_files {
     use super::*;
 
     fn mutate(entry: &Entry, format: Format) -> Option<Json> {
-        let line_format = !matches!(format, Format::Toml | Format::Json | Format::Json5 | Format::Jsonc);
+        let line_format = !matches!(format, Format::Toml | Format::Json | Format::Json5 | Format::Jsonc | Format::Snbt | Format::Hocon | Format::Yaml);
         Some(match (&entry.kind, &entry.value) {
             (Kind::Bool, Json::Bool(b)) => json!(!b),
             (Kind::Int, Json::Number(n)) => json!(n.as_i64()?.wrapping_add(1)),
@@ -1047,7 +1449,14 @@ mod real_files {
                 let stat = stats.entry(format!("{:?}", file.format)).or_default();
                 stat.0 += 1;
                 let Ok((_, text)) = read_text(std::path::Path::new(&file.path)) else { stat.1 += 1; continue };
-                let Ok(entries) = read_doc(&text, file.format) else { stat.1 += 1; continue };
+                let entries = match read_doc(&text, file.format) {
+                    Ok(entries) => entries,
+                    Err(e) => {
+                        stat.1 += 1;
+                        samples.push(format!("{} :: unreadable: {}", file.path, e.message));
+                        continue;
+                    }
+                };
                 for target in entries.iter().filter(|e| !matches!(e.kind, Kind::Section | Kind::Other)).take(6) {
                     let Some(new) = mutate(target, file.format) else { continue };
                     stat.2 += 1;
