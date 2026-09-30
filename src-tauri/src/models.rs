@@ -30,6 +30,21 @@ pub struct ShareOrigin {
     pub item_ids: Vec<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "kind")]
+pub enum LastJoined {
+    Singleplayer {
+        world: String,
+        #[serde(default)]
+        name: Option<String>,
+    },
+    Multiplayer {
+        host: String,
+        #[serde(default)]
+        port: Option<u16>,
+    },
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Instance {
     pub id: String,
@@ -50,6 +65,8 @@ pub struct Instance {
     pub last_played: Option<String>,
     #[serde(default)]
     pub playtime_seconds: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_joined: Option<LastJoined>,
     #[serde(default)]
     pub share_origin: Option<ShareOrigin>,
 

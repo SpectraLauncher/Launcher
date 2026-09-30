@@ -210,6 +210,7 @@ onMounted(async () => {
     }),
     await listen<{ instance_id: string; code: number | null }>('mc://exited', (e) => {
       emitAddonEvent('game:exit', { instanceId: e.payload.instance_id, code: e.payload.code })
+      if (!isContentWindow.value) void instances.load()
     }),
   )
   if (!isContentWindow.value) {

@@ -12,6 +12,7 @@
     "title": "最近游玩",
     "nowPlaying": "正在游玩",
     "play": "开始游戏",
+    "resume": "开始游戏并进入 {name}",
     "stop": "停止",
     "empty": "你还没有游玩过"
   },

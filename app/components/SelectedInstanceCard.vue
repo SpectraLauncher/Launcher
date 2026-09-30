@@ -27,16 +27,34 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1.5" /></svg>
         {{ stopping ? $t('common.loading') : $t('instanceCard.stop') }}
       </button>
-      <button
-        v-else
-        type="button"
-        :disabled="launching"
-        class="flex w-full items-center justify-center gap-2 rounded-[11px] bg-[#3fb877] py-[11px] text-[14px] font-bold tracking-[0.02em] text-[#06210f] transition hover:bg-[#4bcb86] active:scale-[0.98] disabled:opacity-60"
-        @click="play"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5l13 7-13 7z" /></svg>
-        {{ launching ? $t('common.loading') : $t('instanceCard.play') }}
-      </button>
+      <template v-else>
+        <div class="flex gap-2">
+          <button
+            type="button"
+            :disabled="launching"
+            class="flex flex-1 items-center justify-center gap-2 rounded-[11px] bg-[#3fb877] py-[11px] text-[14px] font-bold tracking-[0.02em] text-[#06210f] transition hover:bg-[#4bcb86] active:scale-[0.98] disabled:opacity-60"
+            @click="play"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5l13 7-13 7z" /></svg>
+            {{ launching ? $t('common.loading') : $t('instanceCard.play') }}
+          </button>
+          <button
+            v-if="resume"
+            type="button"
+            :disabled="launching"
+            :title="$t('instanceCard.resume', { name: resumeLabel })"
+            :aria-label="$t('instanceCard.resume', { name: resumeLabel })"
+            class="flex w-[46px] shrink-0 items-center justify-center rounded-[11px] bg-[#3fb877]/15 text-[#3fb877] ring-1 ring-[#3fb877]/40 transition hover:bg-[#3fb877]/25 active:scale-[0.98] disabled:opacity-60"
+            @click="playResume"
+          >
+            <UIcon name="i-lucide-log-in" class="size-4" />
+          </button>
+        </div>
+        <p v-if="resume" class="mt-2 flex items-center gap-1.5 truncate text-[11px] text-neutral-400">
+          <UIcon :name="resume.kind === 'Singleplayer' ? 'i-lucide-globe' : 'i-lucide-server'" class="size-3 shrink-0" />
+          <span class="truncate">{{ resumeLabel }}</span>
+        </p>
+      </template>
     </template>
 
     <div v-else class="py-1 text-[12px] text-neutral-500">
@@ -79,6 +97,19 @@ const play = async () => {
   if (!selected.value) return
   try {
     await mc.launch(selected.value.id)
+  } catch {  }
+}
+
+const resume = computed(() => {
+  const joined = selected.value?.last_joined
+  return joined && selected.value && supportsQuickPlay(selected.value.mc_version) ? joined : null
+})
+const resumeLabel = computed(() => (resume.value ? lastJoinedLabel(resume.value) : ''))
+
+const playResume = async () => {
+  if (!selected.value || !resume.value) return
+  try {
+    await mc.launch(selected.value.id, quickPlayFor(resume.value))
   } catch {  }
 }
 

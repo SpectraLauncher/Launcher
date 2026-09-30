@@ -19,6 +19,7 @@ export interface Instance {
   created_at: string
   last_played?: string | null
   playtime_seconds: number
+  last_joined?: LastJoined | null
   share_origin?: { code: string, revision: number, item_ids: string[] } | null
 
   override_memory: boolean
@@ -121,6 +122,10 @@ export interface CrashInfo {
 export type QuickPlay =
   | { kind: 'Singleplayer'; world: string }
   | { kind: 'Multiplayer'; host: string; port?: number }
+
+export type LastJoined =
+  | { kind: 'Singleplayer'; world: string; name?: string | null }
+  | { kind: 'Multiplayer'; host: string; port?: number | null }
 
 export interface PingResult {
   latency_ms: number

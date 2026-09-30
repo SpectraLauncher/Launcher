@@ -12,6 +12,7 @@
     "title": "ZULETZT GESPIELT",
     "nowPlaying": "LÄUFT GERADE",
     "play": "SPIELEN",
+    "resume": "Spielen und {name} betreten",
     "stop": "BEENDEN",
     "empty": "Du hast noch nicht gespielt"
   },

@@ -12,6 +12,7 @@
     "title": "JOUÉ RÉCEMMENT",
     "nowPlaying": "EN COURS",
     "play": "JOUER",
+    "resume": "Jouer et rejoindre {name}",
     "stop": "ARRÊTER",
     "empty": "Tu n'as pas encore joué"
   },

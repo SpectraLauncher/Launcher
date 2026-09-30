@@ -84,6 +84,10 @@ pub async fn list_worlds(id: String) -> AppResult<Vec<WorldInfo>> {
     crate::blocking(move || worlds(&id)).await
 }
 
+pub fn latest_world(id: &str) -> Option<(String, String)> {
+    worlds(id).ok()?.into_iter().find(|w| w.last_played.is_some()).map(|w| (w.folder, w.name))
+}
+
 fn worlds(id: &str) -> AppResult<Vec<WorldInfo>> {
     let dir = paths::instance_game_dir(id).join("saves");
     let mut out = Vec::new();

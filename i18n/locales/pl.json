@@ -12,6 +12,7 @@
     "title": "OSTATNIO GRANE",
     "nowPlaying": "TERAZ GRASZ",
     "play": "GRAJ",
+    "resume": "Graj i wejdź do {name}",
     "stop": "ZATRZYMAJ",
     "empty": "Jeszcze nie grałeś"
   },

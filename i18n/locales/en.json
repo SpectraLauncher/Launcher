@@ -12,6 +12,7 @@
     "title": "LAST PLAYED",
     "nowPlaying": "NOW PLAYING",
     "play": "PLAY",
+    "resume": "Play and join {name}",
     "stop": "STOP",
     "empty": "You haven't played yet"
   },

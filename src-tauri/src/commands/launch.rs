@@ -31,6 +31,44 @@ struct MultiProgress {
 }
 
 const CONSOLE_CAPACITY: usize = 5_000;
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum Session {
+    World,
+    Server { host: String, port: Option<u16> },
+}
+
+pub fn last_session(log: &str) -> Option<Session> {
+    let mut last = None;
+    for line in log.lines() {
+        if line.contains("Starting integrated minecraft server") {
+            last = Some(Session::World);
+        } else if let Some(target) = line.split("Connecting to ").nth(1) {
+            let Some((host, port)) = target.trim().rsplit_once(", ") else { continue };
+            let Ok(port) = port.parse::<u16>() else { continue };
+            if host.is_empty() || host.contains(char::is_whitespace) {
+                continue;
+            }
+            last = Some(Session::Server { host: host.to_string(), port: Some(port) });
+        }
+    }
+    last
+}
+
+fn remember_last_joined(id: &str) {
+    let Ok(bytes) = std::fs::read(paths::instance_game_dir(id).join("logs").join("latest.log")) else { return };
+    let joined = match last_session(&String::from_utf8_lossy(&bytes)) {
+        Some(Session::Server { host, port }) => Some(crate::models::LastJoined::Multiplayer { host, port }),
+        Some(Session::World) => crate::commands::content::latest_world(id)
+            .map(|(world, name)| crate::models::LastJoined::Singleplayer { world, name: Some(name) }),
+        None => None,
+    };
+    if let Some(joined) = joined {
+        if let Err(e) = instances::set_last_joined(id, joined) {
+            log::warn!("could not remember where {id} was played: {}", e.message);
+        }
+    }
+}
 const CONSOLE_WINDOW: &str = "console";
 
 pub fn console_window_url(id: Option<&str>) -> String {
@@ -531,6 +569,7 @@ async fn launch_inner(app: &AppHandle, id: &str, quick_play: Option<QuickPlay>) 
         if track_playtime {
             let _ = instances::add_playtime(&id_bg, started.elapsed().as_secs());
         }
+        remember_last_joined(&id_bg);
         if let Some(cmd) = post_exit.as_deref().filter(|s| !s.trim().is_empty()) {
             run_hook(cmd, false);
         }
@@ -952,5 +991,42 @@ mod console_window_tests {
         assert_eq!(super::console_window_url(None), "console");
         assert_eq!(super::console_window_url(Some("abc-123")), "console?instance=abc-123");
         assert_eq!(super::console_window_url(Some("My pack & more")), "console?instance=My+pack+%26+more");
+    }
+}
+
+#[cfg(test)]
+mod last_session_tests {
+    use super::{last_session, Session};
+
+    #[test]
+    fn the_last_world_or_server_in_the_log_wins() {
+        let log = "\
+[12:00:01] [Render thread/INFO]: Setting user: Steve
+[12:00:05] [Server thread/INFO]: Starting integrated minecraft server version 1.21.1
+[12:10:00] [Render thread/INFO]: Stopping!
+[12:11:00] [Render thread/INFO]: Connecting to play.example.net, 25565
+[12:20:00] [Render thread/INFO]: Connecting to mc.test.org, 25570
+";
+        assert_eq!(
+            last_session(log),
+            Some(Session::Server { host: "mc.test.org".into(), port: Some(25570) })
+        );
+    }
+
+    #[test]
+    fn a_world_after_a_server_is_the_world() {
+        let log = "[x] Connecting to play.example.net, 25565\n[y] [Server thread/INFO]: Starting integrated minecraft server version 1.20.4\n";
+        assert_eq!(last_session(log), Some(Session::World));
+    }
+
+    #[test]
+    fn other_lines_that_mention_connecting_do_not_count() {
+        let log = "[x] [modloader/INFO]: Connecting to database at localhost\n[y] Connecting to realms server\n";
+        assert_eq!(last_session(log), None);
+    }
+
+    #[test]
+    fn an_empty_session_leaves_nothing() {
+        assert_eq!(last_session(""), None);
     }
 }

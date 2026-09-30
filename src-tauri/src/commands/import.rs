@@ -350,6 +350,7 @@ pub fn restore_backup_from_bytes(bytes: &[u8]) -> AppResult<Instance> {
         id: new_id.clone(),
         created_at: created.created_at,
         last_played: None,
+        last_joined: None,
         playtime_seconds: 0,
         icon: None,
         ..src

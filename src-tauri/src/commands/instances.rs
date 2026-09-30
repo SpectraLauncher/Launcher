@@ -538,6 +538,7 @@ fn clone_instance(id: &str) -> AppResult<Instance> {
         icon: if has_icon { Some("icon.png".to_string()) } else { None },
         created_at: chrono::Utc::now().to_rfc3339(),
         last_played: None,
+        last_joined: None,
         ..src
     };
     store::write_json(&paths::instance_config_file(&new_id), &instance)?;
@@ -587,6 +588,14 @@ fn copy_dir_all(from: &std::path::Path, to: &std::path::Path) -> std::io::Result
 pub fn touch_last_played(id: &str) -> AppResult<()> {
     if let Some(mut instance) = store::read_json::<Instance>(&paths::instance_config_file(id))? {
         instance.last_played = Some(chrono::Utc::now().to_rfc3339());
+        store::write_json(&paths::instance_config_file(id), &instance)?;
+    }
+    Ok(())
+}
+
+pub fn set_last_joined(id: &str, joined: crate::models::LastJoined) -> AppResult<()> {
+    if let Some(mut instance) = store::read_json::<Instance>(&paths::instance_config_file(id))? {
+        instance.last_joined = Some(joined);
         store::write_json(&paths::instance_config_file(id), &instance)?;
     }
     Ok(())

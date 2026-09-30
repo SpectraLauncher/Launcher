@@ -314,10 +314,6 @@ const formatDate = (ms: number) => new Date(ms).toLocaleDateString()
 
 const instance = computed(() => instances.instances.find(i => i.id === props.instanceId))
 
-function supportsQuickPlay(ver: string): boolean {
-  const [, minorStr = '0'] = ver.split('.')
-  return parseInt(minorStr) >= 20
-}
 const instanceSupportsQuickPlay = computed(() =>
   !!instance.value && supportsQuickPlay(instance.value.mc_version),
 )
