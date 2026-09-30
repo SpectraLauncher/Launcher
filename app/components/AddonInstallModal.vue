@@ -78,10 +78,7 @@ const { t } = useI18n()
 
 const slotKey = (slot: string) => slot.replace(/\.(\w)/g, (_, c: string) => c.toUpperCase())
 
-function permissionLabel(permission: string) {
-  if (permission.startsWith('network:')) return t('addons.permissionNetwork', { host: permission.slice(8) })
-  return t(`addons.permissionNames.${permission.replace(/:(\w)/, (_, c: string) => c.toUpperCase())}`)
-}
+const permissionLabel = (permission: string) => addonPermissionLabel(t, permission)
 
 async function onConfirm() {
   const name = await confirm()

@@ -198,6 +198,7 @@ pub fn run() {
             commands::addons::addons_available,
             commands::addons::addons_list,
             commands::addons::addons_catalog,
+            commands::addons::addons_catalog_project,
             commands::addons::addons_stage_catalog,
             commands::addons::addons_stage_file,
             commands::addons::addons_stage_folder,

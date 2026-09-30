@@ -59,3 +59,50 @@ html.squared *::after {
 *::-webkit-scrollbar-track{
 	background:transparent
 }
+
+.mk-md {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ui-text-muted);
+  word-break: break-word;
+}
+.mk-md h1, .mk-md h2, .mk-md h3, .mk-md h4 {
+  color: var(--ui-text-highlighted);
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 1em 0 0.4em;
+}
+.mk-md h1 { font-size: 1.3em; }
+.mk-md h2 { font-size: 1.15em; }
+.mk-md h3 { font-size: 1.05em; }
+.mk-md p { margin: 0.6em 0; }
+.mk-md a { color: var(--ui-primary); text-decoration: underline; }
+.mk-md ul, .mk-md ol { margin: 0.6em 0; padding-left: 1.4em; }
+.mk-md ul { list-style: disc; }
+.mk-md ol { list-style: decimal; }
+.mk-md li { margin: 0.2em 0; }
+.mk-md img { max-width: 100%; height: auto; border-radius: 8px; margin: 0.5em 0; }
+.mk-md code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+.mk-md pre {
+  background: rgba(0, 0, 0, 0.35);
+  padding: 0.8em;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0.7em 0;
+}
+.mk-md pre code { background: none; padding: 0; }
+.mk-md blockquote {
+  border-left: 3px solid var(--ui-border-accented);
+  padding-left: 0.8em;
+  margin: 0.7em 0;
+  color: var(--ui-text-dimmed);
+}
+.mk-md hr { border: 0; border-top: 1px solid var(--ui-border); margin: 1em 0; }
+.mk-md table { border-collapse: collapse; margin: 0.7em 0; display: block; overflow-x: auto; }
+.mk-md th, .mk-md td { border: 1px solid var(--ui-border); padding: 0.3em 0.6em; }

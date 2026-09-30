@@ -1141,6 +1141,26 @@ pub async fn addons_catalog(query: String) -> AppResult<serde_json::Value> {
     Ok(only_addons(body))
 }
 
+pub fn addon_project(body: serde_json::Value) -> AppResult<serde_json::Value> {
+    if body["project"]["type"].as_str() != Some("addon") {
+        return Err(AppError::invalid("this project is not a launcher addon"));
+    }
+    Ok(body)
+}
+
+#[tauri::command]
+pub async fn addons_catalog_project(slug: String) -> AppResult<serde_json::Value> {
+    if !valid_id(&slug) {
+        return Err(AppError::invalid("not an addon address"));
+    }
+    let body = catalog_get(&format!("/api/catalog/project/{slug}"))
+        .await?
+        .json()
+        .await
+        .map_err(|e| AppError::network(format!("bad server reply: {e}")))?;
+    addon_project(body)
+}
+
 #[tauri::command]
 pub async fn addons_stage_catalog(state: State<'_, AppState>, slug: String) -> AppResult<Preview> {
     if !valid_id(&slug) {
@@ -1706,6 +1726,13 @@ mod tests {
 
         let from_file = Installed { project: None, ..installed };
         assert!(update_for(&from_file, &granted, &newer, &v).is_none());
+    }
+
+    #[test]
+    fn a_preview_only_opens_an_addon() {
+        assert!(addon_project(serde_json::json!({ "project": { "type": "addon", "slug": "a" } })).is_ok());
+        assert!(addon_project(serde_json::json!({ "project": { "type": "mod", "slug": "m" } })).is_err());
+        assert!(addon_project(serde_json::json!({})).is_err());
     }
 
     #[test]

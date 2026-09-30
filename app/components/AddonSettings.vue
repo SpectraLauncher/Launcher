@@ -107,14 +107,69 @@
 
     <div>
       <p class="text-sm font-medium">{{ t('addons.browse') }}</p>
-      <UInput v-model="query" icon="i-lucide-search" :placeholder="t('addons.search')" class="mt-2 w-full max-w-sm" />
+      <div class="mt-2 flex items-center gap-2">
+        <UInput v-model="query" icon="i-lucide-search" :placeholder="t('addons.search')" class="w-full max-w-sm" />
+        <div class="ml-auto flex items-center gap-1">
+          <UButton
+            size="xs"
+            square
+            icon="i-lucide-layout-grid"
+            :color="view === 'grid' ? 'primary' : 'neutral'"
+            :variant="view === 'grid' ? 'subtle' : 'ghost'"
+            :title="t('addons.viewGrid')"
+            :aria-label="t('addons.viewGrid')"
+            @click="view = 'grid'"
+          />
+          <UButton
+            size="xs"
+            square
+            icon="i-lucide-list"
+            :color="view === 'list' ? 'primary' : 'neutral'"
+            :variant="view === 'list' ? 'subtle' : 'ghost'"
+            :title="t('addons.viewList')"
+            :aria-label="t('addons.viewList')"
+            @click="view = 'list'"
+          />
+        </div>
+      </div>
       <p v-if="closed" class="mt-3 text-sm text-muted">{{ t('addons.closed') }}</p>
       <p v-else-if="searched && !hits.length" class="mt-3 text-sm text-muted">{{ t('addons.nothingFound') }}</p>
+      <div v-else-if="view === 'grid'" class="mt-3 grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3">
+        <button
+          v-for="hit in hits"
+          :key="hit.slug"
+          type="button"
+          class="flex flex-col gap-3 rounded-xl border border-default p-3 text-left transition hover:border-primary-500/40 hover:bg-white/3"
+          @click="previewSlug = hit.slug"
+        >
+          <div class="flex items-center gap-3">
+            <img v-if="hit.icon" :src="hit.icon" alt="" class="size-11 shrink-0 rounded-lg object-cover">
+            <div v-else class="flex size-11 shrink-0 items-center justify-center rounded-lg bg-white/5">
+              <UIcon name="i-lucide-puzzle" class="size-5" />
+            </div>
+            <p class="min-w-0 truncate text-sm font-medium">{{ hit.title }}</p>
+          </div>
+          <p class="line-clamp-2 min-h-8 text-xs text-muted">{{ hit.summary }}</p>
+          <div class="mt-auto flex items-center justify-between gap-2">
+            <span class="text-xs text-dimmed">
+              <UIcon name="i-lucide-download" class="mr-1 size-3 align-[-1px]" />{{ count(hit.downloads ?? 0) }}
+            </span>
+            <UBadge
+              v-if="installedProjects.has(hit.slug)"
+              size="sm"
+              variant="soft"
+              color="success"
+              :label="t('addons.installed')"
+            />
+          </div>
+        </button>
+      </div>
       <ul v-else class="mt-3 space-y-2">
         <li
           v-for="hit in hits"
           :key="hit.slug"
-          class="flex items-center gap-3 rounded-xl border border-default px-3 py-2"
+          class="flex cursor-pointer items-center gap-3 rounded-xl border border-default px-3 py-2 transition hover:border-primary-500/40 hover:bg-white/3"
+          @click="previewSlug = hit.slug"
         >
           <img v-if="hit.icon" :src="hit.icon" alt="" class="size-9 shrink-0 rounded-lg object-cover">
           <div v-else class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/5">
@@ -128,11 +183,17 @@
             size="xs"
             :variant="installedProjects.has(hit.slug) ? 'soft' : 'solid'"
             :label="installedProjects.has(hit.slug) ? t('addons.update') : t('addons.install')"
-            @click="install.fromCatalog(hit.slug)"
+            @click.stop="install.fromCatalog(hit.slug)"
           />
         </li>
       </ul>
     </div>
+
+    <AddonPreview
+      v-model:slug="previewSlug"
+      :installed="!!previewSlug && installedProjects.has(previewSlug)"
+      @install="installFromPreview"
+    />
   </div>
 </template>
 
@@ -148,9 +209,10 @@ interface CatalogHit {
   title: string
   summary: string
   icon: string | null
+  downloads?: number
 }
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const toast = useToast()
 const addons = useAddonsStore()
 const install = useAddonInstall()
@@ -175,6 +237,30 @@ const closed = ref(false)
 const searched = ref(false)
 
 const installedProjects = computed(() => new Set(addons.addons.map(a => a.project).filter(Boolean)))
+
+const VIEW_KEY = 'spectra-addons-view'
+const view = ref<'grid' | 'list'>((() => {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'grid'
+  } catch {
+    return 'grid'
+  }
+})())
+watch(view, (value) => {
+  try {
+    localStorage.setItem(VIEW_KEY, value)
+  } catch {
+  }
+})
+
+const previewSlug = ref<string | null>(null)
+
+function installFromPreview(slug: string) {
+  previewSlug.value = null
+  void install.fromCatalog(slug)
+}
+
+const count = (n: number) => new Intl.NumberFormat(locale.value).format(n)
 
 async function search() {
   try {
