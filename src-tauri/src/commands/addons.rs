@@ -995,6 +995,13 @@ pub fn update_for(
     })
 }
 
+pub fn only_addons(mut body: serde_json::Value) -> serde_json::Value {
+    if let Some(hits) = body.get_mut("hits").and_then(serde_json::Value::as_array_mut) {
+        hits.retain(|hit| hit.get("type").and_then(serde_json::Value::as_str) == Some("addon"));
+    }
+    body
+}
+
 async fn catalog_get(path: &str) -> AppResult<reqwest::Response> {
     let mut request = crate::http().get(format!("{}{path}", spectra::SITE)).header("origin", spectra::ORIGIN);
     if let Some(token) = spectra::stored_token() {
@@ -1107,7 +1114,8 @@ pub async fn addons_catalog(query: String) -> AppResult<serde_json::Value> {
     if !response.status().is_success() {
         return Err(AppError::network(format!("request failed ({})", response.status())));
     }
-    response.json().await.map_err(|e| AppError::network(format!("bad server reply: {e}")))
+    let body = response.json().await.map_err(|e| AppError::network(format!("bad server reply: {e}")))?;
+    Ok(only_addons(body))
 }
 
 #[tauri::command]
@@ -1153,6 +1161,9 @@ pub async fn addons_check_updates() -> AppResult<Vec<UpdateInfo>> {
         let Some(project) = entry.project.clone() else { continue };
         let Ok(response) = catalog_get(&format!("/api/catalog/project/{project}")).await else { continue };
         let Ok(parsed) = response.json::<CatalogResponse>().await else { continue };
+        if parsed.project.kind != "addon" {
+            continue;
+        }
         let granted = read_manifest(&Package::Folder(paths::addons_dir().join(&entry.id)))
             .map(|m| m.permissions)
             .unwrap_or_default();
@@ -1633,6 +1644,18 @@ mod tests {
 
         let from_file = Installed { project: None, ..installed };
         assert!(update_for(&from_file, &granted, &newer, &v).is_none());
+    }
+
+    #[test]
+    fn the_catalog_list_keeps_only_addons() {
+        let body = serde_json::json!({
+            "hits": [{ "slug": "a", "type": "addon" }, { "slug": "m", "type": "mod" }, { "slug": "x" }],
+            "total": 3,
+        });
+        let kept = only_addons(body);
+        let slugs: Vec<&str> = kept["hits"].as_array().unwrap().iter().map(|h| h["slug"].as_str().unwrap()).collect();
+        assert_eq!(slugs, vec!["a"]);
+        assert_eq!(only_addons(serde_json::json!({ "hits": [], "closed": true }))["closed"], true);
     }
 
     #[test]
