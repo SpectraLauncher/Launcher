@@ -2,7 +2,7 @@ use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
 use serde_json::{json, Map, Value};
-use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::commands::addons::{self, Manifest};
@@ -295,7 +295,7 @@ pub fn requirement(method: &str) -> Option<Needs> {
         "http.fetch" => Needs::Network,
         "storage.get" | "storage.set" | "storage.remove" | "storage.keys" | "ui.toast" | "ui.navigate"
         | "ui.openWindow" | "ui.openUrl" | "ui.confirm" | "launcher.version" | "launcher.locale"
-        | "launcher.theme" => Needs::Nothing,
+        | "launcher.theme" | "backend.call" => Needs::Nothing,
         _ => return None,
     })
 }
@@ -554,13 +554,7 @@ fn check_host_call(manifest: &Manifest, method: &str, params: &Value) -> AppResu
 }
 
 #[tauri::command]
-pub async fn addon_call(
-    app: AppHandle,
-    state: State<'_, AppState>,
-    addon: String,
-    method: String,
-    params: Value,
-) -> AppResult<Value> {
+pub async fn addon_call(app: AppHandle, addon: String, method: String, params: Value) -> AppResult<Value> {
     let manifest = addons::active_manifest(&addon)?;
     authorize(&manifest, &method)?;
 
@@ -572,7 +566,26 @@ pub async fn addon_call(
         return Ok(json!({ "$host": true }));
     }
 
-    match method.as_str() {
+    if method == "backend.call" {
+        let backend = manifest
+            .backend
+            .clone()
+            .ok_or_else(|| AppError::not_found("the addon has no backend.wasm"))?;
+        let function = text(&params, "fn", 64)?;
+        let input = serde_json::to_vec(params.get("input").unwrap_or(&Value::Null))?;
+        let addon = manifest.id.clone();
+        return crate::blocking(move || call_backend(&addon, &backend, &function, &input)).await;
+    }
+
+    dispatch(Some(&app), &manifest, &method, params).await
+}
+
+fn needs_app(app: Option<&AppHandle>) -> AppResult<&AppHandle> {
+    app.ok_or_else(|| AppError::new("unavailable", "the launcher is not ready"))
+}
+
+pub async fn dispatch(app: Option<&AppHandle>, manifest: &Manifest, method: &str, params: Value) -> AppResult<Value> {
+    match method {
         "instances.list" => {
             let all = crate::commands::instances::list_instances().await?;
             Ok(Value::Array(all.iter().map(public_instance).collect()))
@@ -597,7 +610,8 @@ pub async fn addon_call(
         }
         "instances.isRunning" => {
             let id = instance_id(&params).await?;
-            Ok(json!(crate::commands::launch::is_instance_running(state, id)?))
+            let app = needs_app(app)?;
+            Ok(json!(crate::commands::launch::is_instance_running(app.state::<AppState>(), id)?))
         }
         "instances.update" => {
             let id = instance_id(&params).await?;
@@ -635,13 +649,15 @@ pub async fn addon_call(
         }
         "instances.stop" => {
             let id = instance_id(&params).await?;
-            crate::commands::launch::stop_instance(state, id, false).await?;
+            let app = needs_app(app)?;
+            crate::commands::launch::stop_instance(app.state::<AppState>(), id, false).await?;
             Ok(Value::Null)
         }
         "logs.console" => {
             let id = instance_id(&params).await?;
             let cursor = params.get("cursor").and_then(Value::as_u64).unwrap_or(0);
-            Ok(serde_json::to_value(crate::commands::launch::read_console(state, id, cursor)?)?)
+            let app = needs_app(app)?;
+            Ok(serde_json::to_value(crate::commands::launch::read_console(app.state::<AppState>(), id, cursor)?)?)
         }
         "logs.list" => {
             let id = instance_id(&params).await?;
@@ -684,17 +700,107 @@ pub async fn addon_call(
             })
         }
         "skins.list" => Ok(serde_json::to_value(crate::commands::skins::list_skins().await?)?),
-        "http.fetch" => fetch(&manifest, &params).await,
+        "http.fetch" => fetch(manifest, &params).await,
         "storage.get" | "storage.set" | "storage.remove" | "storage.keys" => {
-            let (id, name, params) = (manifest.id.clone(), method.clone(), params.clone());
+            let (id, name) = (manifest.id.clone(), method.to_string());
             crate::blocking(move || storage(&id, &name, &params)).await
         }
         "ui.openWindow" => {
-            open_window(&app, &manifest, &text(&params, "window", 64)?)?;
+            open_window(needs_app(app)?, manifest, &text(&params, "window", 64)?)?;
             Ok(Value::Null)
         }
         "launcher.version" => Ok(json!(env!("CARGO_PKG_VERSION"))),
         _ => Err(AppError::new("unknown_method", format!("{method} is not part of the addon API"))),
+    }
+}
+
+static APP: OnceLock<AppHandle> = OnceLock::new();
+static BACKENDS: Mutex<Option<std::collections::HashMap<String, std::sync::Arc<Mutex<extism::Plugin>>>>> =
+    Mutex::new(None);
+
+const BACKEND_MEMORY_PAGES: u32 = 1024;
+const BACKEND_TIMEOUT: Duration = Duration::from_secs(5);
+
+pub fn remember_app(app: &AppHandle) {
+    let _ = APP.set(app.clone());
+}
+
+extism::host_fn!(spectra_call(addon: String; request: String) -> String {
+    let addon = addon.get()?.lock().map_err(|_| extism::Error::msg("addon is locked"))?.clone();
+    Ok(backend_request(&addon, &request).to_string())
+});
+
+pub fn backend_request(addon: &str, request: &str) -> Value {
+    let outcome = (|| -> AppResult<Value> {
+        let parsed: Value = serde_json::from_str(request).map_err(|_| AppError::invalid("the request is not JSON"))?;
+        let method = parsed
+            .get("method")
+            .and_then(Value::as_str)
+            .ok_or_else(|| AppError::invalid("method is required"))?
+            .to_string();
+        let params = parsed.get("params").cloned().unwrap_or_else(|| json!({}));
+        if HOST_METHODS.contains(&method.as_str()) || method == "backend.call" {
+            return Err(AppError::new("unavailable", format!("{method} is only available to the addon pages")));
+        }
+        let manifest = addons::active_manifest(addon)?;
+        authorize(&manifest, &method)?;
+        tauri::async_runtime::block_on(dispatch(APP.get(), &manifest, &method, params))
+    })();
+    match outcome {
+        Ok(result) => json!({ "result": result }),
+        Err(e) => json!({ "error": { "code": e.code, "message": e.message } }),
+    }
+}
+
+fn backend_plugin(addon: &str, backend: &str) -> AppResult<std::sync::Arc<Mutex<extism::Plugin>>> {
+    let mut cache = BACKENDS.lock().unwrap_or_else(|e| e.into_inner());
+    let cache = cache.get_or_insert_with(Default::default);
+    if let Some(plugin) = cache.get(addon) {
+        return Ok(plugin.clone());
+    }
+    if !addons::valid_id(addon) || !addons::safe_name(backend) {
+        return Err(AppError::invalid("not an addon backend"));
+    }
+    let path = backend.split('/').fold(paths::addons_dir().join(addon), |path, part| path.join(part));
+    let bytes = std::fs::read(&path).map_err(|_| AppError::not_found("backend.wasm is missing"))?;
+    let wasm = extism::Manifest::new([extism::Wasm::data(bytes)])
+        .with_memory_max(BACKEND_MEMORY_PAGES)
+        .with_timeout(BACKEND_TIMEOUT);
+    let plugin = extism::PluginBuilder::new(wasm)
+        .with_wasi(false)
+        .with_function("spectra_call", [extism::PTR], [extism::PTR], extism::UserData::new(addon.to_string()), spectra_call)
+        .build()
+        .map_err(|e| AppError::new("backend", format!("backend.wasm could not load: {e}")))?;
+    let plugin = std::sync::Arc::new(Mutex::new(plugin));
+    cache.insert(addon.to_string(), plugin.clone());
+    Ok(plugin)
+}
+
+pub fn forget_backend(addon: &str) {
+    if let Some(cache) = BACKENDS.lock().unwrap_or_else(|e| e.into_inner()).as_mut() {
+        cache.remove(addon);
+    }
+}
+
+pub fn call_backend(addon: &str, backend: &str, function: &str, input: &[u8]) -> AppResult<Value> {
+    let named = !function.is_empty() && function.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_');
+    if !named {
+        return Err(AppError::invalid("a backend function name may only use letters, digits and underscores"));
+    }
+    let plugin = backend_plugin(addon, backend)?;
+    let mut guard = plugin.lock().unwrap_or_else(|e| e.into_inner());
+    if !guard.function_exists(function) {
+        return Err(AppError::not_found(format!("backend.wasm has no function {function}")));
+    }
+    let outcome = guard.call::<&[u8], Vec<u8>>(function, input);
+    drop(guard);
+    match outcome {
+        Ok(output) => Ok(serde_json::from_slice(&output)
+            .unwrap_or_else(|_| Value::String(String::from_utf8_lossy(&output).into_owned()))),
+        Err(e) => {
+            forget_backend(addon);
+            Err(AppError::new("backend", format!("{function} failed: {e}")))
+        }
     }
 }
 
@@ -947,6 +1053,62 @@ mod tests {
 
         let missing = ask(format!("GET /nope/x.html HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n\r\n"));
         assert!(missing.starts_with("HTTP/1.1 404"), "{missing}");
+    }
+
+    #[test]
+    fn a_backend_runs_with_the_addon_permissions_and_a_time_limit() {
+        let _guard = paths::lock_data_dir();
+        let root = std::env::temp_dir().join(format!("spectra-backend-{}", uuid::Uuid::new_v4()));
+        std::env::set_var("SPECTRA_DATA_DIR", &root);
+        std::fs::create_dir_all(&root).unwrap();
+
+        install(&Staged {
+            package: Package::Folder(Path::new(env!("CARGO_MANIFEST_DIR")).join("../examples/sandbox-check")),
+            source: "folder",
+            project: None,
+            icon: None,
+            sha512: None,
+            dev_path: None,
+            owned: false,
+        })
+        .unwrap();
+
+        let call = |function: &str, input: Value| {
+            call_backend("sandbox-check", "backend.wasm", function, &serde_json::to_vec(&input).unwrap())
+        };
+
+        assert_eq!(call("stats", json!({ "values": [2, 4, 9] })).unwrap()["mean"], json!(5.0));
+        assert_eq!(call("instance_count", Value::Null).unwrap(), json!({ "instances": 0 }));
+
+        let forbidden = call("forbidden", Value::Null).unwrap();
+        assert_eq!(forbidden["refused"], json!(true));
+        assert!(forbidden["detail"].as_str().unwrap().contains("permission_denied"));
+
+        assert_eq!(call("remember", json!("hi")).unwrap(), json!("\"hi\""));
+        assert_eq!(call("nope", Value::Null).unwrap_err().code, "not_found");
+        assert_eq!(call("bad-name", Value::Null).unwrap_err().code, "invalid");
+
+        let started = std::time::Instant::now();
+        assert_eq!(call("spin", Value::Null).unwrap_err().code, "backend");
+        assert!(started.elapsed() < Duration::from_secs(20));
+        assert_eq!(call("stats", json!({ "values": [1] })).unwrap()["count"], json!(1));
+
+        forget_backend("sandbox-check");
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn a_backend_cannot_reach_what_only_pages_may() {
+        let _guard = paths::lock_data_dir();
+        let root = std::env::temp_dir().join(format!("spectra-backend-{}", uuid::Uuid::new_v4()));
+        std::env::set_var("SPECTRA_DATA_DIR", &root);
+        let code = |request: &str| backend_request("sandbox-check", request)["error"]["code"].clone();
+
+        assert_eq!(code("not json"), json!("invalid"));
+        assert_eq!(code(r#"{"method":"ui.toast","params":{"title":"x"}}"#), json!("unavailable"));
+        assert_eq!(code(r#"{"method":"backend.call","params":{}}"#), json!("unavailable"));
+        assert_eq!(code(r#"{"method":"storage.get","params":{"key":"k"}}"#), json!("not_found"));
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]

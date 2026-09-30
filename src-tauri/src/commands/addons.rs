@@ -623,12 +623,6 @@ pub fn check_runs_here(manifest: &Manifest) -> AppResult<()> {
             format!("This addon needs Spectra {}.", manifest.launcher.as_deref().unwrap_or_default()),
         ));
     }
-    if manifest.backend.is_some() {
-        return Err(AppError::new(
-            "unsupported",
-            "This addon ships backend.wasm, which this version of Spectra cannot run yet.",
-        ));
-    }
     Ok(())
 }
 
@@ -773,6 +767,7 @@ pub fn install(staged: &Staged) -> AppResult<Installed> {
     };
     state.push(entry.clone());
     save_state(state)?;
+    crate::commands::addon_host::forget_backend(&entry.id);
 
     if staged.owned {
         if let Package::Zip(path) = &staged.package {
@@ -1260,6 +1255,7 @@ pub async fn addons_reload(id: String) -> AppResult<Installed> {
 pub async fn addons_set_enabled(app: tauri::AppHandle, id: String, enabled: bool) -> AppResult<()> {
     if !enabled {
         crate::commands::addon_host::close_windows(&app, &id);
+        crate::commands::addon_host::forget_backend(&id);
     }
     crate::blocking(move || {
         let mut state = load_state()?;
@@ -1276,6 +1272,7 @@ pub async fn addons_set_enabled(app: tauri::AppHandle, id: String, enabled: bool
 #[tauri::command]
 pub async fn addons_uninstall(app: tauri::AppHandle, id: String) -> AppResult<()> {
     crate::commands::addon_host::close_windows(&app, &id);
+    crate::commands::addon_host::forget_backend(&id);
     crate::blocking(move || {
         if !valid_id(&id) {
             return Err(AppError::invalid("not an addon id"));
@@ -1566,10 +1563,10 @@ mod tests {
         write_zip(&traversal, &[("addon.json", b"{}"), ("../evil.txt", b"x")]);
         assert!(install(&staged(&traversal, false)).unwrap_err().message.contains("outside"));
 
-        let with_backend = root.join("backend.zip");
-        let backend = serde_json::to_vec(&with(base(), "backend", "b.wasm".into())).unwrap();
-        write_zip(&with_backend, &[("addon.json", &backend), ("main.js", b""), ("b.wasm", b"wasm")]);
-        assert_eq!(install(&staged(&with_backend, false)).unwrap_err().code, "unsupported");
+        let too_new = root.join("too-new.zip");
+        let manifest = serde_json::to_vec(&with(base(), "launcher", ">=99.0.0".into())).unwrap();
+        write_zip(&too_new, &[("addon.json", &manifest), ("main.js", b"")]);
+        assert_eq!(install(&staged(&too_new, false)).unwrap_err().code, "unsupported");
 
         let not_zip = root.join("plain.zip");
         std::fs::write(&not_zip, b"not a zip").unwrap();

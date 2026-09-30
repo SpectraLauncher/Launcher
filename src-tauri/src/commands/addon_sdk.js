@@ -110,6 +110,9 @@
       locale: () => call('launcher.locale'),
       theme: () => call('launcher.theme'),
     }),
+    backend: Object.freeze({
+      call: (fn, input) => call('backend.call', { fn, input }),
+    }),
     events: Object.freeze({ on }),
     commands: Object.freeze({ register }),
   })

@@ -30,3 +30,4 @@ logs
 docs
 
 examples/*.zip
+examples/*/target

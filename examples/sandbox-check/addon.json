@@ -1,10 +1,11 @@
 {
   "id": "sandbox-check",
   "name": "Sandbox Check",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Checks that addon code stays inside its sandbox and shows every place an addon can reach.",
   "api": 1,
   "main": "main.js",
+  "backend": "backend.wasm",
   "permissions": ["instances:read", "network:api.github.com"],
   "contributes": {
     "pages": [

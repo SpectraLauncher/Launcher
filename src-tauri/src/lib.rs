@@ -123,6 +123,7 @@ pub fn run() {
                 log::error!("failed to create data directories: {e}");
             }
 
+            commands::addon_host::remember_app(app.handle());
             if let Err(e) = commands::addon_host::start_server() {
                 log::error!("addon file server could not start: {e}");
             }

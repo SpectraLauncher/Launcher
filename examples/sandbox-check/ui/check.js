@@ -84,6 +84,24 @@ const CHECKS = [
     return (await spectra.storage.get('probe')) === value || 'the value changed'
   }],
   ['The launcher answers', async () => typeof (await spectra.launcher.version()) === 'string' || 'no version'],
+  ['Backend runs Rust code', async () => {
+    const stats = await spectra.backend.call('stats', { values: [2, 4, 9] })
+    return stats.mean === 5 || JSON.stringify(stats)
+  }],
+  ['Backend reaches the API it has permission for', async () => {
+    const result = await spectra.backend.call('instance_count')
+    return typeof result.instances === 'number' || JSON.stringify(result)
+  }],
+  ['Backend is refused what the addon may not do', async () => {
+    const result = await spectra.backend.call('forbidden')
+    return result.refused === true || JSON.stringify(result)
+  }],
+  ['Backend code that never ends is stopped', async () => {
+    const started = Date.now()
+    const outcome = await fails(spectra.backend.call('spin'), 'backend')
+    if (outcome !== true) return outcome
+    return Date.now() - started < 20000 || 'it was stopped, but too late'
+  }],
 ]
 
 const render = (results) => {
