@@ -157,6 +157,7 @@
     "selectHint": "选择一个日志文件以查看其内容。",
     "live": "实时日志",
     "window": "游戏控制台",
+    "autoClose": "游戏关闭时自动关闭",
     "autoscroll": "自动滚动",
     "clear": "清空",
     "waiting": "等待游戏输出…",

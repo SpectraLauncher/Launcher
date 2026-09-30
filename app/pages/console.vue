@@ -18,6 +18,7 @@
         {{ isRunning ? $t('logs.live') : $t('activity.idle') }} · {{ lines.length }}
       </span>
       <div class="ml-auto flex items-center gap-1.5">
+        <USwitch v-model="autoClose" size="xs" :label="$t('logs.autoClose')" class="mr-2" />
         <UButton
           icon="i-lucide-arrow-down-to-line"
           color="neutral"
@@ -68,6 +69,7 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 
 definePageMeta({ layout: 'browser' })
 
@@ -78,6 +80,7 @@ interface ConsoleChunk {
 }
 
 const KEEP = 5000
+const AUTO_CLOSE_KEY = 'spectra-console-autoclose'
 
 const route = useRoute()
 const instances = useInstancesStore()
@@ -103,6 +106,31 @@ const options = computed(() => {
 })
 
 const isRunning = computed(() => !!selected.value && running.value.includes(selected.value))
+
+const autoClose = ref((() => {
+  try {
+    return localStorage.getItem(AUTO_CLOSE_KEY) === 'true'
+  } catch {
+    return false
+  }
+})())
+watch(autoClose, (value) => {
+  try {
+    localStorage.setItem(AUTO_CLOSE_KEY, String(value))
+  } catch {
+  }
+})
+
+async function onExit(id: string) {
+  await refreshRunning()
+  if (!autoClose.value || id !== selected.value) return
+  const next = running.value.find(other => other !== id)
+  if (next) {
+    selected.value = next
+    return
+  }
+  await getCurrentWindow().close()
+}
 
 async function pump() {
   if (!selected.value) return
@@ -195,6 +223,7 @@ function clear() {
 let pumpTimer: ReturnType<typeof setInterval> | undefined
 let runningTimer: ReturnType<typeof setInterval> | undefined
 let unlisten: UnlistenFn | null = null
+let unlistenExit: UnlistenFn | null = null
 
 onMounted(async () => {
   if (!instances.instances.length) instances.load()
@@ -203,11 +232,13 @@ onMounted(async () => {
   pumpTimer = setInterval(pump, 500)
   runningTimer = setInterval(refreshRunning, 2000)
   unlisten = await listen<string>('console://select', (e) => { selected.value = e.payload })
+  unlistenExit = await listen<{ instance_id: string }>('mc://exited', (e) => { void onExit(e.payload.instance_id) })
 })
 
 onBeforeUnmount(() => {
   clearInterval(pumpTimer)
   clearInterval(runningTimer)
   unlisten?.()
+  unlistenExit?.()
 })
 </script>

@@ -157,6 +157,7 @@
     "selectHint": "Wybierz plik logu, aby zobaczyć jego zawartość.",
     "live": "Logi na żywo",
     "window": "Konsola gry",
+    "autoClose": "Zamknij, gdy gra się zamknie",
     "autoscroll": "Auto-przewijanie",
     "clear": "Wyczyść",
     "waiting": "Oczekiwanie na wyjście gry…",

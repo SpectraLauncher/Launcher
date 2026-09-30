@@ -157,6 +157,7 @@
     "selectHint": "Sélectionne un fichier journal pour voir son contenu.",
     "live": "Journaux en direct",
     "window": "Console du jeu",
+    "autoClose": "Fermer quand le jeu se ferme",
     "autoscroll": "Défilement automatique",
     "clear": "Effacer",
     "waiting": "En attente de la sortie du jeu…",

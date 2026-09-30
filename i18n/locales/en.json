@@ -157,6 +157,7 @@
     "selectHint": "Select a log file to view its contents.",
     "live": "Live logs",
     "window": "Game console",
+    "autoClose": "Close when the game closes",
     "autoscroll": "Auto-scroll",
     "clear": "Clear",
     "waiting": "Waiting for game output…",

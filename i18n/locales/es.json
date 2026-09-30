@@ -157,6 +157,7 @@
     "selectHint": "Selecciona un archivo de registro para ver su contenido.",
     "live": "Registros en vivo",
     "window": "Consola del juego",
+    "autoClose": "Cerrar cuando se cierre el juego",
     "autoscroll": "Desplazamiento automático",
     "clear": "Limpiar",
     "waiting": "Esperando la salida del juego…",

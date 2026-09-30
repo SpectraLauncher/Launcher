@@ -157,6 +157,7 @@
     "selectHint": "Wähle eine Log-Datei, um ihren Inhalt anzuzeigen.",
     "live": "Live-Logs",
     "window": "Spielkonsole",
+    "autoClose": "Schließen, wenn das Spiel endet",
     "autoscroll": "Auto-Scrollen",
     "clear": "Leeren",
     "waiting": "Warte auf Spielausgabe…",
