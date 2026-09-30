@@ -205,6 +205,8 @@ pub fn run() {
             commands::addons::addons_reload,
             commands::addons::addons_set_enabled,
             commands::addons::addons_uninstall,
+            commands::addons::addons_open_folder,
+            commands::addons::addons_check_updates,
             commands::addons::take_pending_addon,
             commands::images::get_image_thumbnail,
             commands::settings::get_settings,

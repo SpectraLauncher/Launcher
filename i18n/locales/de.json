@@ -909,6 +909,11 @@
       "serversPing": "Prüft Minecraft-Server",
       "accountRead": "Kennt die Namen deiner Minecraft- und Spectra-Konten",
       "skinsRead": "Sieht deine Skins"
-    }
+    },
+    "openFolder": "Ordner öffnen",
+    "checkUpdates": "Nach Updates suchen",
+    "upToDate": "Alle Addons sind aktuell.",
+    "updateTo": "Auf {version} aktualisieren",
+    "updatesFound": "Addon-Updates verfügbar: {n}"
   }
 }

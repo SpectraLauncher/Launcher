@@ -1,7 +1,28 @@
 <template>
   <div class="space-y-6">
     <div>
-      <p class="text-sm font-medium">{{ t('addons.installed') }}</p>
+      <div class="flex items-center justify-between gap-2">
+        <p class="text-sm font-medium">{{ t('addons.installed') }}</p>
+        <div class="flex items-center gap-1">
+          <UButton
+            icon="i-lucide-refresh-cw"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            :loading="checking"
+            :label="t('addons.checkUpdates')"
+            @click="checkUpdates"
+          />
+          <UButton
+            icon="i-lucide-folder-open"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            :label="t('addons.openFolder')"
+            @click="run(() => invoke<void>('addons_open_folder'))"
+          />
+        </div>
+      </div>
       <p v-if="!addons.addons.length" class="mt-2 text-sm text-muted">{{ t('addons.none') }}</p>
       <ul v-else class="mt-2 space-y-2">
         <li
@@ -10,53 +31,60 @@
           class="rounded-xl border border-default px-3 py-2"
         >
           <div class="flex items-center gap-3">
-          <img v-if="a.icon" :src="a.icon" alt="" class="size-9 shrink-0 rounded-lg object-cover">
-          <div v-else class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/5">
-            <UIcon name="i-lucide-puzzle" class="size-4" />
-          </div>
-          <div class="min-w-0 flex-1">
-            <div class="flex flex-wrap items-center gap-2">
-              <p class="truncate text-sm font-medium">{{ a.name }}</p>
-              <span class="font-mono text-xs text-muted">{{ a.version }}</span>
-              <UBadge v-if="a.source !== 'catalog'" color="warning" variant="soft" size="sm" :label="t('addons.unverified')" />
+            <img v-if="a.icon" :src="a.icon" alt="" class="size-9 shrink-0 rounded-lg object-cover">
+            <div v-else class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/5">
+              <UIcon name="i-lucide-puzzle" class="size-4" />
             </div>
-            <p v-if="a.error" class="text-xs text-error">{{ a.error }}</p>
-            <p v-else-if="a.description" class="truncate text-xs text-muted">{{ a.description }}</p>
-          </div>
-          <UButton
-            v-if="a.settings && a.enabled && !a.error"
-            icon="i-lucide-sliders-horizontal"
-            size="xs"
-            color="neutral"
-            :variant="openSettings === a.id ? 'soft' : 'ghost'"
-            :title="t('addons.openSettings')"
-            :aria-label="t('addons.openSettings')"
-            @click="openSettings = openSettings === a.id ? null : a.id"
-          />
-          <UButton
-            v-if="a.source === 'folder' && devMode"
-            icon="i-lucide-rotate-cw"
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            :title="t('addons.reload')"
-            :aria-label="t('addons.reload')"
-            @click="reload(a)"
-          />
-          <USwitch
-            :model-value="a.enabled"
-            :aria-label="t('addons.enabled')"
-            @update:model-value="(v: boolean) => toggle(a, v)"
-          />
-          <UButton
-            icon="i-lucide-trash-2"
-            size="xs"
-            color="error"
-            variant="ghost"
-            :title="t('addons.uninstall')"
-            :aria-label="t('addons.uninstall')"
-            @click="remove(a)"
-          />
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <p class="truncate text-sm font-medium">{{ a.name }}</p>
+                <span class="font-mono text-xs text-muted">{{ a.version }}</span>
+                <UBadge v-if="a.source !== 'catalog'" color="warning" variant="soft" size="sm" :label="t('addons.unverified')" />
+              </div>
+              <p v-if="a.error" class="text-xs text-error">{{ a.error }}</p>
+              <p v-else-if="a.description" class="truncate text-xs text-muted">{{ a.description }}</p>
+            </div>
+            <UButton
+              v-if="a.settings && a.enabled && !a.error"
+              icon="i-lucide-sliders-horizontal"
+              size="xs"
+              color="neutral"
+              :variant="openSettings === a.id ? 'soft' : 'ghost'"
+              :title="t('addons.openSettings')"
+              :aria-label="t('addons.openSettings')"
+              @click="openSettings = openSettings === a.id ? null : a.id"
+            />
+            <UButton
+              v-if="a.source === 'folder' && devMode"
+              icon="i-lucide-rotate-cw"
+              size="xs"
+              color="neutral"
+              variant="ghost"
+              :title="t('addons.reload')"
+              :aria-label="t('addons.reload')"
+              @click="reload(a)"
+            />
+            <UButton
+              v-if="addons.updateFor(a.id) && a.project"
+              icon="i-lucide-arrow-up-circle"
+              size="xs"
+              :label="t('addons.updateTo', { version: addons.updateFor(a.id)!.latest })"
+              @click="install.fromCatalog(a.project)"
+            />
+            <USwitch
+              :model-value="a.enabled"
+              :aria-label="t('addons.enabled')"
+              @update:model-value="(v: boolean) => toggle(a, v)"
+            />
+            <UButton
+              icon="i-lucide-trash-2"
+              size="xs"
+              color="error"
+              variant="ghost"
+              :title="t('addons.uninstall')"
+              :aria-label="t('addons.uninstall')"
+              @click="remove(a)"
+            />
           </div>
           <AddonFrame
             v-if="openSettings === a.id && a.settings && a.enabled && !a.error"
@@ -126,6 +154,19 @@ const addons = useAddonsStore()
 const install = useAddonInstall()
 
 const openSettings = ref<string | null>(null)
+const checking = ref(false)
+
+async function checkUpdates() {
+  checking.value = true
+  try {
+    const updates = await addons.checkUpdates()
+    if (!updates.length) toast.add({ title: t('addons.upToDate'), color: 'success' })
+  } catch (e) {
+    toast.add({ title: errorText(e), color: 'error' })
+  } finally {
+    checking.value = false
+  }
+}
 const query = ref('')
 const hits = ref<CatalogHit[]>([])
 const closed = ref(false)

@@ -925,6 +925,8 @@ struct CatalogProject {
 #[derive(Debug, Deserialize)]
 pub struct CatalogVersion {
     #[serde(default)]
+    pub number: String,
+    #[serde(default)]
     pub meta: serde_json::Value,
     #[serde(default)]
     pub files: Vec<CatalogFile>,
@@ -947,7 +949,7 @@ pub struct CatalogHashes {
 pub fn pick_version<'a>(
     versions: &'a [CatalogVersion],
     launcher: &semver::Version,
-) -> Option<&'a CatalogFile> {
+) -> Option<(&'a CatalogVersion, &'a CatalogFile)> {
     versions
         .iter()
         .filter(|v| {
@@ -955,7 +957,47 @@ pub fn pick_version<'a>(
             let range = v.meta.get("launcher").and_then(serde_json::Value::as_str);
             api.is_some_and(|a| API_VERSIONS.iter().any(|x| u64::from(*x) == a)) && fits_launcher(range, launcher)
         })
-        .find_map(|v| v.files.iter().find(|f| f.primary).or_else(|| v.files.first()))
+        .find_map(|v| v.files.iter().find(|f| f.primary).or_else(|| v.files.first()).map(|f| (v, f)))
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateInfo {
+    pub id: String,
+    pub project: String,
+    pub current: String,
+    pub latest: String,
+    pub new_permissions: Vec<String>,
+}
+
+pub fn update_for(
+    installed: &Installed,
+    granted: &[String],
+    versions: &[CatalogVersion],
+    launcher: &semver::Version,
+) -> Option<UpdateInfo> {
+    let project = installed.project.clone()?;
+    let (version, file) = pick_version(versions, launcher)?;
+    if installed.sha512.as_deref().is_some_and(|s| s.eq_ignore_ascii_case(file.hashes.sha512.trim())) {
+        return None;
+    }
+    let new_permissions = version
+        .meta
+        .get("permissions")
+        .and_then(serde_json::Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(serde_json::Value::as_str)
+        .filter(|p| !granted.iter().any(|g| g == p))
+        .map(str::to_string)
+        .collect();
+    Some(UpdateInfo {
+        id: installed.id.clone(),
+        project,
+        current: installed.version.clone(),
+        latest: version.number.clone(),
+        new_permissions,
+    })
 }
 
 async fn catalog_get(path: &str) -> AppResult<reqwest::Response> {
@@ -1086,7 +1128,7 @@ pub async fn addons_stage_catalog(state: State<'_, AppState>, slug: String) -> A
     if response.project.kind != "addon" {
         return Err(AppError::invalid("this project is not a launcher addon"));
     }
-    let file = pick_version(&response.project.versions, &launcher_version())
+    let (_, file) = pick_version(&response.project.versions, &launcher_version())
         .ok_or_else(|| AppError::new("unsupported", "No version of this addon works with this launcher."))?;
 
     let path = staging_file()?;
@@ -1105,6 +1147,25 @@ pub async fn addons_stage_catalog(state: State<'_, AppState>, slug: String) -> A
         owned: true,
     };
     stage(&state, staged)
+}
+
+#[tauri::command]
+pub async fn addons_check_updates() -> AppResult<Vec<UpdateInfo>> {
+    let installed = crate::blocking(load_state).await?;
+    let launcher = launcher_version();
+    let mut updates = Vec::new();
+    for entry in installed.into_iter().filter(|a| a.source == "catalog") {
+        let Some(project) = entry.project.clone() else { continue };
+        let Ok(response) = catalog_get(&format!("/api/catalog/project/{project}")).await else { continue };
+        let Ok(parsed) = response.json::<CatalogResponse>().await else { continue };
+        let granted = read_manifest(&Package::Folder(paths::addons_dir().join(&entry.id)))
+            .map(|m| m.permissions)
+            .unwrap_or_default();
+        if let Some(update) = update_for(&entry, &granted, &parsed.project.versions, &launcher) {
+            updates.push(update);
+        }
+    }
+    Ok(updates)
 }
 
 #[tauri::command]
@@ -1230,6 +1291,13 @@ pub async fn addons_uninstall(app: tauri::AppHandle, id: String) -> AppResult<()
         Ok(())
     })
     .await
+}
+
+#[tauri::command]
+pub fn addons_open_folder() -> AppResult<()> {
+    let dir = paths::addons_dir();
+    std::fs::create_dir_all(&dir)?;
+    crate::commands::instances::open_in_file_manager(&dir)
 }
 
 #[tauri::command]
@@ -1388,6 +1456,7 @@ mod tests {
     #[test]
     fn the_newest_version_this_launcher_can_run_wins() {
         let version = |api: u64, launcher: Option<&str>, id: &str| CatalogVersion {
+            number: id.into(),
             meta: serde_json::json!({ "api": api, "launcher": launcher }),
             files: vec![
                 CatalogFile { id: format!("{id}-extra"), size: 1, primary: false, hashes: CatalogHashes { sha512: "a".into() } },
@@ -1401,7 +1470,7 @@ mod tests {
             version(1, None, "older"),
         ];
         let v = semver::Version::parse("0.9.0").unwrap();
-        assert_eq!(pick_version(&versions, &v).unwrap().id, "fits");
+        assert_eq!(pick_version(&versions, &v).unwrap().1.id, "fits");
         assert!(pick_version(&versions[..2], &v).is_none());
     }
 
@@ -1534,6 +1603,52 @@ mod tests {
         }
         for bad in ["", "/abs", "../x", "a/../b", "a\\b", "C:/x", "a//b", "./a", "a\u{0}b"] {
             assert!(!safe_name(bad), "{bad:?}");
+        }
+    }
+
+    #[test]
+    fn an_update_is_a_different_file_and_names_what_it_newly_asks_for() {
+        let installed = Installed {
+            id: "stats".into(),
+            version: "1.0.0".into(),
+            source: "catalog".into(),
+            project: Some("stats".into()),
+            icon: None,
+            sha512: Some("AAA".into()),
+            dev_path: None,
+            enabled: true,
+            installed_at: String::new(),
+        };
+        let version = |number: &str, sha: &str, permissions: serde_json::Value| CatalogVersion {
+            number: number.into(),
+            meta: serde_json::json!({ "api": 1, "permissions": permissions }),
+            files: vec![CatalogFile { id: "f".into(), size: 1, primary: true, hashes: CatalogHashes { sha512: sha.into() } }],
+        };
+        let v = semver::Version::parse("0.9.0").unwrap();
+        let granted = vec!["instances:read".to_string()];
+
+        assert!(update_for(&installed, &granted, &[version("1.0.0", "aaa", serde_json::json!(["instances:read"]))], &v).is_none());
+
+        let newer = [version("1.1.0", "bbb", serde_json::json!(["instances:read", "logs:read"]))];
+        let update = update_for(&installed, &granted, &newer, &v).unwrap();
+        assert_eq!((update.current.as_str(), update.latest.as_str()), ("1.0.0", "1.1.0"));
+        assert_eq!(update.new_permissions, vec!["logs:read".to_string()]);
+
+        let from_file = Installed { project: None, ..installed };
+        assert!(update_for(&from_file, &granted, &newer, &v).is_none());
+    }
+
+    #[test]
+    fn the_example_addon_passes_every_check() {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../examples/sandbox-check");
+        let inspected = inspect(&Package::Folder(dir)).unwrap();
+        check_runs_here(&inspected.manifest).unwrap();
+        assert!(runs_code(&inspected.manifest));
+        assert_eq!(inspected.themes[0].background.as_deref(), Some("themes/background.png"));
+        assert_eq!(inspected.locales["pl"]["check"], "Test piaskownicy");
+        let slots: BTreeSet<&str> = inspected.manifest.contributes.buttons.iter().map(|b| b.slot.as_str()).collect();
+        for slot in ["sidebar.menu", "titlebar", "instance.menu", "instance.header", "home.header"] {
+            assert!(slots.contains(slot), "{slot}");
         }
     }
 }

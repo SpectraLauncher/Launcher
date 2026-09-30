@@ -191,6 +191,13 @@ onMounted(async () => {
 
   addons.load().catch(() => {})
   await addons.checkAvailable()
+  if (!isContentWindow.value && addons.available) {
+    addons.checkUpdates()
+      .then((updates) => {
+        if (updates.length) toast.add({ title: t('addons.updatesFound', { n: updates.length }), color: 'info' })
+      })
+      .catch(() => {})
+  }
   addonUnlisteners.push(
     await listen<{ name: string; payload: Record<string, unknown> }>('addon://event', (e) => {
       emitAddonEvent(e.payload.name, e.payload.payload)

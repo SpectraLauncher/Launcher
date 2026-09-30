@@ -909,6 +909,11 @@
       "serversPing": "Проверяет серверы Minecraft",
       "accountRead": "Знает имена ваших аккаунтов Minecraft и Spectra",
       "skinsRead": "Видит ваши скины"
-    }
+    },
+    "openFolder": "Открыть папку",
+    "checkUpdates": "Проверить обновления",
+    "upToDate": "Все дополнения обновлены.",
+    "updateTo": "Обновить до {version}",
+    "updatesFound": "Доступны обновления дополнений: {n}"
   }
 }

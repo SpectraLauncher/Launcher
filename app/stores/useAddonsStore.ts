@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { invoke } from '@tauri-apps/api/core'
-import type { Addon, AddonButton, AddonTheme } from '~/types/launcher'
+import type { Addon, AddonButton, AddonTheme, AddonUpdate } from '~/types/launcher'
 
 const AVAILABLE_KEY = 'spectra-addons-available'
 
@@ -21,6 +21,7 @@ export const useAddonsStore = defineStore('addons', {
     loaded: false,
     available: false,
     origin: '',
+    updates: [] as AddonUpdate[],
   }),
   getters: {
     active(state): Addon[] {
@@ -41,6 +42,15 @@ export const useAddonsStore = defineStore('addons', {
       const file = path.split('/').map(encodeURIComponent).join('/')
       const search = new URLSearchParams(query).toString()
       return `${this.origin}/${encodeURIComponent(addonId)}/${file}${search ? `?${search}` : ''}`
+    },
+
+    async checkUpdates() {
+      this.updates = await invoke<AddonUpdate[]>('addons_check_updates')
+      return this.updates
+    },
+
+    updateFor(id: string): AddonUpdate | undefined {
+      return this.updates.find(u => u.id === id)
     },
 
     async checkAvailable() {

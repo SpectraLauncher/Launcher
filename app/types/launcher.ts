@@ -300,3 +300,11 @@ export interface AddonPreview {
   permissions: string[]
   runsCode: boolean
 }
+
+export interface AddonUpdate {
+  id: string
+  project: string
+  current: string
+  latest: string
+  newPermissions: string[]
+}

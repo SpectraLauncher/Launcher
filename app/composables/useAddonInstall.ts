@@ -30,7 +30,9 @@ export const useAddonInstall = () => {
     loading.value = true
     try {
       await invoke('addons_commit', { token: preview.value.token })
-      await useAddonsStore().load()
+      const store = useAddonsStore()
+      await store.load()
+      store.checkUpdates().catch(() => {})
       const name = preview.value.name
       preview.value = null
       isOpen.value = false

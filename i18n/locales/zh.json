@@ -908,6 +908,11 @@
       "serversPing": "检测 Minecraft 服务器",
       "accountRead": "知道你的 Minecraft 和 Spectra 账号名称",
       "skinsRead": "查看你的皮肤"
-    }
+    },
+    "openFolder": "打开文件夹",
+    "checkUpdates": "检查更新",
+    "upToDate": "所有插件都是最新的。",
+    "updateTo": "更新到 {version}",
+    "updatesFound": "可更新的插件：{n}"
   }
 }

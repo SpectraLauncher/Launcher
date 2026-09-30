@@ -417,7 +417,7 @@ pub async fn copy_file(from: String, to: String) -> AppResult<()> {
     .await
 }
 
-fn open_in_file_manager(path: &std::path::Path) -> AppResult<()> {
+pub(crate) fn open_in_file_manager(path: &std::path::Path) -> AppResult<()> {
     #[cfg(target_os = "windows")]
     {
         use std::os::windows::process::CommandExt;

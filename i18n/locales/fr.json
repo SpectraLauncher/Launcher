@@ -909,6 +909,11 @@
       "serversPing": "Vérifie des serveurs Minecraft",
       "accountRead": "Connaît les noms de tes comptes Minecraft et Spectra",
       "skinsRead": "Voit tes skins"
-    }
+    },
+    "openFolder": "Ouvrir le dossier",
+    "checkUpdates": "Rechercher des mises à jour",
+    "upToDate": "Toutes les extensions sont à jour.",
+    "updateTo": "Mettre à jour vers {version}",
+    "updatesFound": "Mises à jour d’extensions disponibles : {n}"
   }
 }

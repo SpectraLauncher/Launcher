@@ -909,6 +909,11 @@
       "serversPing": "Sprawdza serwery Minecraft",
       "accountRead": "Zna nazwy twoich kont Minecraft i Spectra",
       "skinsRead": "Widzi twoje skórki"
-    }
+    },
+    "openFolder": "Otwórz folder",
+    "checkUpdates": "Sprawdź aktualizacje",
+    "upToDate": "Wszystkie addony są aktualne.",
+    "updateTo": "Aktualizuj do {version}",
+    "updatesFound": "Dostępne aktualizacje addonów: {n}"
   }
 }
