@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Sandbox tab</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1 id="name">…</h1>
+  <p class="lede">This tab lives inside the instance page and knows which instance it is on.</p>
+  <table>
+    <tbody>
+      <tr><th>Instance id</th><td class="detail" id="id"></td></tr>
+      <tr><th>Minecraft</th><td id="mc"></td></tr>
+      <tr><th>Mods</th><td id="mods"></td></tr>
+      <tr><th>Worlds</th><td id="worlds"></td></tr>
+    </tbody>
+  </table>
+  <script>
+    const id = spectra.context.instanceId
+    document.getElementById('id').textContent = id ?? 'missing'
+    ;(async () => {
+      try {
+        const instance = await spectra.instances.get(id)
+        document.getElementById('name').textContent = instance.name
+        document.getElementById('mc').textContent = `${instance.mcVersion} · ${instance.loader.type}`
+        const mods = await spectra.instances.content(id, 'mod')
+        document.getElementById('mods').textContent = `${mods.filter(m => m.enabled).length} on, ${mods.length} total`
+        const worlds = await spectra.instances.worlds(id)
+        document.getElementById('worlds').textContent = worlds.map(w => w.name).join(', ') || 'none'
+      } catch (error) {
+        document.getElementById('name').textContent = `${error.code}: ${error.message}`
+      }
+    })()
+  </script>
+</body>
+</html>

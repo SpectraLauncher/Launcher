@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Sandbox Check settings</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <label>
+    <input id="toast" type="checkbox">
+    Show a notification when the game closes
+  </label>
+  <p class="lede" id="saved"></p>
+  <script>
+    const box = document.getElementById('toast')
+    const saved = document.getElementById('saved')
+    ;(async () => {
+      box.checked = (await spectra.storage.get('toastOnExit')) !== false
+    })()
+    box.addEventListener('change', async () => {
+      await spectra.storage.set('toastOnExit', box.checked)
+      saved.textContent = 'Saved.'
+    })
+  </script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Sandbox events</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Events</h1>
+  <p class="lede">What main.js recorded. Launch or close a game, add or remove an instance, or count mods from the instance menu.</p>
+  <button id="clear" type="button">Clear</button>
+  <ul class="events" id="events"></ul>
+  <script>
+    const list = document.getElementById('events')
+
+    const refresh = async () => {
+      const events = (await spectra.storage.get('events')) ?? []
+      list.replaceChildren(...events.map((event) => {
+        const item = document.createElement('li')
+        const { at, name, ...rest } = event
+        item.textContent = `${at.slice(11, 19)}  ${name}  ${Object.keys(rest).length ? JSON.stringify(rest) : ''}`
+        return item
+      }))
+    }
+
+    document.getElementById('clear').addEventListener('click', async () => {
+      await spectra.storage.set('events', [])
+      refresh()
+    })
+
+    for (const name of ['game:launch', 'game:exit', 'instance:created', 'instance:removed']) {
+      spectra.events.on(name, () => setTimeout(refresh, 300))
+    }
+    setInterval(refresh, 2000)
+    refresh()
+  </script>
+</body>
+</html>

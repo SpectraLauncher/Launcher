@@ -1,0 +1,63 @@
+{
+  "id": "sandbox-check",
+  "name": "Sandbox Check",
+  "version": "1.0.0",
+  "description": "Checks that addon code stays inside its sandbox and shows every place an addon can reach.",
+  "api": 1,
+  "main": "main.js",
+  "permissions": ["instances:read", "network:api.github.com"],
+  "contributes": {
+    "pages": [
+      { "id": "check", "title": "%check%", "icon": "icons/check.svg", "entry": "ui/check.html" }
+    ],
+    "instanceTabs": [
+      { "id": "sandbox", "title": "%tab%", "icon": "icons/check.svg", "entry": "ui/tab.html" }
+    ],
+    "settings": "ui/settings.html",
+    "windows": [
+      { "id": "events", "title": "Sandbox events", "entry": "ui/events.html", "width": 460, "height": 520 }
+    ],
+    "themes": [
+      { "id": "sandbox", "name": "%theme%", "file": "themes/sandbox.json" }
+    ],
+    "locales": {
+      "en": "locales/en.json",
+      "pl": "locales/pl.json"
+    },
+    "buttons": [
+      {
+        "id": "open-check",
+        "slot": "sidebar.menu",
+        "title": "%check%",
+        "icon": "icons/check.svg",
+        "action": { "type": "page", "page": "check" }
+      },
+      {
+        "id": "events",
+        "slot": "titlebar",
+        "title": "%events%",
+        "icon": "icons/events.svg",
+        "action": { "type": "window", "window": "events" }
+      },
+      {
+        "id": "count-mods",
+        "slot": "instance.menu",
+        "title": "%countMods%",
+        "action": { "type": "command", "command": "count-mods" }
+      },
+      {
+        "id": "count-mods-header",
+        "slot": "instance.header",
+        "title": "%countMods%",
+        "icon": "icons/check.svg",
+        "action": { "type": "command", "command": "count-mods" }
+      },
+      {
+        "id": "repo",
+        "slot": "home.header",
+        "title": "%repo%",
+        "action": { "type": "url", "url": "https://github.com/SpectraLauncher" }
+      }
+    ]
+  }
+}
