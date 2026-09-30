@@ -279,6 +279,7 @@ pub enum Needs {
     Nothing,
     Permission(&'static str),
     Network,
+    Files,
 }
 
 pub fn requirement(method: &str) -> Option<Needs> {
@@ -292,7 +293,10 @@ pub fn requirement(method: &str) -> Option<Needs> {
         "servers.ping" => Needs::Permission("servers:ping"),
         "account.minecraft" | "account.spectra" => Needs::Permission("account:read"),
         "skins.list" => Needs::Permission("skins:read"),
+        "resourcepacks.files" | "resourcepacks.read" => Needs::Permission("resourcepacks:read"),
+        "resourcepacks.save" => Needs::Permission("resourcepacks:write"),
         "http.fetch" => Needs::Network,
+        "files.list" | "files.read" | "files.write" | "files.remove" | "files.mkdir" => Needs::Files,
         "storage.get" | "storage.set" | "storage.remove" | "storage.keys" | "ui.toast" | "ui.navigate"
         | "ui.openWindow" | "ui.openUrl" | "ui.confirm" | "launcher.version" | "launcher.locale"
         | "launcher.theme" | "backend.call" => Needs::Nothing,
@@ -647,6 +651,64 @@ pub async fn dispatch(app: Option<&AppHandle>, manifest: &Manifest, method: &str
             crate::commands::content::set_content_enabled(id, kind, filename, enabled)?;
             Ok(Value::Null)
         }
+        "resourcepacks.files" => {
+            let id = instance_id(&params).await?;
+            let filename = text(&params, "filename", 255)?;
+            let folder = paths::instance_game_dir(&id).join("resourcepacks");
+            let listing = crate::blocking(move || crate::commands::resourcepacks::list(&folder, &filename)).await?;
+            Ok(serde_json::to_value(listing)?)
+        }
+        "resourcepacks.read" => {
+            let id = instance_id(&params).await?;
+            let filename = text(&params, "filename", 255)?;
+            let path = text(&params, "path", 512)?;
+            let folder = paths::instance_game_dir(&id).join("resourcepacks");
+            let data = crate::blocking(move || crate::commands::resourcepacks::read(&folder, &filename, &path)).await?;
+            Ok(json!({ "data": data }))
+        }
+        "resourcepacks.save" => {
+            let id = instance_id(&params).await?;
+            let filename = text(&params, "filename", 255)?;
+            let excluded: Vec<String> = match params.get("excluded") {
+                None | Some(Value::Null) => Vec::new(),
+                Some(value) => serde_json::from_value(value.clone())
+                    .map_err(|_| AppError::invalid("excluded has to be a list of paths"))?,
+            };
+            let app = needs_app(app)?;
+            if crate::commands::launch::is_instance_running(app.state::<AppState>(), id.clone())? {
+                return Err(AppError::busy("close the game first: it keeps its resource packs open and rewrites options.txt when it quits"));
+            }
+            let game = paths::instance_game_dir(&id);
+            let saved = crate::blocking(move || crate::commands::resourcepacks::save(&game, &filename, &excluded)).await?;
+            Ok(serde_json::to_value(saved)?)
+        }
+        "files.list" | "files.read" | "files.write" | "files.remove" | "files.mkdir" => {
+            use crate::commands::addon_files::{self as files, Access};
+            let id = instance_id(&params).await?;
+            let rel = text(&params, "path", 512)?;
+            let access = if matches!(method, "files.list" | "files.read") { Access::Read } else { Access::Write };
+            let game = paths::instance_game_dir(&id);
+            let path = files::resolve(&game, &rel, &manifest.permissions, access)?;
+            let trash = paths::instance_dir(&id).join("addon-trash").join(&manifest.id);
+            let base64 = match params.get("encoding").and_then(Value::as_str) {
+                None | Some("text") => false,
+                Some("base64") => true,
+                Some(_) => return Err(AppError::invalid("encoding has to be text or base64")),
+            };
+            let data = match method {
+                "files.write" => Some(files::decode(params.get("data").and_then(Value::as_str).unwrap_or_default(), base64)?),
+                _ => None,
+            };
+            let method = method.to_string();
+            crate::blocking(move || match method.as_str() {
+                "files.list" => Ok(serde_json::to_value(files::list(&path)?)?),
+                "files.read" => Ok(json!(files::read(&path, base64)?)),
+                "files.write" => files::write(&path, &data.unwrap_or_default(), &trash, &rel).map(|_| Value::Null),
+                "files.remove" => files::remove(&path, &trash, &rel).map(|_| Value::Null),
+                _ => files::mkdir(&path).map(|_| Value::Null),
+            })
+            .await
+        }
         "instances.stop" => {
             let id = instance_id(&params).await?;
             let app = needs_app(app)?;
@@ -975,6 +1037,21 @@ mod tests {
         authorize(&none, "ui.toast").unwrap();
         assert_eq!(authorize(&reader, "fs.read").unwrap_err().code, "unknown_method");
         assert_eq!(authorize(&reader, "auth_login").unwrap_err().code, "unknown_method");
+
+        let packs = manifest(&["resourcepacks:read"]);
+        authorize(&packs, "resourcepacks.files").unwrap();
+        authorize(&packs, "resourcepacks.read").unwrap();
+        assert_eq!(authorize(&packs, "resourcepacks.save").unwrap_err().code, "permission_denied");
+        assert_eq!(requirement("files.write"), Some(Needs::Files));
+    }
+
+    #[test]
+    fn every_sdk_call_is_a_known_method() {
+        let calls: Vec<&str> = SDK.split("call('").skip(1).filter_map(|rest| rest.split('\'').next()).collect();
+        assert!(calls.len() > 20);
+        for method in calls.into_iter().filter(|m| !matches!(*m, "events.subscribe" | "commands.register")) {
+            assert!(requirement(method).is_some(), "{method}");
+        }
     }
 
     #[test]

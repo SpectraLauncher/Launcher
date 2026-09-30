@@ -89,6 +89,18 @@
     skins: Object.freeze({
       list: () => call('skins.list'),
     }),
+    files: Object.freeze({
+      list: (id, path) => call('files.list', { id, path }),
+      read: (id, path, options = {}) => call('files.read', { id, path, encoding: options.encoding }),
+      write: (id, path, data, options = {}) => call('files.write', { id, path, data, encoding: options.encoding }),
+      remove: (id, path) => call('files.remove', { id, path }),
+      mkdir: (id, path) => call('files.mkdir', { id, path }),
+    }),
+    resourcepacks: Object.freeze({
+      files: (id, filename) => call('resourcepacks.files', { id, filename }),
+      read: (id, filename, path) => call('resourcepacks.read', { id, filename, path }),
+      save: (id, filename, excluded) => call('resourcepacks.save', { id, filename, excluded }),
+    }),
     http: Object.freeze({
       fetch: (url, init = {}) => call('http.fetch', { url, method: init.method, headers: init.headers, body: init.body }),
     }),

@@ -921,6 +921,8 @@
     "commandMissing": "Addon nie odpowiedział. Spróbuj za chwilę.",
     "openUrlAsk": "{name} chce otworzyć {url}. Otworzyć?",
     "permissionNetwork": "Łączy się z {host}",
+    "permissionFilesRead": "Czytać folder {folder} w twoich instancjach",
+    "permissionFilesWrite": "Zmieniać pliki w folderze {folder} twoich instancji",
     "permissionNames": {
       "instancesRead": "Widzi twoje instancje, ich zawartość i światy",
       "instancesWrite": "Zmienia ustawienia instancji i włącza lub wyłącza zawartość",
@@ -928,7 +930,9 @@
       "logsRead": "Czyta logi gry",
       "serversPing": "Sprawdza serwery Minecraft",
       "accountRead": "Zna nazwy twoich kont Minecraft i Spectra",
-      "skinsRead": "Widzi twoje skórki"
+      "skinsRead": "Widzi twoje skórki",
+      "resourcepacksRead": "Zaglądać do wnętrza twoich paczek zasobów",
+      "resourcepacksWrite": "Zapisywać edytowane kopie twoich paczek zasobów"
     },
     "openFolder": "Otwórz folder",
     "checkUpdates": "Sprawdź aktualizacje",

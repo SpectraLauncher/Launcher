@@ -921,6 +921,8 @@
     "commandMissing": "El complemento no respondió. Inténtalo de nuevo en un momento.",
     "openUrlAsk": "{name} quiere abrir {url}. ¿Abrirlo?",
     "permissionNetwork": "Se conecta a {host}",
+    "permissionFilesRead": "Leer la carpeta {folder} de tus instancias",
+    "permissionFilesWrite": "Cambiar archivos en la carpeta {folder} de tus instancias",
     "permissionNames": {
       "instancesRead": "Ve tus instancias, su contenido y sus mundos",
       "instancesWrite": "Cambia los ajustes de las instancias y activa o desactiva contenido",
@@ -928,7 +930,9 @@
       "logsRead": "Lee los registros del juego",
       "serversPing": "Comprueba servidores de Minecraft",
       "accountRead": "Conoce los nombres de tus cuentas de Minecraft y Spectra",
-      "skinsRead": "Ve tus skins"
+      "skinsRead": "Ve tus skins",
+      "resourcepacksRead": "Ver el interior de tus paquetes de recursos",
+      "resourcepacksWrite": "Guardar copias editadas de tus paquetes de recursos"
     },
     "openFolder": "Abrir carpeta",
     "checkUpdates": "Buscar actualizaciones",

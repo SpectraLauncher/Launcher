@@ -921,6 +921,8 @@
     "commandMissing": "L’extension n’a pas répondu. Réessaie dans un instant.",
     "openUrlAsk": "{name} veut ouvrir {url}. L’ouvrir ?",
     "permissionNetwork": "Se connecte à {host}",
+    "permissionFilesRead": "Lire le dossier {folder} de tes instances",
+    "permissionFilesWrite": "Modifier les fichiers du dossier {folder} de tes instances",
     "permissionNames": {
       "instancesRead": "Voit tes instances, leur contenu et leurs mondes",
       "instancesWrite": "Modifie les paramètres des instances et active ou désactive du contenu",
@@ -928,7 +930,9 @@
       "logsRead": "Lit les journaux du jeu",
       "serversPing": "Vérifie des serveurs Minecraft",
       "accountRead": "Connaît les noms de tes comptes Minecraft et Spectra",
-      "skinsRead": "Voit tes skins"
+      "skinsRead": "Voit tes skins",
+      "resourcepacksRead": "Regarder à l'intérieur de tes packs de ressources",
+      "resourcepacksWrite": "Enregistrer des copies modifiées de tes packs de ressources"
     },
     "openFolder": "Ouvrir le dossier",
     "checkUpdates": "Rechercher des mises à jour",

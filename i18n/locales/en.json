@@ -921,6 +921,8 @@
     "commandMissing": "The addon did not answer. Try again in a moment.",
     "openUrlAsk": "{name} wants to open {url}. Open it?",
     "permissionNetwork": "Connect to {host}",
+    "permissionFilesRead": "Read the {folder} folder of your instances",
+    "permissionFilesWrite": "Change files in the {folder} folder of your instances",
     "permissionNames": {
       "instancesRead": "See your instances, their content and worlds",
       "instancesWrite": "Change instance settings and turn content on or off",
@@ -928,7 +930,9 @@
       "logsRead": "Read game logs",
       "serversPing": "Check Minecraft servers",
       "accountRead": "Know your Minecraft and Spectra account names",
-      "skinsRead": "See your skins"
+      "skinsRead": "See your skins",
+      "resourcepacksRead": "Look inside your resource packs",
+      "resourcepacksWrite": "Save edited copies of your resource packs"
     },
     "openFolder": "Open folder",
     "checkUpdates": "Check for updates",

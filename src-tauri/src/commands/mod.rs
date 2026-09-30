@@ -1,3 +1,4 @@
+pub mod addon_files;
 pub mod addon_host;
 pub mod addons;
 pub mod auth;
@@ -15,6 +16,7 @@ pub mod meta;
 pub mod modrinth;
 pub mod mods;
 pub mod ping;
+pub mod resourcepacks;
 pub mod settings;
 pub mod share;
 pub mod skins;

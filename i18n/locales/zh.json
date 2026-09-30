@@ -920,6 +920,8 @@
     "commandMissing": "插件没有响应，请稍后再试。",
     "openUrlAsk": "{name} 想要打开 {url}。是否打开？",
     "permissionNetwork": "连接到 {host}",
+    "permissionFilesRead": "读取实例中的 {folder} 文件夹",
+    "permissionFilesWrite": "修改实例中 {folder} 文件夹里的文件",
     "permissionNames": {
       "instancesRead": "查看你的实例、内容和世界",
       "instancesWrite": "修改实例设置并启用或禁用内容",
@@ -927,7 +929,9 @@
       "logsRead": "读取游戏日志",
       "serversPing": "检测 Minecraft 服务器",
       "accountRead": "知道你的 Minecraft 和 Spectra 账号名称",
-      "skinsRead": "查看你的皮肤"
+      "skinsRead": "查看你的皮肤",
+      "resourcepacksRead": "查看资源包内部的文件",
+      "resourcepacksWrite": "保存资源包的修改副本"
     },
     "openFolder": "打开文件夹",
     "checkUpdates": "检查更新",

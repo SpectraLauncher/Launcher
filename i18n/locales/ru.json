@@ -921,6 +921,8 @@
     "commandMissing": "Дополнение не ответило. Попробуйте ещё раз через минуту.",
     "openUrlAsk": "{name} хочет открыть {url}. Открыть?",
     "permissionNetwork": "Подключается к {host}",
+    "permissionFilesRead": "Читать папку {folder} ваших сборок",
+    "permissionFilesWrite": "Изменять файлы в папке {folder} ваших сборок",
     "permissionNames": {
       "instancesRead": "Видит ваши сборки, их содержимое и миры",
       "instancesWrite": "Меняет настройки сборок и включает или выключает содержимое",
@@ -928,7 +930,9 @@
       "logsRead": "Читает логи игры",
       "serversPing": "Проверяет серверы Minecraft",
       "accountRead": "Знает имена ваших аккаунтов Minecraft и Spectra",
-      "skinsRead": "Видит ваши скины"
+      "skinsRead": "Видит ваши скины",
+      "resourcepacksRead": "Смотреть содержимое ваших ресурспаков",
+      "resourcepacksWrite": "Сохранять изменённые копии ваших ресурспаков"
     },
     "openFolder": "Открыть папку",
     "checkUpdates": "Проверить обновления",

@@ -921,6 +921,8 @@
     "commandMissing": "Das Addon hat nicht geantwortet. Versuche es gleich noch einmal.",
     "openUrlAsk": "{name} möchte {url} öffnen. Öffnen?",
     "permissionNetwork": "Verbindet sich mit {host}",
+    "permissionFilesRead": "Den Ordner {folder} deiner Instanzen lesen",
+    "permissionFilesWrite": "Dateien im Ordner {folder} deiner Instanzen ändern",
     "permissionNames": {
       "instancesRead": "Sieht deine Instanzen, ihre Inhalte und Welten",
       "instancesWrite": "Ändert Instanzeinstellungen und schaltet Inhalte ein oder aus",
@@ -928,7 +930,9 @@
       "logsRead": "Liest Spielprotokolle",
       "serversPing": "Prüft Minecraft-Server",
       "accountRead": "Kennt die Namen deiner Minecraft- und Spectra-Konten",
-      "skinsRead": "Sieht deine Skins"
+      "skinsRead": "Sieht deine Skins",
+      "resourcepacksRead": "In deine Ressourcenpakete hineinsehen",
+      "resourcepacksWrite": "Bearbeitete Kopien deiner Ressourcenpakete speichern"
     },
     "openFolder": "Ordner öffnen",
     "checkUpdates": "Nach Updates suchen",

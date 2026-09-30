@@ -20,6 +20,8 @@ pub const PERMISSIONS: &[&str] = &[
     "servers:ping",
     "account:read",
     "skins:read",
+    "resourcepacks:read",
+    "resourcepacks:write",
 ];
 
 pub const SLOTS: &[&str] = &[
@@ -280,7 +282,8 @@ pub fn validate(manifest: &Manifest, files: &BTreeSet<String>) -> Result<(), Str
     }
     for (i, permission) in manifest.permissions.iter().enumerate() {
         let network = permission.strip_prefix("network:").is_some_and(valid_host);
-        if !PERMISSIONS.contains(&permission.as_str()) && !network {
+        let files = crate::commands::addon_files::valid_permission(permission);
+        if !PERMISSIONS.contains(&permission.as_str()) && !network && !files {
             return Err(format!("permissions[{i}] is not a permission: {permission}"));
         }
     }
