@@ -1,3 +1,8 @@
+## Changes (v1.0.1)
+
+### ✨ Features & Improvements
+- **Themes can recolor the whole launcher**: An addon theme can now change the color of the launcher's text and borders, not only the accent and the background. Animated backgrounds work too.
+
 ## Changes (v1.0.0)
 
 ### ✨ Features & Improvements
