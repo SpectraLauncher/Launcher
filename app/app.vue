@@ -43,7 +43,7 @@
 
     <div class="h-10" />
 
-    <div :class="['relative w-screen h-[calc(100vh-2.5rem)] overflow-hidden text-[#eef1f5]', theme.bgClass]">
+    <div :class="['relative w-screen h-[calc(100vh-2.5rem)] overflow-hidden text-(--mk-text)', theme.bgClass]">
 
       <div
         v-if="themeBackground"
@@ -165,6 +165,14 @@ const themeBackground = computed(() => {
   const picked = addons.themes.find(t => t.key === theme.addonTheme)
   return picked?.background ? convertFileSrc(picked.background) : null
 })
+
+watch(
+  () => (addons.loaded ? addons.themes.find(t => t.key === theme.addonTheme)?.tint ?? null : undefined),
+  (tint) => {
+    if (tint !== undefined) theme.syncTint(tint)
+  },
+  { immediate: true },
+)
 
 async function openAccountSettings() {
   const url = await invoke<string>('spectra_account_settings_url')

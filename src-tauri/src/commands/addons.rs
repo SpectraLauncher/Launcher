@@ -152,6 +152,12 @@ struct ThemeFile {
     accent: Option<String>,
     #[serde(default)]
     background: Option<String>,
+    #[serde(default)]
+    tint: Option<String>,
+}
+
+fn valid_tint(value: &str) -> bool {
+    value.len() == 7 && value.starts_with('#') && value[1..].bytes().all(|b| b.is_ascii_hexdigit())
 }
 
 pub fn valid_id(value: &str) -> bool {
@@ -563,6 +569,7 @@ pub struct ThemeInfo {
     pub mode: Option<String>,
     pub accent: Option<String>,
     pub background: Option<String>,
+    pub tint: Option<String>,
 }
 
 fn read_manifest(package: &Package) -> AppResult<Manifest> {
@@ -584,12 +591,16 @@ fn read_theme(package: &Package, files: &BTreeSet<String>, theme: &ThemeRef) -> 
     if let Some(background) = &parsed.background {
         file(files, background, &format!("{}: background", theme.file), &[".png", ".jpg", ".jpeg", ".webp"])?;
     }
+    if parsed.tint.as_deref().is_some_and(|t| !valid_tint(t)) {
+        return Err(format!("{}: tint has to be a colour like #00ff41", theme.file));
+    }
     Ok(ThemeInfo {
         id: theme.id.clone(),
         name: theme.name.clone(),
         mode: parsed.mode,
         accent: parsed.accent,
         background: parsed.background.map(|b| b.trim().trim_start_matches("./").to_string()),
+        tint: parsed.tint.map(|t| t.to_ascii_lowercase()),
     })
 }
 
@@ -1613,7 +1624,14 @@ mod tests {
         let root = temp_root();
 
         let zip_path = root.join("night.zip");
-        let theme = serde_json::to_vec(&serde_json::json!({ "mode": "oled", "accent": "indigo", "background": "bg.webp" })).unwrap();
+        for bad in ["green", "#0f4", "#00ff4g", "00ff41", "#00ff41; color: red"] {
+            let theme = serde_json::to_vec(&serde_json::json!({ "tint": bad })).unwrap();
+            theme_zip(&zip_path, &theme);
+            let refused = preview("t", &staged(&zip_path, true)).unwrap_err();
+            assert!(refused.message.contains("tint"), "{bad}: {}", refused.message);
+        }
+
+        let theme = serde_json::to_vec(&serde_json::json!({ "mode": "oled", "accent": "indigo", "background": "bg.webp", "tint": "#00FF41" })).unwrap();
         theme_zip(&zip_path, &theme);
 
         let shown = preview("t", &staged(&zip_path, true)).unwrap();
@@ -1630,6 +1648,7 @@ mod tests {
         let info = &listed[0];
         assert_eq!(info.error, None);
         assert_eq!(info.themes[0].accent.as_deref(), Some("indigo"));
+        assert_eq!(info.themes[0].tint.as_deref(), Some("#00ff41"));
         assert!(Path::new(info.themes[0].background.as_deref().unwrap()).is_file());
         assert!(Path::new(info.buttons[0].icon.as_deref().unwrap()).is_file());
         assert_eq!(info.locales["pl"]["discord"], "Nasz Discord");

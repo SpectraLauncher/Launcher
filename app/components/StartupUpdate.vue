@@ -38,7 +38,7 @@ const known = computed(() => updater.total.value > 0)
         <img src="/logo-transparent.png" alt="" class="h-16 w-16 object-contain" >
 
         <div class="space-y-1.5">
-          <p class="text-lg font-semibold text-[#eef1f5]">{{ t('update.startupTitle') }}</p>
+          <p class="text-lg font-semibold text-(--mk-text)">{{ t('update.startupTitle') }}</p>
           <p class="text-sm text-gray-400">{{ message }}</p>
         </div>
 

@@ -6,12 +6,17 @@
 	--font-mono: 'JetBrains Mono', ui-monospace, monospace;
 }
 
+:root {
+	--mk-text: #eef1f5;
+	--mk-placeholder: #5b626d;
+}
+
 body {
 	margin:0;
 	font-family: 'Space Grotesk', system-ui, sans-serif;
 	font-size:14px;
 	line-height:1.45;
-	color:#eef1f5;
+	color:var(--mk-text);
 	-webkit-font-smoothing:antialiased;
 	text-rendering:optimizeLegibility;
 	background: #0c0e12;
@@ -22,7 +27,7 @@ body {
 }
 
 ::selection { background:#36a9e159; }
-input::placeholder, textarea::placeholder { color:#5b626d; }
+input::placeholder, textarea::placeholder { color:var(--mk-placeholder); }
 
 @keyframes mk-float {
 	0%,100% { transform:translate(0,0) }

@@ -12,7 +12,7 @@
           class="h-[42px] w-[42px] rounded-[11px] text-[18px] shadow-[0_4px_14px_rgba(0,0,0,0.35)]"
         />
         <div class="min-w-0">
-          <div class="truncate text-[14px] font-semibold text-[#eef1f5]">{{ selected.name }}</div>
+          <div class="truncate text-[14px] font-semibold text-(--mk-text)">{{ selected.name }}</div>
           <div class="font-mono text-[11px] text-neutral-400">{{ subtitle }}</div>
         </div>
       </div>

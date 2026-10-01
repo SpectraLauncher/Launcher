@@ -240,6 +240,7 @@ export interface AddonTheme {
   mode: 'dark' | 'oled' | 'squared' | null
   accent: string | null
   background: string | null
+  tint: string | null
 }
 
 export interface AddonButton {
