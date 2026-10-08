@@ -52,7 +52,7 @@ futures-util = "0.3"
 # Utilities
 anyhow = "1"
 thiserror = "2"
-dirs = "5"
+dirs = "6"
 uuid = { version = "1", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
 base64 = "0.22"
