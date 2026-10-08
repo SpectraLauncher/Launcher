@@ -1,22 +1,24 @@
 <div align="center">
-  <img src="public/logo-transparent.png" alt="Spectra Launcher" width="120" />
+  <img src="public/logo-transparent.png" alt="Nova Launcher" width="120" />
 
-  # Spectra Launcher
+  # Nova Launcher
 
   **A fast, good-looking Minecraft launcher that makes mods, modpacks and accounts simple.**
 
   Play any version, install mods with one click, and keep all your worlds in one place — without messing with files.
 
-  [⬇️ Download](https://github.com/MakotoPD/Spectra-Launcher/releases) · [✨ Features](#-what-can-it-do) · [🚀 Getting started](#-getting-started) · [❓ Help](#-help--troubleshooting)
+  [⬇️ Build for Windows](#-build-a-windows-installer) · [✨ Features](#-what-can-it-do) · [🚀 Getting started](#-getting-started) · [❓ Help](#-help--troubleshooting)
 </div>
 
 ---
 
-## 🎮 What is Spectra Launcher?
+> Nova Launcher is a rebranded build of the AGPL-3.0-licensed Spectra Launcher source. It continues to use Spectra's online account, sharing and API services; this rebrand is not affiliated with or endorsed by the upstream project.
 
-Spectra Launcher is a free program for your computer that **starts Minecraft for you**. Think of it as the front door to the game.
+## 🎮 What is Nova Launcher?
 
-Instead of editing files or copying `.jar` mods by hand, you click a button and Spectra does the boring parts:
+Nova Launcher is a free program for your computer that **starts Minecraft for you**. Think of it as the front door to the game.
+
+Instead of editing files or copying `.jar` mods by hand, you click a button and Nova does the boring parts:
 
 - 📦 Keeps each modpack in its own tidy box (called an **instance**), so your setups never clash.
 - 🔌 Installs **mods, shaders and texture packs** straight from the internet — no manual downloads.
@@ -26,7 +28,7 @@ Instead of editing files or copying `.jar` mods by hand, you click a button and 
 It works on **Windows** and is built to feel quick and modern.
 
 <div align="center">
-  <img src="https://usespectra.app/screenshots/MainMenu.png" alt="Spectra Launcher home screen showing your list of Minecraft instances" width="800" />
+  <img src="https://usespectra.app/screenshots/MainMenu.png" alt="Nova Launcher home screen showing your list of Minecraft instances" width="800" />
   <br />
   <em>The home screen — all your Minecraft setups in one place. Hit <strong>Play</strong> to jump back into your last game.</em>
 </div>
@@ -51,10 +53,10 @@ An **instance** is a self-contained copy of Minecraft — its own version, its o
 
 ### 🔌 Add mods and modpacks with one click
 
-Browse thousands of mods, shaders and resource packs from **Modrinth** and **CurseForge** right inside the launcher. Find what you want, click **Install**, and Spectra grabs everything it needs — including any required dependencies.
+Browse thousands of mods, shaders and resource packs from **Modrinth** and **CurseForge** right inside the launcher. Find what you want, click **Install**, and Nova grabs everything it needs — including any required dependencies.
 
 - Turn mods on or off without deleting them.
-- Spectra checks your installed mods for available **updates** automatically.
+- Nova checks your installed mods for available **updates** automatically.
 - Install full **modpacks** (like *All the Mods* or *Better MC*) in one go.
 
 <div align="center">
@@ -71,7 +73,7 @@ Browse thousands of mods, shaders and resource packs from **Modrinth** and **Cur
 
 ### 🌍 Worlds, screenshots and skins — all in one place
 
-No more digging through folders. Spectra gathers your stuff into easy tabs:
+No more digging through folders. Nova gathers your stuff into easy tabs:
 
 - **Worlds** — see every save across all your instances and jump straight into one.
 - **Screenshots** — every in-game photo you've taken, in one gallery.
@@ -93,7 +95,7 @@ No more digging through folders. Spectra gathers your stuff into easy tabs:
 
 - **Quick Play** (Minecraft 1.20+) — launch straight into a specific world or server.
 - **Server list** — check if your favorite servers are online, see player counts and ping, right from the launcher.
-- **Crash help** — if the game crashes, Spectra finds the crash report for you and lets you share it in one click for help.
+- **Crash help** — if the game crashes, Nova finds the crash report for you and lets you share it in one click for help.
 - **Live logs** — watch what the game is doing in real time.
 - **Discord status** — show friends what you're playing (optional).
 - **Playtime tracking** — see how long you've spent in each instance.
@@ -121,17 +123,33 @@ Every instance has its own settings: rename it, switch the mod loader, adjust ho
 
 ### 🔄 Moving from another launcher?
 
-Already use Prism, CurseForge or the Modrinth app? You can **import** your existing instances straight into Spectra. You can also **export** any instance as a backup (`.mrpack` or `.zip`) to share with friends or keep safe.
+Already use Prism, CurseForge or the Modrinth app? You can **import** your existing instances straight into Nova. You can also **export** any instance as a backup (`.mrpack` or `.zip`) to share with friends or keep safe.
 
 ---
 
+## ⬇️ Build a Windows installer
+
+This source includes a GitHub Actions workflow named **Build Nova Windows installer**. Push the source to a GitHub repository, open **Actions → Build Nova Windows installer → Run workflow**, then download the generated `.exe` from the workflow run's **Artifacts** section. It is a Windows installer, not a standalone portable executable.
+
+Automatic app updates are disabled in this rebrand until a Nova update feed and signing key are configured. Build and install a fresh installer for later versions.
+
+For a local build on Windows, install Node.js 24, pnpm 10, Rust stable, and the Microsoft C++ Build Tools, then run:
+
+```powershell
+pnpm install --frozen-lockfile
+$env:DISCORD_CLIENT_ID = "0"
+pnpm exec tauri build --bundles nsis
+```
+
+The installer is written to `src-tauri/target/release/bundle/nsis/`.
+
 ## 🚀 Getting started
 
-1. **Download** the latest version from the [GitHub Releases page](https://github.com/MakotoPD/Spectra-Launcher/releases).
-2. **Install and open** Spectra Launcher.
+1. Build and install the Nova Windows installer using the steps above.
+2. Open Nova Launcher.
 3. **Sign in** with your Microsoft account (or add an offline account).
 4. Click **New instance**, pick a Minecraft version and a mod loader, and you're ready.
-5. Press **Play**. Spectra downloads everything it needs the first time — after that, launching is instant.
+5. Press **Play**. Nova downloads everything it needs the first time — after that, launching is instant.
 
 > 💡 First launch of a new instance can take a minute while files and Java download. Later launches are much faster.
 
@@ -160,9 +178,9 @@ This warning appears for new apps that aren't yet code-signed — it doesn't mea
 
 1. Open **Windows Security** → **Virus & threat protection**.
 2. Click **Protection history**.
-3. Find **Spectra-Launcher** → **Actions** → **Allow**.
+3. Find **Nova-Launcher** → **Actions** → **Allow**.
 
-Optionally, add an exclusion for the folder where you installed Spectra.
+Optionally, add an exclusion for the folder where you installed Nova.
 
 </details>
 
@@ -174,7 +192,7 @@ Optionally, add an exclusion for the folder where you installed Spectra.
 This is a normal macOS check for apps not signed with a paid Apple Developer certificate. Make sure the app is in your **Applications** folder, then run this in Terminal:
 
 ```bash
-sudo xattr -cr /Applications/Spectra-Launcher.app
+sudo xattr -cr "/Applications/Nova Launcher.app"
 ```
 
 </details>
@@ -184,7 +202,7 @@ sudo xattr -cr /Applications/Spectra-Launcher.app
 
 <br />
 
-- Always download from the [official GitHub Releases page](https://github.com/MakotoPD/Spectra-Launcher/releases).
+- Only install Nova builds you trust. This rebranded source is not the official Spectra Launcher release.
 - Verify the SHA256 checksum listed in the release notes if you want to be extra sure.
 
 </details>
@@ -207,7 +225,7 @@ sudo xattr -cr /Applications/Spectra-Launcher.app
 
 <br />
 
-Spectra is a desktop app built with **[Tauri v2](https://v2.tauri.app/)** — a Rust backend paired with a web-based UI.
+Nova is a desktop app built with **[Tauri v2](https://v2.tauri.app/)** — a Rust backend paired with a web-based UI.
 
 - **Backend (Rust 🦀):** `lyceris` (Minecraft install/launch/auth), `tokio` (async), `reqwest` (networking), plus `serde`, `zip`, `flate2`, `fastnbt` (world data) and `sysinfo` (RAM detection).
 - **Frontend (TypeScript 📘):** **[Nuxt 4](https://nuxt.com/)** (Vue 3) with `@nuxt/ui` + TailwindCSS, `Pinia` for state, `tiptap` editor, `@nuxtjs/i18n` for languages, and `skinview3d` for the 3D skin preview.
@@ -243,10 +261,10 @@ By default everything lives in your OS data folder under `SpectraLauncher` (e.g.
 
 ## License
 
-Spectra Launcher is licensed under the [GNU Affero General Public License v3.0](LICENCE) (AGPL-3.0-only).
+Nova Launcher is a rebranded derivative of the Spectra Launcher source, licensed under the [GNU Affero General Public License v3.0](LICENCE) (AGPL-3.0-only). Upstream attribution and license notices are retained.
 
 ---
 
 <div align="center">
-  <sub>Made with ❤️ by <strong>MakotoPD</strong> · Spectra Launcher</sub>
+  <sub>Rebranded as Nova Launcher · Original project by <strong>MakotoPD</strong></sub>
 </div>

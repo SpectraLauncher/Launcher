@@ -634,7 +634,7 @@ pub fn check_runs_here(manifest: &Manifest) -> AppResult<()> {
     if !fits_launcher(manifest.launcher.as_deref(), &launcher_version()) {
         return Err(AppError::new(
             "unsupported",
-            format!("This addon needs Spectra {}.", manifest.launcher.as_deref().unwrap_or_default()),
+            format!("This addon needs Nova {}.", manifest.launcher.as_deref().unwrap_or_default()),
         ));
     }
     Ok(())

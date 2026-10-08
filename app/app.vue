@@ -11,7 +11,7 @@
                keeps the right-hand group where justify-between expects it. -->
           <div class="w-[72px]" />
           <div class="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
-            <img src="/logo-transparent.png" alt="Spectra Launcher Icon" class="h-5 object-contain" />
+            <img src="/logo-transparent.png" alt="Nova Launcher Icon" class="h-5 object-contain" />
             <span>{{ windowTitle }}</span>
           </div>
           <div class="flex items-center gap-3">
@@ -24,7 +24,7 @@
         </template>
         <template v-else>
           <div class="flex items-center gap-2 pl-2">
-            <img src="/logo-transparent.png" alt="Spectra Launcher Icon" class="h-5 object-contain" />
+            <img src="/logo-transparent.png" alt="Nova Launcher Icon" class="h-5 object-contain" />
             <span>{{ windowTitle }}</span>
           </div>
           <div class="flex items-center gap-3">
@@ -105,10 +105,10 @@ const windowTitle = computed(() => {
   if (isAddonWindow.value) {
     const addon = addons.active.find(a => a.id === route.query.addon)
     const win = addon?.windows.find(w => w.id === route.query.window)
-    return addon && win ? `${win.title} — ${addon.name}` : 'Spectra'
+    return addon && win ? `${win.title} — ${addon.name}` : 'Nova'
   }
   if (isConsoleWindow.value) return t('logs.window')
-  return isContentWindow.value ? 'Spectra — content' : 'Spectra Launcher'
+  return isContentWindow.value ? 'Nova — content' : 'Nova Launcher'
 })
 
 const { platform } = usePlatform()

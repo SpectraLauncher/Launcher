@@ -30,7 +30,7 @@ fn http() -> &'static reqwest::Client {
     static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
     CLIENT.get_or_init(|| {
         reqwest::Client::builder()
-            .user_agent(concat!("MakotoPD/Spectra-Launcher/", env!("CARGO_PKG_VERSION")))
+            .user_agent(concat!("Nova-Launcher/", env!("CARGO_PKG_VERSION")))
             .build()
             .expect("build curseforge client")
     })

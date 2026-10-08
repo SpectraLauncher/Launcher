@@ -143,7 +143,7 @@ async function doExport() {
   const ext = format.value === 'mrpack' ? 'mrpack' : 'zip'
   const filterName = format.value === 'mrpack'
     ? 'Modrinth modpack'
-    : format.value === 'curseforge' ? 'CurseForge modpack' : 'Spectra backup'
+    : format.value === 'curseforge' ? 'CurseForge modpack' : 'Nova backup'
   const safe = tgt.name.replace(/[^\w.\- ]+/g, '_').trim() || 'instance'
 
   try {

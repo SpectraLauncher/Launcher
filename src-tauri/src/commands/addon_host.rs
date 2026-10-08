@@ -436,7 +436,7 @@ async fn fetch(manifest: &Manifest, params: &Value) -> AppResult<Value> {
         .collect();
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(15))
-        .user_agent(format!("Spectra-Launcher/{} (addon {})", env!("CARGO_PKG_VERSION"), manifest.id))
+        .user_agent(format!("Nova-Launcher/{} (addon {})", env!("CARGO_PKG_VERSION"), manifest.id))
         .redirect(reqwest::redirect::Policy::custom(move |attempt| {
             let allowed = attempt.url().scheme() == "https"
                 && attempt.url().host_str().is_some_and(|h| hosts.iter().any(|x| x == h));

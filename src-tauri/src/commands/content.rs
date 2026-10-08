@@ -718,7 +718,7 @@ pub async fn upload_log_to_mclogs(id: String, rel: String) -> AppResult<MclogsPa
 
     let resp = crate::http()
         .post("https://api.mclo.gs/1/log")
-        .form(&[("content", content.as_str()), ("source", "SpectraLauncher")])
+        .form(&[("content", content.as_str()), ("source", "NovaLauncher")])
         .send()
         .await
         .map_err(|e| format!("upload failed: {e}"))?;

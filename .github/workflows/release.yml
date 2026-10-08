@@ -56,11 +56,11 @@ jobs:
             echo ""
             echo "| Platform | Architecture | Download |"
             echo "|----------|-------------|----------|"
-            echo "| 🪟 Windows | x64 | [Spectra.Launcher_${VERSION_NUM}_x64-setup.exe](https://github.com/${GITHUB_REPOSITORY}/releases/download/${VERSION}/Spectra.Launcher_${VERSION_NUM}_x64-setup.exe) |"
-            echo "| 🍎 macOS | Apple Silicon (M1+) | [Spectra.Launcher_${VERSION_NUM}_aarch64.dmg](https://github.com/${GITHUB_REPOSITORY}/releases/download/${VERSION}/Spectra.Launcher_${VERSION_NUM}_aarch64.dmg) |"
-            echo "| 🍎 macOS | Intel (x64) | [Spectra.Launcher_${VERSION_NUM}_x64.dmg](https://github.com/${GITHUB_REPOSITORY}/releases/download/${VERSION}/Spectra.Launcher_${VERSION_NUM}_x64.dmg) |"
-            echo "| 🐧 Linux | x64 (AppImage) | [Spectra.Launcher_${VERSION_NUM}_amd64.AppImage](https://github.com/${GITHUB_REPOSITORY}/releases/download/${VERSION}/Spectra.Launcher_${VERSION_NUM}_amd64.AppImage) |"
-            echo "| 🐧 Linux | x64 (deb) | [Spectra.Launcher_${VERSION_NUM}_amd64.deb](https://github.com/${GITHUB_REPOSITORY}/releases/download/${VERSION}/Spectra.Launcher_${VERSION_NUM}_amd64.deb) |"
+            echo "| 🪟 Windows | x64 | [Nova.Launcher_${VERSION_NUM}_x64-setup.exe](https://github.com/${GITHUB_REPOSITORY}/releases/download/${VERSION}/Nova.Launcher_${VERSION_NUM}_x64-setup.exe) |"
+            echo "| 🍎 macOS | Apple Silicon (M1+) | [Nova.Launcher_${VERSION_NUM}_aarch64.dmg](https://github.com/${GITHUB_REPOSITORY}/releases/download/${VERSION}/Nova.Launcher_${VERSION_NUM}_aarch64.dmg) |"
+            echo "| 🍎 macOS | Intel (x64) | [Nova.Launcher_${VERSION_NUM}_x64.dmg](https://github.com/${GITHUB_REPOSITORY}/releases/download/${VERSION}/Nova.Launcher_${VERSION_NUM}_x64.dmg) |"
+            echo "| 🐧 Linux | x64 (AppImage) | [Nova.Launcher_${VERSION_NUM}_amd64.AppImage](https://github.com/${GITHUB_REPOSITORY}/releases/download/${VERSION}/Nova.Launcher_${VERSION_NUM}_amd64.AppImage) |"
+            echo "| 🐧 Linux | x64 (deb) | [Nova.Launcher_${VERSION_NUM}_amd64.deb](https://github.com/${GITHUB_REPOSITORY}/releases/download/${VERSION}/Nova.Launcher_${VERSION_NUM}_amd64.deb) |"
             echo ""
             echo "---"
             echo ""
@@ -160,7 +160,7 @@ jobs:
           DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
         with:
           tagName: v${{ needs.prepare.outputs.version }}
-          releaseName: 'Spectra Launcher v${{ needs.prepare.outputs.version }}'
+          releaseName: 'Nova Launcher v${{ needs.prepare.outputs.version }}'
           releaseBody: ${{ needs.prepare.outputs.body }}
           releaseDraft: true
           prerelease: false

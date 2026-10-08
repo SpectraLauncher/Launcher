@@ -95,7 +95,7 @@ pub async fn open_console_window(app: AppHandle, id: Option<String>) -> AppResul
     }
 
     let builder = WebviewWindowBuilder::new(&app, CONSOLE_WINDOW, WebviewUrl::App(console_window_url(id.as_deref()).into()))
-        .title("Spectra — console")
+        .title("Nova — console")
         .inner_size(960.0, 620.0)
         .min_inner_size(520.0, 320.0);
 

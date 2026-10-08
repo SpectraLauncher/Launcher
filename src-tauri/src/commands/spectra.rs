@@ -263,7 +263,7 @@ fn launcher_agent() -> String {
         "linux" => "Linux",
         other => other,
     };
-    format!("Spectra-Launcher/{} ({os})", env!("CARGO_PKG_VERSION"))
+    format!("Nova-Launcher/{} ({os})", env!("CARGO_PKG_VERSION"))
 }
 
 pub fn login_token_from_url(url: &str) -> Option<String> {

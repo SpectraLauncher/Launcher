@@ -1,10 +1,10 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "identifier": "pl.makoto.spectra-launcher",
+  "identifier": "com.nova.launcher",
   "app": {
     "windows": [
       {
-        "title": "Spectra Launcher",
+        "title": "Nova Launcher",
         "width": 1470,
         "height": 860,
         "resizable": true,

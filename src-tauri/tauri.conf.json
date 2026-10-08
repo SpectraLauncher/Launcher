@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Spectra Launcher",
+  "productName": "Nova Launcher",
   "version": "1.0.1",
-  "identifier": "pl.makoto.spectra-launcher",
+  "identifier": "com.nova.launcher",
   "build": {
     "frontendDist": "../.output/public",
     "devUrl": "http://localhost:3000",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Spectra Launcher",
+        "title": "Nova Launcher",
         "width": 1470,
         "height": 860,
         "resizable": true,
@@ -41,20 +41,12 @@
         ]
       }
     },
-    "updater": {
-      "endpoints": [
-        "https://github.com/MakotoPD/Spectra-Launcher/releases/latest/download/latest.json"
-      ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDg5RTUyRTU4MkQ4NEI3MjgKUldRb3Q0UXRXQzdsaVZMYXRXUDl3ZktqcmhYUy9wck15dDBvd0xobk5TenhaN0QxYlpsTk5LU2QK",
-      "windows": {
-        "installMode": "quiet"
-      }
-    }
+    "updater": {}
   },
   "bundle": {
     "active": true,
     "category": "Game",
-    "createUpdaterArtifacts": true,
+    "createUpdaterArtifacts": false,
     "targets": "all",
     "icon": [
       "icons/32x32.png",

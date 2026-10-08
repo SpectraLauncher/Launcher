@@ -14,7 +14,7 @@ pub fn http() -> &'static reqwest::Client {
     static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
     CLIENT.get_or_init(|| {
         reqwest::Client::builder()
-            .user_agent(concat!("Spectra-Launcher/", env!("CARGO_PKG_VERSION")))
+            .user_agent(concat!("Nova-Launcher/", env!("CARGO_PKG_VERSION")))
             .pool_max_idle_per_host(64)
             .build()
             .expect("build http client")
@@ -167,7 +167,7 @@ pub fn run() {
 
                 #[cfg(windows)]
                 if let Ok(key) = windows_registry::CURRENT_USER.create("Software\\Classes\\spectra") {
-                    let _ = key.set_string("", "URL:Spectra Launcher protocol");
+                    let _ = key.set_string("", "URL:Nova Launcher protocol");
                 }
 
                 let handle = app.handle().clone();

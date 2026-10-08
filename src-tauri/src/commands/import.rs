@@ -330,7 +330,7 @@ pub fn restore_backup_from_bytes(bytes: &[u8]) -> AppResult<Instance> {
     let manifest: BackupManifest = {
         let mut f = archive
             .by_name(BACKUP_MANIFEST)
-            .map_err(|_| "not a Spectra backup".to_string())?;
+            .map_err(|_| "not a Nova or Spectra backup".to_string())?;
         let mut s = String::new();
         f.read_to_string(&mut s).map_err(|e| e.to_string())?;
         serde_json::from_str(&s).map_err(|e| format!("parse manifest: {e}"))?

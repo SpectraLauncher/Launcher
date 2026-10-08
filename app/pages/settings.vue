@@ -265,9 +265,9 @@
       </div>
     </div>
     <div class="shrink-0 mx-auto w-full max-w-5xl flex gap-3 items-center border-t border-default pt-4 mt-4">
-        <img src="/logo-transparent.png" alt="Spectra Launcher Icon" class="w-8 h-8 rounded-sm" />
+        <img src="/logo-transparent.png" alt="Nova Launcher Icon" class="w-8 h-8 rounded-sm" />
         <div>
-          <p>Spectra Launcher v{{ version }}</p>
+          <p>Nova Launcher v{{ version }}</p>
           <p class="text-xs text-muted">Made with by <a href="https://github.com/MakotoPD" target="_blank" rel="noopener noreferrer">MakotoPD</a></p>
         </div>
         <UButton
