@@ -701,6 +701,7 @@
     "signedOutTitle": "Graj ze znajomymi",
     "signedOutHint": "Zaloguj się, żeby mieć listę znajomych i wysyłać im paczki prosto do launchera.",
     "browserHint": "Do dokończenia logowania otworzy się przeglądarka.",
+    "signInFailed": "Nie udało się zalogować do Spectra. Spróbuj ponownie z poziomu launchera.",
     "verifyEmailWarning": "Adres e-mail na koncie Spectra nie został potwierdzony.",
     "verifyEmailAction": "Otwórz ustawienia konta",
     "inbox": "Powiadomienia",

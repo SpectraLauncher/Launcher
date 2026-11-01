@@ -191,6 +191,7 @@ const contentWindow = useContentWindow()
 let unlistenContent: UnlistenFn | null = null
 let unlistenShare: UnlistenFn | null = null
 let unlistenAccount: UnlistenFn | null = null
+let unlistenAuthFailed: UnlistenFn | null = null
 let unlistenLaunch: UnlistenFn | null = null
 let unlistenCloudExit: UnlistenFn | null = null
 let unlistenAddon: UnlistenFn | null = null
@@ -263,6 +264,11 @@ onMounted(async () => {
     spectraNotifications.start()
     spectra.linkMinecraft()
   })
+  if (!isContentWindow.value) {
+    unlistenAuthFailed = await listen<{ message: string }>('spectra://auth-failed', (e) => {
+      toast.add({ title: t('spectra.signInFailed'), description: e.payload.message, color: 'error' })
+    })
+  }
 
   unlistenContent = await contentWindow.onInstalled(async ({ instance }) => {
     await instances.load()
@@ -272,6 +278,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   unlistenShare?.()
   unlistenAccount?.()
+  unlistenAuthFailed?.()
   unlistenLaunch?.()
   unlistenCloudExit?.()
   unlistenContent?.()
