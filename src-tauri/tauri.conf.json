@@ -65,12 +65,14 @@
     ],
     "linux": {
       "deb": {
+        "desktopTemplate": "linux.desktop",
         "depends": [
           "gstreamer1.0-plugins-base",
           "gstreamer1.0-plugins-good"
         ]
       },
       "rpm": {
+        "desktopTemplate": "linux.desktop",
         "depends": [
           "gstreamer1-plugins-base",
           "gstreamer1-plugins-good"
