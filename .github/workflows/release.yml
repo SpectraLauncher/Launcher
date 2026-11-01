@@ -91,7 +91,9 @@ jobs:
             args: '--target aarch64-apple-darwin'
           - platform: 'macos-15-intel'
             args: '--target x86_64-apple-darwin'
-          - platform: 'ubuntu-latest'
+          # Pinned: the Linux packages work on systems at least as new as the one
+          # they are built on, so a newer image would quietly drop older distros.
+          - platform: 'ubuntu-24.04'
             args: ''
 
     runs-on: ${{ matrix.platform }}
@@ -100,13 +102,13 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install dependencies (Ubuntu only)
-        if: matrix.platform == 'ubuntu-latest'
+        if: matrix.platform == 'ubuntu-24.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libssl-dev libfuse2 squashfs-tools file
 
       - name: Let the AppImage use the system libwayland (Ubuntu only)
-        if: matrix.platform == 'ubuntu-latest'
+        if: matrix.platform == 'ubuntu-24.04'
         run: |
           set -euo pipefail
           TAURI_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/tauri"
