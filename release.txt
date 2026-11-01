@@ -1,3 +1,9 @@
+## Changes (v1.0.2)
+
+### 🐛 Bug Fixes
+- **Signing in to Spectra no longer undoes itself**: You could be signed out right after signing in, or at any later start, if Mojang refused or failed to answer the check of your Minecraft account. Opening a sign-in link that was already used or expired signed you out too. Your Spectra session now survives both, and a failed sign-in shows a message instead of doing nothing.
+- **Linux: the launcher starts on NVIDIA without extra settings**: Started from a sign-in link in the browser, it could crash or stay blank unless you had set `WEBKIT_DISABLE_DMABUF_RENDERER=1` yourself. The launcher now sets this when it finds the NVIDIA driver.
+
 ## Changes (v1.0.1)
 
 ### ✨ Features & Improvements
