@@ -106,7 +106,7 @@ async fn call_with_agent(method: &str, path: &str, body: Option<Value>, agent: O
     let text = resp.text().await.unwrap_or_default();
 
     if !status.is_success() {
-        if status == reqwest::StatusCode::UNAUTHORIZED {
+        if status == reqwest::StatusCode::UNAUTHORIZED && judges_session(path) {
             let _ = save_token(None);
         }
         return Err((message_of(&text).unwrap_or_else(|| format!("request failed ({status})"))).into());
@@ -115,6 +115,12 @@ async fn call_with_agent(method: &str, path: &str, body: Option<Value>, agent: O
         return Ok(Value::Null);
     }
     (serde_json::from_str(&text).map_err(|e| format!("bad server reply: {e}"))).map_err(Into::into)
+}
+
+/// A 401 from these two is about the token in the request body — a spent sign-in
+/// link, or a Minecraft session Mojang refused — not the stored Spectra session.
+fn judges_session(path: &str) -> bool {
+    !matches!(path, "/api/launcher/session" | "/api/me/minecraft")
 }
 
 fn message_of(body: &str) -> Option<String> {
@@ -277,7 +283,15 @@ pub fn login_token_from_url(url: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{activity_chunks, allowed, login_token_from_url, ACTIVITY_MAX_SECONDS};
+    use super::{activity_chunks, allowed, judges_session, login_token_from_url, ACTIVITY_MAX_SECONDS};
+
+    #[test]
+    fn a_refused_body_token_keeps_the_session() {
+        assert!(!judges_session("/api/launcher/session"));
+        assert!(!judges_session("/api/me/minecraft"));
+        assert!(judges_session("/api/friends"));
+        assert!(judges_session("/api/me/activity"));
+    }
 
     #[test]
     fn only_the_routes_the_launcher_uses_are_reachable() {
