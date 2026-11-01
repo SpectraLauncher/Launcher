@@ -104,6 +104,18 @@ fn handle_deep_link(app: &tauri::AppHandle, url: &str) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // WebKit's DMA-BUF renderer gives a blank window or a crash on NVIDIA's driver.
+    // Set here because a launcher started from a `spectra://` link in the browser
+    // gets none of the variables a terminal or a custom shortcut would pass.
+    #[cfg(target_os = "linux")]
+    {
+        if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none()
+            && std::path::Path::new("/sys/module/nvidia").exists()
+        {
+            std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+        }
+    }
+
     let builder = tauri::Builder::default();
 
     #[cfg(desktop)]
@@ -163,7 +175,9 @@ pub fn run() {
             #[cfg(desktop)]
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
-                let _ = app.deep_link().register_all();
+                if let Err(e) = app.deep_link().register_all() {
+                    log::warn!("could not register the spectra:// link handler: {e}");
+                }
 
                 #[cfg(windows)]
                 if let Ok(key) = windows_registry::CURRENT_USER.create("Software\\Classes\\spectra") {
