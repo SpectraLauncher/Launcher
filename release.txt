@@ -1,3 +1,8 @@
+## Changes (v1.0.3)
+
+### 🐛 Bug Fixes
+- **Linux: signing in from the browser works again**: Clicking the link on the website only brought the launcher to attention and nothing else happened, because the installed launcher started without being told about the link. This also fixes every other `spectra://` link on Linux, such as opening a shared modpack from the website.
+
 ## Changes (v1.0.2)
 
 ### 🐛 Bug Fixes
