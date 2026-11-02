@@ -175,8 +175,12 @@ pub fn run() {
             #[cfg(desktop)]
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
-                if let Err(e) = app.deep_link().register_all() {
-                    log::warn!("could not register the spectra:// link handler: {e}");
+                // macOS takes the scheme from the app bundle, so there is nothing to register.
+                #[cfg(not(target_os = "macos"))]
+                {
+                    if let Err(e) = app.deep_link().register_all() {
+                        log::warn!("could not register the spectra:// link handler: {e}");
+                    }
                 }
 
                 #[cfg(windows)]
