@@ -1,3 +1,9 @@
+## Changes (v1.0.4)
+
+### ✨ Features & Improvements
+- **Cloud sync brings your mods along**: An instance synced to another computer used to arrive empty, with the right version and loader but none of its mods. Now the mods and shaders you installed from Modrinth or CurseForge come along: the other computer downloads the same versions again, and a mod you remove on one computer moves to the backup folder on the other. Mods you added by hand and worlds still stay on the computer they are on. A CurseForge mod whose author only allows downloads on their site shows up in the list of mods to download yourself.
+- **Test the mod you are making on another computer**: A mod that is on neither Modrinth nor CurseForge, such as one you are building yourself, has a cloud button in the mod list. Mark it and cloud sync carries the file too, up to 20 MB. It follows the mod rather than the file name, so each new build replaces the previous one on the other computer by itself.
+
 ## Changes (v1.0.3)
 
 ### 🐛 Bug Fixes
