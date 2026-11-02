@@ -21,12 +21,7 @@ fn read_local_mod_meta(jar_path: &Path) -> JarMeta {
     let Ok(file) = std::fs::File::open(jar_path) else { return JarMeta::default() };
     let Ok(mut zip) = zip::ZipArchive::new(file) else { return JarMeta::default() };
 
-    let (name, version, icon_path) = fabric_meta(&mut zip)
-        .or_else(|| quilt_meta(&mut zip))
-        .or_else(|| toml_meta(&mut zip, "META-INF/neoforge.mods.toml"))
-        .or_else(|| toml_meta(&mut zip, "META-INF/mods.toml"))
-        .or_else(|| mcmod_meta(&mut zip))
-        .unwrap_or((None, None, None));
+    let (name, version, icon_path) = meta_fields(&mut zip);
 
     JarMeta {
         icon: icon_path.and_then(|p| read_zip_image(&mut zip, &p)),
@@ -59,6 +54,25 @@ fn clean_version(v: Option<&str>) -> Option<String> {
 }
 
 type MetaTuple = (Option<String>, Option<String>, Option<String>);
+
+fn meta_fields(zip: &mut Jar) -> MetaTuple {
+    fabric_meta(zip)
+        .or_else(|| quilt_meta(zip))
+        .or_else(|| toml_meta(zip, "META-INF/neoforge.mods.toml"))
+        .or_else(|| toml_meta(zip, "META-INF/mods.toml"))
+        .or_else(|| mcmod_meta(zip))
+        .unwrap_or((None, None, None))
+}
+
+/// What cloud sync remembers a hand-added mod by: the name in its metadata, which
+/// stays the same from one build to the next, or the filename when it has none.
+pub(crate) fn local_mod_key(jar_path: &Path, filename: &str) -> String {
+    std::fs::File::open(jar_path)
+        .ok()
+        .and_then(|file| zip::ZipArchive::new(file).ok())
+        .and_then(|mut zip| meta_fields(&mut zip).0)
+        .unwrap_or_else(|| filename.to_string())
+}
 
 fn fabric_meta(zip: &mut Jar) -> Option<MetaTuple> {
     let s = read_entry_string(zip, "fabric.mod.json")?;
@@ -132,6 +146,8 @@ pub struct ModEntry {
     project_id: Option<String>,
     provider: String,
     modified: u64,
+    /// A hand-added mod the player marked to travel with cloud sync.
+    cloud: bool,
 }
 
 #[tauri::command]
@@ -158,6 +174,7 @@ fn content(instance_id: &str, kind: &str) -> AppResult<Vec<ModEntry>> {
     let dir = paths::instance_game_dir(instance_id).join(folder);
     let index = modrinth::installed_items(instance_id);
     let by_file: HashMap<&str, &InstalledItem> = index.iter().map(|i| (i.filename.as_str(), i)).collect();
+    let cloud_keys = if ext == ".jar" { super::cloud_sync::cloud_mod_keys(instance_id) } else { Vec::new() };
 
     let mut out = Vec::new();
     let entries = match std::fs::read_dir(&dir) {
@@ -196,6 +213,8 @@ fn content(instance_id: &str, kind: &str) -> AppResult<Vec<ModEntry>> {
         } else {
             JarMeta::default()
         };
+        let cloud = meta.is_none() && !is_dir && ext == ".jar"
+            && cloud_keys.contains(local.name.as_ref().unwrap_or(&filename));
 
         out.push(ModEntry {
             name: meta.map(|m| m.name.clone()).or(local.name),
@@ -208,6 +227,7 @@ fn content(instance_id: &str, kind: &str) -> AppResult<Vec<ModEntry>> {
             enabled,
             filename,
             modified,
+            cloud,
         });
     }
     out.sort_by(|a, b| {

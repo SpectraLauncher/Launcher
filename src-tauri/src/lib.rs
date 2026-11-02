@@ -305,6 +305,7 @@ pub fn run() {
             commands::cloud_sync::cloud_sync_set_enabled,
             commands::cloud_sync::cloud_sync_tick,
             commands::cloud_sync::cloud_sync_resolve,
+            commands::cloud_sync::cloud_sync_set_mod_file,
             commands::launch::stop_instance,
             commands::ping::ping_server,
             commands::meta::get_minecraft_versions,

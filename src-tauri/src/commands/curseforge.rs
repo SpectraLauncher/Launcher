@@ -758,6 +758,30 @@ async fn fetch_file(project_id: &str, file_id: &str) -> AppResult<CfFile> {
     Ok(d.data)
 }
 
+/// Where the file an index entry names can be downloaded, with its sha1. None when
+/// the author allows downloads only on CurseForge itself: the file then joins the
+/// instance's blocked list, which already asks the player to fetch it by hand.
+pub async fn installed_file_url(instance_id: &str, item: &InstalledItem) -> AppResult<Option<(String, Option<String>)>> {
+    let file = fetch_file(&item.project_id, &item.version_id).await?;
+    let sha1 = file.hashes.iter().find(|h| h.algo == 1).map(|h| h.value.clone());
+    if let Some(url) = file.download_url {
+        return Ok(Some((url, sha1)));
+    }
+    let mut blocked = blocked_mods(instance_id);
+    if !blocked.iter().any(|b| b.file_id == item.version_id) {
+        blocked.push(BlockedMod {
+            name: item.name.clone(),
+            filename: safe_name(&file.file_name),
+            project_id: item.project_id.clone(),
+            file_id: item.version_id.clone(),
+            url: blocked_url(None, file.mod_id, file.id),
+            fingerprint: file.file_fingerprint,
+        });
+        save_blocked_mods(instance_id, &blocked);
+    }
+    Ok(None)
+}
+
 async fn fetch_mod(project_id: &str) -> AppResult<CfMod> {
     let resp = send(http().get(format!("{API}/mods/{project_id}"))).await?;
     if !resp.status().is_success() {

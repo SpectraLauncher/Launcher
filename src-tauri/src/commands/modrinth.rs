@@ -755,6 +755,20 @@ async fn fetch_version(http: &reqwest::Client, version_id: &str) -> AppResult<Ve
     (resp.json::<Version>().await.map_err(|e| e.to_string())).map_err(Into::into)
 }
 
+/// Where the file an index entry names can be downloaded, with its sha1, so cloud
+/// sync can put an instance back together on another computer.
+pub async fn installed_file_url(item: &InstalledItem) -> AppResult<(String, Option<String>)> {
+    let version = fetch_version(&client()?, &item.version_id).await?;
+    let file = version.files.iter().find(|f| f.filename == item.filename)
+        .or_else(|| version.files.iter().find(|f| f.primary))
+        .ok_or_else(|| AppError::not_found(format!("{} has no file to download", item.name)))?;
+    Ok((file.url.clone(), file.hashes.sha1.clone()))
+}
+
+pub async fn download_file(url: &str) -> AppResult<Vec<u8>> {
+    download(&client()?, url).await
+}
+
 async fn fetch_project(http: &reqwest::Client, project_id: &str) -> AppResult<ProjectInfo> {
     let resp = send(http.get(format!("{API}/project/{project_id}"))).await?;
     if !resp.status().is_success() {

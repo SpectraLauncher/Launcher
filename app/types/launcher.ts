@@ -226,6 +226,7 @@ export interface ModEntry {
   project_id: string | null
   provider: 'local' | 'modrinth' | 'curseforge'
   modified: number
+  cloud: boolean
 }
 
 export type AddonAction =

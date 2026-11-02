@@ -198,6 +198,15 @@
               @click="linkLocal"
             />
             <UButton
+              v-if="!m.project_id && m.kind === 'mod'"
+              :icon="m.cloud ? 'i-lucide-cloud' : 'i-lucide-cloud-off'"
+              :color="m.cloud ? 'primary' : 'neutral'"
+              :variant="m.cloud ? 'soft' : 'ghost'"
+              size="xs"
+              :title="m.cloud ? $t('mods.cloudSyncOn') : $t('mods.cloudSyncOff')"
+              @click="toggleCloud(m)"
+            />
+            <UButton
               v-if="m.project_id && updates[m.project_id]"
               icon="i-lucide-circle-arrow-up"
               color="primary"
@@ -627,6 +636,16 @@ async function toggle(mod: Entry, enabled: boolean) {
       await invoke('set_content_enabled', { id: props.instanceId, kind: mod.kind, filename: mod.filename, enabled })
     }
     mod.enabled = enabled
+  } catch (e) {
+    toast.add({ title: errorText(e), color: 'error' })
+  }
+}
+
+// Marks by the mod's name, so another build of the same mod in the folder follows along.
+async function toggleCloud(mod: Entry) {
+  try {
+    await invoke('cloud_sync_set_mod_file', { instanceId: props.instanceId, filename: mod.filename, enabled: !mod.cloud })
+    mods.value = await listAll()
   } catch (e) {
     toast.add({ title: errorText(e), color: 'error' })
   }
