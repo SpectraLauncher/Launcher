@@ -1,3 +1,8 @@
+## Changes (v1.0.5)
+
+### 🐛 Bug Fixes
+- **Linux: opening folders and the sign-in page tells you when it fails**: Opening an instance folder, the mods or logs folder, a screenshot or the sign-in page in the browser could silently do nothing on some systems. The launcher now waits for the system to open it, tries a second way if the first one fails, and shows the reason in a message when neither works, so you know what is missing. The reason is also written to the launcher log.
+
 ## Changes (v1.0.4)
 
 ### ✨ Features & Improvements
