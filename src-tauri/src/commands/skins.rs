@@ -157,7 +157,7 @@ pub async fn open_skin_editor(skin: String, model: String) -> AppResult<()> {
     if share.id.len() != 16 || !share.id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_') {
         return Err(AppError::network("bad server reply"));
     }
-    crate::commands::instances::open_external(skin_editor_url(site, &share.id, &model))
+    crate::commands::instances::open_external(skin_editor_url(site, &share.id, &model)).await
 }
 
 #[tauri::command]

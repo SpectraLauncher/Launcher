@@ -267,19 +267,19 @@ pub fn get_instance_path(id: String) -> String {
 }
 
 #[tauri::command]
-pub fn open_instance_folder(id: String) -> AppResult<()> {
+pub async fn open_instance_folder(id: String) -> AppResult<()> {
     let dir = paths::instance_dir(&id);
     if !dir.exists() {
         return Err("instance folder not found".into());
     }
-    open_in_file_manager(&dir)
+    crate::blocking(move || open_in_file_manager(&dir)).await
 }
 
 #[tauri::command]
-pub fn open_instance_game_folder(id: String) -> AppResult<()> {
+pub async fn open_instance_game_folder(id: String) -> AppResult<()> {
     let dir = paths::instance_game_dir(&id);
     std::fs::create_dir_all(&dir).map_err(|e| format!("create game dir: {e}"))?;
-    open_in_file_manager(&dir)
+    crate::blocking(move || open_in_file_manager(&dir)).await
 }
 
 fn shortcut_file_name(name: &str) -> String {
@@ -380,8 +380,12 @@ fn desktop_shortcut(id: &str) -> AppResult<String> {
 }
 
 #[tauri::command]
-pub fn reveal_in_explorer(path: String) -> AppResult<()> {
-    let p = std::path::Path::new(&path);
+pub async fn reveal_in_explorer(path: String) -> AppResult<()> {
+    crate::blocking(move || reveal(&path)).await
+}
+
+fn reveal(path: &str) -> AppResult<()> {
+    let p = std::path::Path::new(path);
     if !p.exists() {
         return Err("file not found".into());
     }
@@ -463,24 +467,59 @@ fn system_command(program: &str) -> std::process::Command {
     cmd
 }
 
+/// Runs an opener and waits briefly for it to exit, so a failure (no handler,
+/// broken portal…) reaches the user instead of vanishing. One still running
+/// after the wait is taken as success: some openers stay up with the app.
 #[cfg(target_os = "linux")]
-fn desktop_open(target: &std::ffi::OsStr) -> AppResult<()> {
-    match system_command("xdg-open").arg(target).spawn() {
-        Ok(_) => Ok(()),
-        Err(e) => system_command("gio")
-            .arg("open")
-            .arg(target)
-            .spawn()
-            .map(|_| ())
-            .map_err(|_| {
-                AppError::new("io", format!("could not open it — is xdg-utils installed? ({e})"))
-            }),
+fn run_opener(mut cmd: std::process::Command) -> Result<(), String> {
+    use std::process::Stdio;
+    let name = format!("{:?}", cmd.get_program());
+    let child = cmd
+        .stdin(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("{name} could not start: {e}"))?;
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let _ = tx.send(child.wait_with_output());
+    });
+    match rx.recv_timeout(std::time::Duration::from_secs(3)) {
+        Ok(Ok(out)) if out.status.success() => Ok(()),
+        Ok(Ok(out)) => {
+            let stderr = String::from_utf8_lossy(&out.stderr);
+            let stderr = stderr.trim();
+            Err(format!(
+                "{name} failed ({}){}",
+                out.status,
+                if stderr.is_empty() { String::new() } else { format!(": {stderr}") }
+            ))
+        }
+        Ok(Err(e)) => Err(format!("{name}: {e}")),
+        Err(_) => Ok(()),
     }
 }
 
+#[cfg(target_os = "linux")]
+fn desktop_open(target: &std::ffi::OsStr) -> AppResult<()> {
+    let mut xdg = system_command("xdg-open");
+    xdg.arg(target);
+    let Err(xdg_err) = run_opener(xdg) else { return Ok(()) };
+
+    let mut gio = system_command("gio");
+    gio.arg("open").arg(target);
+    let Err(gio_err) = run_opener(gio) else { return Ok(()) };
+
+    let msg = format!("could not open {}: {xdg_err}; {gio_err}", target.to_string_lossy());
+    log::warn!("{msg}");
+    Err(AppError::new("io", msg))
+}
+
 #[tauri::command]
-pub fn open_external(url: String) -> AppResult<()> {
-    let url = url.trim();
+pub async fn open_external(url: String) -> AppResult<()> {
+    crate::blocking(move || open_url(url.trim())).await
+}
+
+fn open_url(url: &str) -> AppResult<()> {
     if !["http://", "https://", "mailto:", "tel:"].iter().any(|s| url.starts_with(s)) {
         return Err(AppError::invalid(format!("refusing to open {url}")));
     }

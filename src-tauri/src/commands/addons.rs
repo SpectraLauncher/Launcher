@@ -1397,10 +1397,10 @@ pub async fn addons_uninstall(app: tauri::AppHandle, id: String) -> AppResult<()
 }
 
 #[tauri::command]
-pub fn addons_open_folder() -> AppResult<()> {
+pub async fn addons_open_folder() -> AppResult<()> {
     let dir = paths::addons_dir();
     std::fs::create_dir_all(&dir)?;
-    crate::commands::instances::open_in_file_manager(&dir)
+    crate::blocking(move || crate::commands::instances::open_in_file_manager(&dir)).await
 }
 
 #[tauri::command]
