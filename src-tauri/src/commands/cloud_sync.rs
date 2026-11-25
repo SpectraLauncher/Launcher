@@ -660,9 +660,16 @@ async fn restore_content(ids: Vec<String>) -> Vec<String> {
     for id in ids {
         let mut complete = true;
         for item in modrinth::read_content_index(&id).items {
-            if let Err(e) = restore_item(&id, &item).await {
-                log::warn!("cloud sync could not download {} into {id}: {e}", item.filename);
-                complete = false;
+            match restore_item(&id, &item).await {
+                Ok(()) => {}
+                // Gone from its provider for good: say so once and stop asking every tick.
+                Err(e) if e.code == "not_found" => {
+                    log::warn!("cloud sync skipped {} for {id}, it is no longer available: {e}", item.filename);
+                }
+                Err(e) => {
+                    log::warn!("cloud sync could not download {} into {id}: {e}", item.filename);
+                    complete = false;
+                }
             }
         }
         if !complete { pending.push(id); }
@@ -993,6 +1000,25 @@ mod tests {
         assert!(!valid_ref("../../api") && !valid_ref("") && !valid_ref("a/b"));
         assert_eq!(content_folder("mod"), Some("mods"));
         assert_eq!(content_folder("resourcepack"), None);
+    }
+
+    #[tokio::test]
+    #[ignore = "asks Modrinth for a removed project"]
+    async fn a_mod_removed_from_modrinth_is_not_retried() {
+        let _guard = paths::lock_data_dir();
+        let root = std::env::temp_dir().join(format!("spectra-cloud-removed-{}", uuid::Uuid::new_v4()));
+        std::env::set_var("SPECTRA_DATA_DIR", &root);
+        let id = "removed-test".to_string();
+        // Login Shield: the whole project was deleted from Modrinth, so its version answers 404.
+        let gone = InstalledItem {
+            project_id: "vpjnuUWT".into(), version_id: "nx5nTAKH".into(), kind: "mod".into(),
+            name: "Login Shield".into(), filename: "loadingprotection-1.0.2-fabric-1.20.1.jar".into(),
+            provider: "modrinth".into(), ..Default::default()
+        };
+        modrinth::write_content_index(&id, &ContentIndex { items: vec![gone] }).unwrap();
+        assert!(restore_content(vec![id.clone()]).await.is_empty());
+        std::fs::remove_dir_all(&root).ok();
+        std::env::remove_var("SPECTRA_DATA_DIR");
     }
 
     #[tokio::test]

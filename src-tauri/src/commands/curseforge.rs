@@ -751,6 +751,9 @@ fn install_rec<'a>(
 
 async fn fetch_file(project_id: &str, file_id: &str) -> AppResult<CfFile> {
     let resp = send(http().get(format!("{API}/mods/{project_id}/files/{file_id}"))).await?;
+    if resp.status() == reqwest::StatusCode::NOT_FOUND {
+        return Err(AppError::not_found(format!("CurseForge file {file_id} is no longer available")));
+    }
     if !resp.status().is_success() {
         return Err(AppError::network(format!("CurseForge file failed: {}", resp.status())));
     }

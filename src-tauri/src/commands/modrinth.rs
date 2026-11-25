@@ -749,6 +749,10 @@ fn kind_and_folder(version: &Version, project: &ProjectInfo) -> (&'static str, &
 
 async fn fetch_version(http: &reqwest::Client, version_id: &str) -> AppResult<Version> {
     let resp = send(http.get(format!("{API}/version/{version_id}"))).await?;
+    if resp.status() == reqwest::StatusCode::NOT_FOUND {
+        // Removed from Modrinth (the version or its whole project): retrying will not help.
+        return Err(AppError::not_found(format!("version {version_id} is no longer on Modrinth")));
+    }
     if !resp.status().is_success() {
         return Err(AppError::network(format!("version {version_id} failed: {}", resp.status())));
     }
