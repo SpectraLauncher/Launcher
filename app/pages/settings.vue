@@ -1,8 +1,8 @@
 <template>
-  <div class="h-full flex flex-col p-6 lg:p-8">
-    <div class="mx-auto w-full max-w-5xl flex flex-1 min-h-0 flex-col gap-6">
+  <div class="h-full flex flex-col px-8 pb-8 pt-7">
+    <div class="mx-auto w-full max-w-[1400px] flex flex-1 min-h-0 flex-col gap-6">
       <div class="flex shrink-0 flex-wrap items-center justify-between gap-2">
-        <h1 class="text-2xl font-bold tracking-tight">{{ t('settings.title') }}</h1>
+        <h1 class="text-[22px] font-semibold tracking-[-0.01em] text-highlighted">{{ t('settings.title') }}</h1>
         <div class="flex flex-wrap items-center gap-2">
           <AddonSlot name="settings.header" />
         </div>
@@ -15,7 +15,7 @@
             :key="s.key"
             type="button"
             class="flex items-center text-left gap-2 rounded-lg px-3 py-2 text-sm font-medium transition"
-            :class="section === s.key ? 'bg-primary-500/15 text-primary-400' : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'"
+            :class="section === s.key ? 'bg-elevated text-highlighted' : 'text-muted hover:bg-elevated/60 hover:text-highlighted'"
             @click="section = s.key"
           >
             <UIcon :name="s.icon" class="size-4" />
@@ -34,12 +34,13 @@
                   v-for="opt in themeOptions"
                   :key="opt.value"
                   type="button"
-                  class="flex-1 rounded-lg border px-4 py-3 text-left transition"
-                  :class="theme.mode === opt.value ? 'border-primary-500 ring-1 ring-primary-500 bg-primary-500/10' : 'border-default hover:border-neutral-500'"
+                  class="flex-1 rounded-xl border p-2.5 text-left transition-colors"
+                  :class="theme.mode === opt.value ? 'border-primary ring-1 ring-primary' : 'border-default hover:border-(--ui-border-accented)'"
+                  :aria-pressed="theme.mode === opt.value"
                   @click="theme.setMode(opt.value)"
                 >
-                  <span class="block text-sm font-medium">{{ opt.label }}</span>
-                  <span class="mt-2 block h-6 rounded" :style="{ background: opt.preview }" />
+                  <ThemeSwatch :mode="opt.value" />
+                  <span class="mt-2.5 block px-0.5 text-sm font-medium text-highlighted">{{ opt.label }}</span>
                 </button>
               </div>
             </div>
@@ -52,8 +53,10 @@
                   :key="c"
                   type="button"
                   :title="c"
-                  class="size-7 rounded-full transition"
-                  :class="theme.accent === c ? 'ring-2 ring-white ring-offset-2 ring-offset-neutral-950' : 'hover:scale-110'"
+                  :aria-label="c"
+                  :aria-pressed="theme.accent === c"
+                  class="size-7 rounded-full transition-transform"
+                  :class="theme.accent === c ? 'ring-2 ring-(--ui-text-highlighted) ring-offset-2 ring-offset-(--ui-bg)' : 'hover:scale-110'"
                   :style="{ background: accentHex[c] }"
                   @click="theme.setAccent(c)"
                 />
@@ -68,7 +71,7 @@
                   :key="th.key"
                   type="button"
                   class="w-44 rounded-lg border px-4 py-3 text-left transition"
-                  :class="theme.addonTheme === th.key ? 'border-primary-500 ring-1 ring-primary-500 bg-primary-500/10' : 'border-default hover:border-neutral-500'"
+                  :class="theme.addonTheme === th.key ? 'border-primary ring-1 ring-primary bg-primary/10' : 'border-default hover:border-neutral-500'"
                   @click="theme.applyAddonTheme(th)"
                 >
                   <span class="block truncate text-sm font-medium">{{ addons.text(th.addonId, th.name, locale) }}</span>
@@ -90,9 +93,41 @@
           </template>
 
           <template v-else-if="section === 'language'">
-            <UFormField :label="t('settings.language.title')" :description="t('settings.language.auto')">
-              <USelect :model-value="locale" :items="localeItems" value-key="value" class="w-56" @update:model-value="onLocaleChange" />
-            </UFormField>
+            <div>
+              <p class="text-sm font-medium text-highlighted">{{ t('settings.language.title') }}</p>
+              <p class="mb-3 text-xs text-muted">{{ t('settings.language.auto') }}</p>
+              <div class="rounded-xl border border-default bg-muted p-3">
+                <UInput
+                  v-model="languageQuery"
+                  icon="i-lucide-search"
+                  variant="soft"
+                  :placeholder="t('settings.language.search')"
+                  class="mb-3 w-full max-w-sm"
+                />
+                <div class="grid gap-2 sm:grid-cols-2" role="radiogroup" :aria-label="t('settings.language.title')">
+                  <button
+                    v-for="l in visibleLanguages"
+                    :key="l.value"
+                    type="button"
+                    role="radio"
+                    :aria-checked="locale === l.value"
+                    class="flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors"
+                    :class="locale === l.value
+                      ? 'border-primary/70 bg-primary/10'
+                      : 'border-default bg-elevated/40 hover:border-(--ui-border-accented) hover:bg-elevated'"
+                    @click="onLocaleChange(l.value)"
+                  >
+                    <FlagIcon :code="l.value" class="h-5 w-7 shrink-0" />
+                    <span class="min-w-0 flex-1 truncate">
+                      <span class="font-semibold text-highlighted">{{ l.label }}</span>
+                      <span v-if="l.local !== l.label" class="ml-2 text-[13px] text-muted">{{ l.local }}</span>
+                    </span>
+                    <UIcon v-if="locale === l.value" name="i-lucide-circle-check" class="size-5 shrink-0 text-primary" />
+                  </button>
+                </div>
+                <p v-if="!visibleLanguages.length" class="py-4 text-center text-sm text-muted">{{ t('settings.language.noMatch') }}</p>
+              </div>
+            </div>
           </template>
 
           <template v-else-if="section === 'privacy' && settings">
@@ -128,13 +163,13 @@
               <div
                 v-for="inst in java.installations.value"
                 :key="inst.path"
-                class="flex items-center gap-3 rounded-xl border border-default bg-white/3 p-3"
+                class="flex items-center gap-3 rounded-xl border border-default bg-muted p-3"
               >
-                <UIcon name="i-lucide-coffee" class="size-5 shrink-0 text-primary-400" />
+                <UIcon name="i-lucide-coffee" class="size-5 shrink-0 text-primary" />
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center gap-2">
                     <span class="font-medium">Java {{ inst.major ?? '?' }}</span>
-                    <span class="font-mono text-[11px] text-neutral-500">{{ inst.version }}</span>
+                    <span class="tabular-nums text-[11px] text-neutral-500">{{ inst.version }}</span>
                     <span v-if="inst.vendor" class="text-[11px] text-neutral-500">· {{ inst.vendor }}</span>
                   </div>
                   <div class="truncate font-mono text-[11px] text-neutral-500" :title="inst.path">{{ inst.path }}</div>
@@ -156,7 +191,7 @@
             <UFormField :label="t('settings.defaults.memory')" :description="t('settings.defaults.memoryDesc')">
               <div class="flex items-center gap-3 pt-1">
                 <USlider v-model="settings.default_memory_mb" :min="sysMem.minMb" :max="sysMem.maxMb.value" :step="256" class="flex-1" />
-                <span class="w-24 shrink-0 text-right font-mono text-sm">{{ settings.default_memory_mb }} MB</span>
+                <span class="w-24 shrink-0 text-right tabular-nums text-sm">{{ settings.default_memory_mb }} MB</span>
               </div>
             </UFormField>
 
@@ -264,11 +299,11 @@
         </div>
       </div>
     </div>
-    <div class="shrink-0 mx-auto w-full max-w-5xl flex gap-3 items-center border-t border-default pt-4 mt-4">
+    <div class="shrink-0 mx-auto w-full max-w-[1400px] flex gap-3 items-center border-t border-default pt-4 mt-4">
         <img src="/logo-transparent.png" alt="Spectra Launcher Icon" class="w-8 h-8 rounded-sm" />
         <div>
           <p>Spectra Launcher v{{ version }}</p>
-          <p class="text-xs text-muted">Made with by <a href="https://github.com/MakotoPD" target="_blank" rel="noopener noreferrer">MakotoPD</a></p>
+          <p class="text-xs text-muted">{{ t('settings.madeBy') }} <a href="https://github.com/MakotoPD" target="_blank" rel="noopener noreferrer" class="text-toned hover:text-highlighted">MakotoPD</a></p>
         </div>
         <UButton
           v-if="updater.available.value"
@@ -312,6 +347,7 @@ const java = useJava()
 const sysMem = useSystemMemory()
 const updater = useAutoUpdate()
 const route = useRoute()
+const router = useRouter()
 const addons = useAddonsStore()
 
 type Section = 'appearance' | 'language' | 'privacy' | 'java' | 'defaults' | 'sync' | 'accounts' | 'addons'
@@ -326,9 +362,13 @@ const allSections: { key: Section; icon: string }[] = [
   { key: 'addons', icon: 'i-lucide-puzzle' },
 ]
 const sections = computed(() => allSections.filter(s => s.key !== 'addons' || addons.available))
-const section = ref<Section>(route.query.section === 'sync' ? 'sync' : 'appearance')
-watch(() => route.query.section, (value) => {
-  if (value === 'sync') section.value = 'sync'
+const asSection = (v: unknown): Section =>
+  allSections.some(s => s.key === v) ? v as Section : 'appearance'
+// The open section lives in the URL, so other screens can link straight to e.g. Java or Accounts.
+const section = ref<Section>(asSection(route.query.section))
+watch(() => route.query.section, (value) => { section.value = asSection(value) })
+watch(section, (value) => {
+  if (route.query.section !== value) router.replace({ query: { ...route.query, section: value === 'appearance' ? undefined : value } })
 })
 
 type PrivacyKey = 'track_playtime' | 'share_activity' | 'discord_rpc' | 'crash_reports' | 'anonymous_stats'
@@ -382,9 +422,9 @@ watch(() => settings.value?.anonymous_stats, (on) => {
 })
 
 const themeOptions = computed<{ value: ThemeMode; label: string; preview: string }[]>(() => [
-  { value: 'dark', label: t('settings.appearance.themeDark'), preview: '#0a0a0b' },
+  { value: 'dark', label: t('settings.appearance.themeDark'), preview: '#16181c' },
   { value: 'oled', label: t('settings.appearance.themeOled'), preview: '#000000' },
-  { value: 'squared', label: t('settings.appearance.themeSquared'), preview: 'linear-gradient(135deg,#0a0a0b 50%,#52525b 50%)' },
+  { value: 'squared', label: t('settings.appearance.themeSquared'), preview: 'linear-gradient(135deg,#16181c 50%,#31353c 50%)' },
 ])
 
 const accentHex: Record<string, string> = {
@@ -397,7 +437,7 @@ const accentHex: Record<string, string> = {
 function themeSwatch(th: InstalledTheme) {
   if (th.background) return { backgroundImage: `url('${convertFileSrc(th.background)}')` }
   if (th.accent && accentHex[th.accent]) return { background: accentHex[th.accent] }
-  return { background: th.mode === 'oled' ? '#000000' : '#0a0a0b' }
+  return { background: th.mode === 'oled' ? '#000000' : '#16181c' }
 }
 
 async function setDevMode(on: boolean) {
@@ -407,8 +447,28 @@ async function setDevMode(on: boolean) {
 }
 
 const localeItems = computed(() =>
-  (locales.value as { code: string; name?: string }[]).map(l => ({ label: l.name ?? l.code, value: l.code })),
+  (locales.value as { code: string; name?: string }[]).map(l => ({
+    label: l.name ?? l.code,
+    value: l.code,
+    // The language's name in the language the launcher is shown in now, e.g. "Polski · Polish".
+    local: languageName(l.code) ?? l.name ?? l.code,
+  })),
 )
+const languageQuery = ref('')
+function languageName(code: string) {
+  try {
+    const name = new Intl.DisplayNames([locale.value], { type: 'language' }).of(code)
+    return name ? name.charAt(0).toLocaleUpperCase(locale.value) + name.slice(1) : undefined
+  } catch {
+    return undefined
+  }
+}
+const visibleLanguages = computed(() => {
+  const q = languageQuery.value.trim().toLowerCase()
+  return q
+    ? localeItems.value.filter(l => `${l.label} ${l.local} ${l.value}`.toLowerCase().includes(q))
+    : localeItems.value
+})
 const onLocaleChange = (code: string) => setLocale(code as 'en' | 'pl' | 'de' | 'es' | 'fr' | 'zh' | 'ru')
 
 const avatarUrl = (acc: Account) =>

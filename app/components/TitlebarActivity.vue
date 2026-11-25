@@ -4,7 +4,7 @@
       v-if="updater.available.value && updater.status.value !== 'downloading' && updater.status.value !== 'ready'"
       type="button"
       style="-webkit-app-region: no-drag"
-      class="flex h-7 items-center gap-1.5 rounded-full border border-primary-500/40 bg-primary-500/15 px-3 text-xs font-medium text-primary-300 transition hover:border-primary-500/70 hover:bg-primary-500/25"
+      class="flex h-7 items-center gap-1.5 rounded-full border border-primary/40 bg-primary/15 px-3 text-xs font-medium text-primary transition hover:border-primary/70 hover:bg-primary/25"
       :title="$t('update.available', { version: updater.newVersion.value })"
       @click="updater.downloadAndInstall()"
     >
@@ -16,30 +16,30 @@
       :is="clickable ? 'button' : 'div'"
       :type="clickable ? 'button' : undefined"
       style="-webkit-app-region: no-drag"
-      class="flex h-7 items-center gap-2 rounded-full border border-white/8 bg-white/4 px-3 text-xs transition"
-      :class="clickable ? 'cursor-pointer hover:border-white/20 hover:bg-white/8' : ''"
+      class="flex h-7 items-center gap-2 rounded-full border border-default bg-muted px-3 text-xs transition"
+      :class="clickable ? 'cursor-pointer hover:border-(--ui-border-accented) hover:bg-elevated' : ''"
       :title="clickable ? $t('activity.openLogs') : view.label"
       @click="onClick"
     >
       <template v-if="view.kind === 'install'">
-        <UIcon name="i-lucide-loader-circle" class="size-3.5 shrink-0 animate-spin text-primary-400" />
+        <UIcon name="i-lucide-loader-circle" class="size-3.5 shrink-0 animate-spin text-primary" />
         <span class="max-w-48 truncate text-neutral-200">{{ view.label }}</span>
-        <span v-if="view.percent !== null" class="shrink-0 font-mono text-neutral-400">{{ view.percent }}%</span>
-        <span class="relative h-1 w-14 shrink-0 overflow-hidden rounded-full bg-white/10">
+        <span v-if="view.percent !== null" class="shrink-0 tabular-nums text-neutral-400">{{ view.percent }}%</span>
+        <span class="relative h-1 w-14 shrink-0 overflow-hidden rounded-full bg-accented">
           <span
-            class="absolute inset-y-0 left-0 rounded-full bg-primary-500 transition-[width] duration-200"
+            class="absolute inset-y-0 left-0 rounded-full bg-primary transition-[width] duration-200"
             :style="{ width: (view.percent ?? 0) + '%' }"
           />
         </span>
       </template>
 
       <template v-else-if="view.kind === 'task'">
-        <UIcon name="i-lucide-loader-circle" class="size-3.5 shrink-0 animate-spin text-primary-400" />
+        <UIcon name="i-lucide-loader-circle" class="size-3.5 shrink-0 animate-spin text-primary" />
         <span class="max-w-64 truncate text-neutral-200">{{ view.label }}</span>
       </template>
 
       <template v-else-if="view.kind === 'running'">
-        <span class="size-2 shrink-0 rounded-full bg-[#3fb877] shadow-[0_0_8px_#3fb877]" />
+        <span class="size-2 shrink-0 rounded-full bg-primary" />
         <span class="max-w-56 truncate text-neutral-200">{{ view.label }}</span>
       </template>
 

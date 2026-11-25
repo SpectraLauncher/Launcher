@@ -12,7 +12,7 @@
         <div>
           <div class="flex flex-wrap items-center gap-2">
             <p class="text-lg font-semibold">{{ preview.name }}</p>
-            <span class="rounded-md bg-white/7 px-2 py-0.5 font-mono text-xs">{{ preview.version }}</span>
+            <span class="rounded-md bg-elevated px-2 py-0.5 tabular-nums text-xs">{{ preview.version }}</span>
             <UBadge v-if="preview.source !== 'catalog'" color="warning" variant="soft" size="sm" :label="$t('addons.unverified')" />
           </div>
           <p v-if="preview.installed" class="mt-1 text-xs text-muted">{{ $t('addons.updateFrom', { version: preview.installed }) }}</p>

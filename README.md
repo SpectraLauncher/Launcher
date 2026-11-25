@@ -23,12 +23,12 @@ Instead of editing files or copying `.jar` mods by hand, you click a button and 
 - 👤 Logs you in with your **Microsoft (Xbox) account**, or lets you play offline.
 - ☕ Finds and installs the correct **Java** version automatically. You never have to think about it.
 
-It works on **Windows** and is built to feel quick and modern.
+It works on **Windows**, **macOS** and **Linux** and is built to feel quick and modern.
 
 <div align="center">
-  <img src="https://usespectra.app/screenshots/MainMenu.png" alt="Spectra Launcher home screen showing your list of Minecraft instances" width="800" />
+  <img src="https://usespectra.app/screenshots/MainMenu.png" alt="Spectra Launcher library showing the last played instance with a Play button and all instances in groups" width="800" />
   <br />
-  <em>The home screen — all your Minecraft setups in one place. Hit <strong>Play</strong> to jump back into your last game.</em>
+  <em>The Library — all your Minecraft setups in one place, with the one you played last and its <strong>Play</strong> button right at the top.</em>
 </div>
 
 ---
@@ -46,7 +46,7 @@ An **instance** is a self-contained copy of Minecraft — its own version, its o
 <div align="center">
   <img src="https://usespectra.app/screenshots/InstanceScreen.png" alt="An instance page listing all installed mods with on/off toggles" width="800" />
   <br />
-  <em>Open an instance to see its mods, shaders, worlds and more — each with a simple on/off switch.</em>
+  <em>Open an instance to see its mods, shaders, worlds and more — each with a simple on/off switch. The tabs and the Play button stay at the top while you scroll.</em>
 </div>
 
 ### 🔌 Add mods and modpacks with one click
@@ -60,13 +60,7 @@ Browse thousands of mods, shaders and resource packs from **Modrinth** and **Cur
 <div align="center">
   <img src="https://usespectra.app/screenshots/ModalAddModsToInstanceModrinth.png" alt="Built-in browser for searching and installing mods from Modrinth" width="800" />
   <br />
-  <em>Search Modrinth without leaving the launcher. Pick a mod, choose a version, click <strong>Install</strong>.</em>
-</div>
-
-<div align="center">
-  <img src="https://usespectra.app/screenshots/ModalAddModsToInstanceCurseForge.png.png" alt="The same mod browser switched to the CurseForge source" width="800" />
-  <br />
-  <em>Prefer CurseForge? Switch the source with one dropdown and search there instead.</em>
+  <em>Search Modrinth without leaving the launcher, tick as many mods as you like and install them together. Prefer CurseForge? Switch the source and keep picking.</em>
 </div>
 
 ### 🌍 Worlds, screenshots and skins — all in one place
@@ -97,16 +91,22 @@ No more digging through folders. Spectra gathers your stuff into easy tabs:
 - **Live logs** — watch what the game is doing in real time.
 - **Discord status** — show friends what you're playing (optional).
 - **Playtime tracking** — see how long you've spent in each instance.
-- **Languages** — available in **English** and **Polish**.
+- **Languages** — English, Polish, German, Spanish, French, Russian and Chinese.
 
 ### 🎨 Make it yours
 
-Pick a theme (Dark, pure-black OLED, or a gold "Zębatkowo" look), choose an accent color, and the whole launcher updates to match.
+Pick a style (Dark, pure-black OLED, or Squared with no rounded corners), choose an accent color, and the whole launcher updates to match.
 
 <div align="center">
   <img src="https://usespectra.app/screenshots/Settings.png" alt="Settings page with theme options and accent color picker" width="800" />
   <br />
-  <em>Themes and accent colors in Settings — tweak the look in seconds.</em>
+  <em>Styles and accent colors in Settings — tweak the look in seconds.</em>
+</div>
+
+<div align="center">
+  <img src="https://usespectra.app/screenshots/SettingsLanguage.png" alt="Language settings with a flag and name for each language" width="800" />
+  <br />
+  <em>Switch the language any time — the launcher changes right away.</em>
 </div>
 
 ### ⚙️ Fine-tune each instance

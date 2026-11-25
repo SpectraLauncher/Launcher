@@ -2,47 +2,55 @@
 @import "@nuxt/ui";
 
 @theme {
-	--font-sans: 'Space Grotesk', system-ui, sans-serif;
+	--font-sans: 'Inter', system-ui, sans-serif;
 	--font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+	/* Graphite neutrals: every neutral-* utility and Nuxt UI surface reads these. */
+	--color-neutral-50: #f5f6f7;
+	--color-neutral-100: #e8eaed;
+	--color-neutral-200: #d4d7dc;
+	--color-neutral-300: #b3b8bf;
+	--color-neutral-400: #8d939c;
+	--color-neutral-500: #7a808a;
+	--color-neutral-600: #4a4f57;
+	--color-neutral-700: #31353c;
+	--color-neutral-800: #23262b;
+	--color-neutral-900: #16181c;
+	--color-neutral-950: #0f1013;
 }
 
-:root {
-	--mk-text: #eef1f5;
-	--mk-placeholder: #5b626d;
+/* Dark (default): ground, a half step for cards, a full step for anything raised. */
+:root,
+.dark {
+	--ui-radius: 0.25rem;
+	--ui-bg: var(--ui-color-neutral-900);
+	--ui-bg-muted: color-mix(in oklab, var(--ui-color-neutral-900), var(--ui-color-neutral-800) 55%);
+	--ui-bg-elevated: var(--ui-color-neutral-800);
+	--ui-bg-accented: var(--ui-color-neutral-700);
+	--ui-border: color-mix(in oklab, var(--ui-color-neutral-800), var(--ui-color-neutral-700) 25%);
+	--ui-border-muted: color-mix(in oklab, var(--ui-color-neutral-900), var(--ui-color-neutral-800) 70%);
+	--ui-border-accented: var(--ui-color-neutral-700);
+	--mk-chrome: var(--ui-color-neutral-950);
+	--mk-text: var(--ui-text);
+	--mk-placeholder: var(--ui-text-dimmed);
 }
 
-body {
-	margin:0;
-	font-family: 'Space Grotesk', system-ui, sans-serif;
-	font-size:14px;
-	line-height:1.45;
-	color:var(--mk-text);
-	-webkit-font-smoothing:antialiased;
-	text-rendering:optimizeLegibility;
-	background: #0c0e12;
-}
-
-.font-mono {
-	font-family: 'JetBrains Mono', ui-monospace, monospace;
-}
-
-::selection { background:#36a9e159; }
-input::placeholder, textarea::placeholder { color:var(--mk-placeholder); }
-
-@keyframes mk-float {
-	0%,100% { transform:translate(0,0) }
-	50% { transform:translate(24px,-30px) }
-}
-
-html.oled body {
-	background: #000000;
-}
+/* OLED: true black ground, surfaces lifted just enough to separate. */
 html.oled {
 	--ui-bg: #000000;
-	--ui-bg-muted: #050505;
-	--ui-bg-elevated: #0a0a0a;
+	--ui-bg-muted: #0a0a0b;
+	--ui-bg-elevated: #121315;
+	--ui-bg-accented: #1d1e21;
+	--ui-border: #1c1d20;
+	--ui-border-muted: #121315;
+	--ui-border-accented: #2a2c30;
+	--mk-chrome: #000000;
 }
 
+/* Squared: every corner goes to zero, layout must hold by borders alone. */
+html.squared {
+	--ui-radius: 0rem;
+}
 html.squared,
 html.squared *,
 html.squared *::before,
@@ -50,20 +58,37 @@ html.squared *::after {
 	border-radius: 0 !important;
 }
 
-*::-webkit-scrollbar{
-	width:10px;
-	height:10px
+html, body {
+	height: 100%;
 }
-*::-webkit-scrollbar-thumb{
-	background:rgba(255,255,255,0.10);
-	border-radius:8px
+
+body {
+	margin: 0;
+	font-family: var(--font-sans);
+	font-size: 14px;
+	line-height: 1.5;
+	font-feature-settings: 'cv11', 'ss01';
+	color: var(--ui-text);
+	background: var(--ui-bg);
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
 }
-*::-webkit-scrollbar-thumb:hover{
-	background:rgba(255,255,255,0.20)
+
+::selection { background: color-mix(in oklab, var(--ui-primary) 35%, transparent); color: var(--ui-text-highlighted); }
+input, textarea { caret-color: var(--ui-primary); }
+input::placeholder, textarea::placeholder { color: var(--ui-text-dimmed); }
+a { text-underline-offset: 3px; }
+
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+	background: var(--ui-bg-accented);
+	border: 3px solid transparent;
+	border-radius: 8px;
+	background-clip: padding-box;
 }
-*::-webkit-scrollbar-track{
-	background:transparent
-}
+*::-webkit-scrollbar-thumb:hover { background-color: var(--ui-color-neutral-600); }
+*::-webkit-scrollbar-corner { background: transparent; }
 
 .mk-md {
   font-size: 13px;
@@ -88,14 +113,15 @@ html.squared *::after {
 .mk-md li { margin: 0.2em 0; }
 .mk-md img { max-width: 100%; height: auto; border-radius: 8px; margin: 0.5em 0; }
 .mk-md code {
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 0.9em;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--ui-bg-elevated);
   padding: 0.1em 0.35em;
   border-radius: 4px;
 }
 .mk-md pre {
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--ui-bg-muted);
+  border: 1px solid var(--ui-border);
   padding: 0.8em;
   border-radius: 8px;
   overflow-x: auto;

@@ -1,10 +1,10 @@
 <template>
   <div class="flex h-full flex-col">
-    <div class="min-h-0 flex-1 overflow-y-auto p-6 lg:p-8">
-      <div class="mx-auto grid max-w-6xl grid-cols-1 gap-8 lg:grid-cols-[360px_1fr]">
+    <div class="min-h-0 flex-1 overflow-y-auto px-8 pb-10 pt-7">
+      <div class="mx-auto grid max-w-[1400px] grid-cols-1 gap-8 lg:grid-cols-[360px_1fr]">
         <div class="lg:sticky lg:top-0 lg:self-start">
           <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <h1 class="text-2xl font-bold tracking-tight">{{ $t('skins.title') }}</h1>
+            <h1 class="text-[22px] font-semibold tracking-[-0.01em] text-highlighted">{{ $t('skins.title') }}</h1>
             <div class="flex flex-wrap items-center gap-2">
               <AddonSlot name="skins.header" />
             </div>
@@ -19,7 +19,7 @@
                 :key="m"
                 type="button"
                 class="flex-1 rounded-md py-1 font-medium transition"
-                :class="selectedSavedSkin.model === m ? 'bg-primary-500/20 text-primary-300' : 'text-neutral-400 hover:text-neutral-200'"
+                :class="selectedSavedSkin.model === m ? 'bg-primary/20 text-primary' : 'text-neutral-400 hover:text-neutral-200'"
                 @click="setModel(m)"
               >
                 {{ $t(`skins.${m}`) }}
@@ -76,7 +76,7 @@
               <button
                 type="button"
                 class="flex h-28 w-24 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-2 text-center transition"
-                :class="dragOver ? 'border-primary-500 bg-primary-500/10' : 'border-default text-neutral-400 hover:border-primary-500/60 hover:text-neutral-200'"
+                :class="dragOver ? 'border-primary bg-primary/10' : 'border-default text-neutral-400 hover:border-primary/60 hover:text-neutral-200'"
                 @click="pickFile"
               >
                 <UIcon name="i-lucide-plus" class="size-6" />
@@ -84,8 +84,8 @@
               </button>
 
               <template v-if="savedLoading">
-                <div v-for="n in 4" :key="`sk-${n}`" class="w-24 rounded-xl border border-default bg-white/3 p-2">
-                  <div class="h-20 animate-pulse rounded-lg bg-white/5" />
+                <div v-for="n in 4" :key="`sk-${n}`" class="w-24 rounded-xl border border-default bg-muted p-2">
+                  <div class="h-20 animate-pulse rounded-lg bg-elevated" />
                 </div>
               </template>
 
@@ -93,11 +93,11 @@
                 v-for="s in saved"
                 :key="s.id"
                 class="group relative flex w-24 cursor-pointer flex-col items-center gap-1 rounded-xl border p-2 transition"
-                :class="selected.kind === 'saved' && selected.id === s.id ? 'border-primary-500 bg-primary-500/10' : 'border-default bg-white/3 hover:border-primary-500/40'"
+                :class="selected.kind === 'saved' && selected.id === s.id ? 'border-primary bg-primary/10' : 'border-default bg-muted hover:border-primary/40'"
                 @click="previewSaved(s)"
               >
                 <img v-if="savedBust[s.id]" :src="savedBust[s.id]" class="h-20 w-full object-contain" :alt="s.name" >
-                <div v-else class="h-20 w-full animate-pulse rounded-lg bg-white/5" />
+                <div v-else class="h-20 w-full animate-pulse rounded-lg bg-elevated" />
                 <span class="w-full truncate text-center text-[11px] text-neutral-300" :title="s.name">{{ s.name }}</span>
                 <UIcon
                   v-if="s.active"
@@ -128,11 +128,11 @@
                 :key="d.name"
                 type="button"
                 class="flex w-24 flex-col items-center gap-1 rounded-xl border p-2 transition"
-                :class="selected.kind === 'default' && selected.name === d.name ? 'border-primary-500 bg-primary-500/10' : 'border-default bg-white/3 hover:border-primary-500/40'"
+                :class="selected.kind === 'default' && selected.name === d.name ? 'border-primary bg-primary/10' : 'border-default bg-muted hover:border-primary/40'"
                 @click="previewDefault(d)"
               >
                 <img v-if="defaultBust[d.name]" :src="defaultBust[d.name]" class="h-20 w-full object-contain" :alt="d.name" >
-                <div v-else class="h-20 w-full animate-pulse rounded-lg bg-white/5" />
+                <div v-else class="h-20 w-full animate-pulse rounded-lg bg-elevated" />
                 <span class="w-full truncate text-center text-[11px] text-neutral-300">{{ d.name }}</span>
               </button>
             </div>
@@ -141,10 +141,10 @@
       </div>
     </div>
 
-    <div v-if="!isMicrosoft" class="shrink-0 border-t border-default bg-white/2 px-6 py-4 lg:px-8">
-      <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
+    <div v-if="!isMicrosoft" class="shrink-0 border-t border-default bg-muted px-8 py-4">
+      <div class="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-3">
         <div class="flex min-w-0 items-start gap-3">
-          <UIcon name="i-lucide-info" class="mt-0.5 size-5 shrink-0 text-primary-400" />
+          <UIcon name="i-lucide-info" class="mt-0.5 size-5 shrink-0 text-primary" />
           <div class="min-w-0">
             <p class="text-sm font-semibold">{{ $t('skins.demoTitle') }}</p>
             <p class="text-sm text-muted">{{ $t('skins.demoDesc') }}</p>
@@ -164,18 +164,18 @@
         <p v-if="!isMicrosoft" class="mb-4 text-sm text-muted">{{ $t('skins.capesDemo') }}</p>
 
         <div v-if="capesLoading" class="flex flex-wrap gap-3">
-          <div v-for="n in 3" :key="`cape-sk-${n}`" class="h-28 w-24 animate-pulse rounded-xl bg-white/5" />
+          <div v-for="n in 3" :key="`cape-sk-${n}`" class="h-28 w-24 animate-pulse rounded-xl bg-elevated" />
         </div>
 
         <div v-else class="flex flex-wrap gap-3">
           <button
             type="button"
             class="flex w-24 flex-col items-center gap-2 rounded-xl border p-2 transition"
-            :class="!activeCapeId ? 'border-primary-500 bg-primary-500/10' : 'border-default bg-white/3 hover:border-primary-500/40'"
+            :class="!activeCapeId ? 'border-primary bg-primary/10' : 'border-default bg-muted hover:border-primary/40'"
             :disabled="!isMicrosoft"
             @click="chooseCape(null)"
           >
-            <div class="flex h-32 w-full items-center justify-center rounded-lg bg-white/5">
+            <div class="flex h-32 w-full items-center justify-center rounded-lg bg-elevated">
               <UIcon name="i-lucide-slash" class="size-5 text-neutral-500" />
             </div>
             <span class="text-[11px] text-neutral-300">{{ $t('skins.noCape') }}</span>
@@ -186,7 +186,7 @@
             :key="c.id"
             type="button"
             class="flex w-24 flex-col items-center gap-2 rounded-xl border p-2 transition"
-            :class="c.active ? 'border-primary-500 bg-primary-500/10' : 'border-default bg-white/3 hover:border-primary-500/40'"
+            :class="c.active ? 'border-primary bg-primary/10' : 'border-default bg-muted hover:border-primary/40'"
             :disabled="!isMicrosoft"
             @click="chooseCape(c)"
           >

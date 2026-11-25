@@ -1,64 +1,54 @@
 <template>
-  <div class="mb-6 rounded-[15px] border border-primary-500/25 bg-linear-[160deg] from-primary-500/15 to-primary-500/5 p-[13px]">
-    <div class="mb-[9px] flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.12em] text-primary-300">
-      <span v-if="playing" class="size-1.5 rounded-full bg-[#3fb877] shadow-[0_0_6px_#3fb877]" />
-      {{ playing ? $t('instanceCard.nowPlaying') : $t('instanceCard.title') }}
+  <div v-if="selected" class="flex flex-wrap items-center gap-4 rounded-xl border border-default bg-muted p-4">
+    <InstanceIcon :instance="selected" class="size-16 rounded-xl text-[24px]" />
+    <div class="min-w-0 flex-1">
+      <div class="flex items-center gap-2">
+        <span class="truncate text-base font-semibold text-highlighted">{{ selected.name }}</span>
+        <UBadge v-if="playing" color="primary" variant="subtle" size="sm" :label="$t('instanceCard.nowPlaying')" />
+      </div>
+      <div class="mt-0.5 truncate text-[13px] tabular-nums text-muted">{{ subtitle }}</div>
+      <p v-if="resume && !playing" class="mt-1.5 flex items-center gap-1.5 truncate text-[13px] text-toned">
+        <UIcon :name="resume.kind === 'Singleplayer' ? 'i-lucide-globe' : 'i-lucide-server'" class="size-3.5 shrink-0 text-dimmed" />
+        <span class="truncate">{{ resumeLabel }}</span>
+      </p>
     </div>
 
-    <template v-if="selected">
-      <div class="mb-3 flex items-center gap-[11px]">
-        <InstanceIcon
-          :instance="selected"
-          class="h-[42px] w-[42px] rounded-[11px] text-[18px] shadow-[0_4px_14px_rgba(0,0,0,0.35)]"
-        />
-        <div class="min-w-0">
-          <div class="truncate text-[14px] font-semibold text-(--mk-text)">{{ selected.name }}</div>
-          <div class="font-mono text-[11px] text-neutral-400">{{ subtitle }}</div>
-        </div>
-      </div>
-
-      <button
+    <div class="flex items-center gap-2">
+      <UButton
         v-if="playing"
-        type="button"
-        :disabled="launching || stopping"
-        class="flex w-full items-center justify-center gap-2 rounded-[11px] bg-[#e5484d] py-[11px] text-[14px] font-bold tracking-[0.02em] text-white transition hover:bg-[#ec5d62] active:scale-[0.98] disabled:opacity-60"
+        color="error"
+        size="lg"
+        icon="i-lucide-square"
+        :loading="stopping"
+        :label="$t('instanceCard.stop')"
+        class="px-5"
         @click="stop"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1.5" /></svg>
-        {{ stopping ? $t('common.loading') : $t('instanceCard.stop') }}
-      </button>
+      />
       <template v-else>
-        <div class="flex gap-2">
-          <button
-            type="button"
-            :disabled="launching"
-            class="flex flex-1 items-center justify-center gap-2 rounded-[11px] bg-[#3fb877] py-[11px] text-[14px] font-bold tracking-[0.02em] text-[#06210f] transition hover:bg-[#4bcb86] active:scale-[0.98] disabled:opacity-60"
-            @click="play"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5l13 7-13 7z" /></svg>
-            {{ launching ? $t('common.loading') : $t('instanceCard.play') }}
-          </button>
-          <button
-            v-if="resume"
-            type="button"
-            :disabled="launching"
-            :title="$t('instanceCard.resume', { name: resumeLabel })"
-            :aria-label="$t('instanceCard.resume', { name: resumeLabel })"
-            class="flex w-[46px] shrink-0 items-center justify-center rounded-[11px] bg-[#3fb877]/15 text-[#3fb877] ring-1 ring-[#3fb877]/40 transition hover:bg-[#3fb877]/25 active:scale-[0.98] disabled:opacity-60"
-            @click="playResume"
-          >
-            <UIcon name="i-lucide-log-in" class="size-4" />
-          </button>
-        </div>
-        <p v-if="resume" class="mt-2 flex items-center gap-1.5 truncate text-[11px] text-neutral-400">
-          <UIcon :name="resume.kind === 'Singleplayer' ? 'i-lucide-globe' : 'i-lucide-server'" class="size-3 shrink-0" />
-          <span class="truncate">{{ resumeLabel }}</span>
-        </p>
+        <UButton
+          v-if="resume"
+          color="neutral"
+          variant="soft"
+          size="lg"
+          icon="i-lucide-log-in"
+          :disabled="launching"
+          :label="$t('instanceCard.resume', { name: resumeLabel })"
+          class="max-w-72"
+          :ui="{ label: 'truncate' }"
+          @click="playResume"
+        />
+        <UButton
+          size="xl"
+          :loading="launching"
+          :label="$t('instanceCard.play')"
+          class="px-7"
+          @click="play"
+        >
+          <template #leading>
+            <svg v-if="!launching" class="size-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z" /></svg>
+          </template>
+        </UButton>
       </template>
-    </template>
-
-    <div v-else class="py-1 text-[12px] text-neutral-500">
-      {{ $t('instanceCard.empty') }}
     </div>
   </div>
 </template>
@@ -91,7 +81,11 @@ const playing = computed(() => !!running.value)
 const mc = useMinecraftLaunch(() => selected.value?.id)
 const launching = computed(() => mc.launching.value)
 
-const subtitle = computed(() => (selected.value ? instanceSubtitle(selected.value) : ''))
+const subtitle = computed(() => {
+  if (!selected.value) return ''
+  const hours = Math.round((selected.value.playtime_seconds ?? 0) / 360) / 10
+  return hours ? `${instanceSubtitle(selected.value)} · ${hours} h` : instanceSubtitle(selected.value)
+})
 
 const play = async () => {
   if (!selected.value) return

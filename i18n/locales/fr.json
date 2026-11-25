@@ -1,6 +1,6 @@
 {
   "nav": {
-    "home": "Accueil",
+    "home": "Bibliothèque",
     "worlds": "Mondes",
     "screenshots": "Captures d'écran",
     "skins": "Skins",
@@ -9,12 +9,13 @@
     "newInstance": "Nouvelle instance"
   },
   "instanceCard": {
-    "title": "JOUÉ RÉCEMMENT",
-    "nowPlaying": "EN COURS",
-    "play": "JOUER",
+    "title": "Joué récemment",
+    "nowPlaying": "En cours",
+    "play": "Jouer",
     "resume": "Jouer et rejoindre {name}",
-    "stop": "ARRÊTER",
-    "empty": "Tu n'as pas encore joué"
+    "stop": "Arrêter",
+    "empty": "Tu n'as pas encore joué",
+    "continue": "Reprendre"
   },
   "create": {
     "title": "Créer une instance",
@@ -62,7 +63,7 @@
     }
   },
   "library": {
-    "title": "Instances",
+    "title": "Bibliothèque",
     "count": "{n} dans ta bibliothèque",
     "search": "Rechercher des instances...",
     "allLoaders": "Tous les chargeurs",
@@ -349,7 +350,9 @@
     "language": {
       "title": "Langue",
       "label": "Langue de l'interface",
-      "auto": "Détectée automatiquement au premier lancement, mémorisée ensuite."
+      "auto": "Détectée automatiquement au premier lancement, mémorisée ensuite.",
+      "search": "Rechercher une langue…",
+      "noMatch": "Aucune langue ne correspond"
     },
     "accounts": {
       "title": "Comptes",
@@ -402,7 +405,8 @@
       "defaultPath": "Chemin Java par défaut",
       "defaultPathHint": "Utilisé quand une instance n'en a pas (le moteur gère toujours Java lui-même).",
       "detectedDesc": "Versions de Java trouvées sur ton système et dans le launcher."
-    }
+    },
+    "madeBy": "Créé par"
   },
   "activity": {
     "idle": "Aucune instance en cours",
@@ -428,7 +432,7 @@
   },
   "content": {
     "all": "Tout",
-    "count": "{n} éléments",
+    "count": "Éléments : {n}",
     "searchPlaceholder": "Rechercher du contenu...",
     "refresh": "Actualiser",
     "empty": "Rien ici pour l'instant",
@@ -693,7 +697,32 @@
     "extendHint": "Prolongeable dans les dernières 48 heures",
     "revoke": "Expirer le code",
     "revokeConfirm": "Clique encore pour confirmer",
-    "revokeHint": "Le code cesse de fonctionner aussitôt. Tes amis gardent ce qu’ils ont installé, ils ne reçoivent plus les mises à jour."
+    "revokeHint": "Le code cesse de fonctionner aussitôt. Tes amis gardent ce qu’ils ont installé, ils ne reçoivent plus les mises à jour.",
+    "collabOf": "Tu crées ce pack avec {owner}",
+    "behind": "La révision {n} est sortie. Récupère-la avant d’envoyer.",
+    "pull": "Récupérer la mise à jour",
+    "canPush": "Peut envoyer des mises à jour",
+    "coAuthor": "Coauteur",
+    "allowPush": "Autoriser l’envoi de mises à jour",
+    "stopPush": "Retirer l’envoi de mises à jour",
+    "merging": "Fusion des changements dans {name}",
+    "conflict": {
+      "title": "Quelqu’un a envoyé la révision {n} avant toi",
+      "hint": "Choisis quelle version de chaque élément part dans ton envoi. Les configs et les autres fichiers viennent de ta copie.",
+      "none": "Aucun mod ne diffère. Ton envoi emporte tes configs et tes fichiers.",
+      "takeAll": "Tout prendre de leur côté",
+      "keepAll": "Tout garder de mon côté",
+      "mine": "La mienne",
+      "theirs": "La leur",
+      "addedByThem": "Ajouté par eux",
+      "removedByThem": "Retiré par eux",
+      "updatedByThem": "Mis à jour par eux",
+      "addedByYou": "Ajouté par toi",
+      "removedByYou": "Retiré par toi",
+      "updatedByYou": "Mis à jour par toi",
+      "updatedByBoth": "Modifié des deux côtés",
+      "apply": "Appliquer et envoyer"
+    }
   },
   "spectra": {
     "title": "Compte Spectra",
@@ -722,7 +751,8 @@
       "friend_request": "{who} veut devenir ton ami",
       "friend_accepted": "{who} a accepté ta demande",
       "instance_invite": "{who} a partagé « {name} » avec toi",
-      "instance_update": "{who} a publié une mise à jour de « {name} »"
+      "instance_update": "{who} a publié une mise à jour de « {name} »",
+      "instance_collab": "{who} t’invite à créer « {name} » ensemble"
     },
     "update": "Mettre à jour",
     "updating": "Mise à jour de {name}…",
@@ -745,7 +775,8 @@
       "dndHint": "Tes amis voient un point rouge : tu es là, mais tu préfères qu’on te laisse",
       "hidden": "Masqué",
       "hiddenHint": "Tout le monde te voit hors ligne, quoi que tu fasses"
-    }
+    },
+    "statusLabel": "Ton statut"
   },
   "snapshots": {
     "title": "Points de restauration",
@@ -793,7 +824,14 @@
       "useCloud": "Utiliser la copie cloud",
       "useComputer": "Utiliser cet ordinateur",
       "turnOff": "Désactiver la synchronisation",
-      "status": { "off": "Désactivée", "idle": "Prête", "synced": "À jour", "conflict": "Choisir une copie", "deferred": "Attend la fermeture du jeu", "signed_out": "Connecte-toi pour continuer" }
+      "status": {
+        "off": "Désactivée",
+        "idle": "Prête",
+        "synced": "À jour",
+        "conflict": "Choisir une copie",
+        "deferred": "Attend la fermeture du jeu",
+        "signed_out": "Connecte-toi pour continuer"
+      }
     },
     "title": "Synchroniser les instances",
     "desc": "Garde les réglages choisis identiques dans toutes les instances. Les changements sont repris à la fermeture du jeu et appliqués aux autres au démarrage suivant.",

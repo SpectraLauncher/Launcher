@@ -31,3 +31,5 @@ docs
 
 examples/*.zip
 examples/*/target
+
+.impeccable/

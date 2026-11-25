@@ -7,7 +7,7 @@
             v-for="i in steps"
             :key="i"
             class="h-1.5 rounded-full transition-all"
-            :class="i - 1 === step ? 'w-6 bg-primary-500' : 'w-1.5 bg-white/15'"
+            :class="i - 1 === step ? 'w-6 bg-primary' : 'w-1.5 bg-accented'"
           />
         </div>
 
@@ -48,12 +48,13 @@
                 v-for="opt in themeOptions"
                 :key="opt.value"
                 type="button"
-                class="rounded-lg border px-3 py-2.5 text-left transition"
-                :class="theme.mode === opt.value ? 'border-primary-500 ring-1 ring-primary-500 bg-primary-500/10' : 'border-default hover:border-neutral-500'"
+                class="rounded-xl border p-2 text-left transition-colors"
+                :class="theme.mode === opt.value ? 'border-primary ring-1 ring-primary' : 'border-default hover:border-(--ui-border-accented)'"
+                :aria-pressed="theme.mode === opt.value"
                 @click="theme.setMode(opt.value)"
               >
-                <span class="block text-xs font-medium">{{ opt.label }}</span>
-                <span class="mt-2 block h-5 rounded" :style="{ background: opt.preview }" />
+                <ThemeSwatch :mode="opt.value" />
+                <span class="mt-2 block px-0.5 text-xs font-medium text-highlighted">{{ opt.label }}</span>
               </button>
             </div>
             <div class="flex flex-wrap gap-2">
@@ -62,7 +63,7 @@
                 :key="c"
                 type="button"
                 class="size-6 rounded-full transition"
-                :class="theme.accent === c ? 'ring-2 ring-white ring-offset-2 ring-offset-neutral-950' : 'hover:scale-110'"
+                :class="theme.accent === c ? 'ring-2 ring-(--ui-text-highlighted) ring-offset-2 ring-offset-(--ui-bg-elevated)' : 'hover:scale-110'"
                 :style="{ background: accentHex[c] }"
                 @click="theme.setAccent(c)"
               />
@@ -84,7 +85,7 @@
             <div>
               <div class="mb-1 flex items-center justify-between text-sm">
                 <span class="font-medium">{{ $t('onboarding.ram') }}</span>
-                <span class="font-mono text-primary-300">{{ (ram / 1024).toFixed(1) }} GB</span>
+                <span class="tabular-nums text-primary">{{ (ram / 1024).toFixed(1) }} GB</span>
               </div>
               <USlider v-model="ram" :min="sysMem.minMb" :max="sysMem.maxMb.value" :step="256" />
             </div>
@@ -112,7 +113,7 @@
           </div>
 
           <div v-else class="flex flex-col items-center gap-4 py-6 text-center">
-            <UIcon name="i-lucide-party-popper" class="size-12 text-primary-400" />
+            <UIcon name="i-lucide-party-popper" class="size-12 text-primary" />
             <div>
               <h2 class="text-xl font-bold">{{ $t('onboarding.doneTitle') }}</h2>
               <p class="mt-2 text-sm text-muted">{{ $t('onboarding.doneText') }}</p>
@@ -161,9 +162,9 @@ const privacyOptions: { key: PrivacyKey; wip?: boolean }[] = [
 ]
 
 const themeOptions = computed<{ value: ThemeMode, label: string, preview: string }[]>(() => [
-  { value: 'dark', label: t('settings.appearance.themeDark'), preview: '#0a0a0b' },
+  { value: 'dark', label: t('settings.appearance.themeDark'), preview: '#16181c' },
   { value: 'oled', label: t('settings.appearance.themeOled'), preview: '#000000' },
-  { value: 'squared', label: t('settings.appearance.themeSquared'), preview: 'linear-gradient(135deg,#0a0a0b 50%,#52525b 50%)' },
+  { value: 'squared', label: t('settings.appearance.themeSquared'), preview: 'linear-gradient(135deg,#16181c 50%,#31353c 50%)' },
 ])
 const accentHex: Record<string, string> = {
   sky: '#0ea5e9', blue: '#3b82f6', indigo: '#6366f1', violet: '#8b5cf6',

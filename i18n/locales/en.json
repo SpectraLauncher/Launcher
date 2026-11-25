@@ -1,6 +1,6 @@
 {
   "nav": {
-    "home": "Home",
+    "home": "Library",
     "worlds": "Worlds",
     "screenshots": "Screenshots",
     "skins": "Skins",
@@ -9,12 +9,13 @@
     "newInstance": "New instance"
   },
   "instanceCard": {
-    "title": "LAST PLAYED",
-    "nowPlaying": "NOW PLAYING",
-    "play": "PLAY",
+    "title": "Last played",
+    "nowPlaying": "Now playing",
+    "play": "Play",
     "resume": "Play and join {name}",
-    "stop": "STOP",
-    "empty": "You haven't played yet"
+    "stop": "Stop",
+    "empty": "You haven't played yet",
+    "continue": "Jump back in"
   },
   "create": {
     "title": "Create instance",
@@ -62,7 +63,7 @@
     }
   },
   "library": {
-    "title": "Instances",
+    "title": "Library",
     "count": "{n} in your library",
     "search": "Search instances...",
     "allLoaders": "All loaders",
@@ -349,7 +350,9 @@
     "language": {
       "title": "Language",
       "label": "Interface language",
-      "auto": "Detected automatically on first run, remembered after that."
+      "auto": "Detected automatically on first run, remembered after that.",
+      "search": "Search languages…",
+      "noMatch": "No language matches"
     },
     "accounts": {
       "title": "Accounts",
@@ -402,7 +405,8 @@
       "defaultPath": "Default Java path",
       "defaultPathHint": "Used when an instance has none (the engine still manages Java itself).",
       "detectedDesc": "Java versions found on your system and in the launcher."
-    }
+    },
+    "madeBy": "Made by"
   },
   "activity": {
     "idle": "No instance running",
@@ -693,7 +697,32 @@
     "extendHint": "Can be extended in the last 48 hours",
     "revoke": "Expire the code",
     "revokeConfirm": "Click again to confirm",
-    "revokeHint": "The code stops working right away. Friends keep what they already installed, they just stop getting updates."
+    "revokeHint": "The code stops working right away. Friends keep what they already installed, they just stop getting updates.",
+    "collabOf": "You co-author this pack with {owner}",
+    "behind": "Revision {n} is out. Get it before you push.",
+    "pull": "Get update",
+    "canPush": "Can push updates",
+    "coAuthor": "Co-author",
+    "allowPush": "Let them push updates",
+    "stopPush": "Stop them pushing updates",
+    "merging": "Merging changes into {name}",
+    "conflict": {
+      "title": "Someone pushed revision {n} before you",
+      "hint": "Pick which version of each item goes into your push. Configs and other files come from your copy.",
+      "none": "No mods differ. Your push carries your configs and files.",
+      "takeAll": "Take all theirs",
+      "keepAll": "Keep all mine",
+      "mine": "Mine",
+      "theirs": "Theirs",
+      "addedByThem": "Added by them",
+      "removedByThem": "Removed by them",
+      "updatedByThem": "Updated by them",
+      "addedByYou": "Added by you",
+      "removedByYou": "Removed by you",
+      "updatedByYou": "Updated by you",
+      "updatedByBoth": "Changed on both sides",
+      "apply": "Apply and push"
+    }
   },
   "spectra": {
     "title": "Spectra account",
@@ -722,7 +751,8 @@
       "friend_request": "{who} wants to be friends",
       "friend_accepted": "{who} accepted your friend request",
       "instance_invite": "{who} shared \"{name}\" with you",
-      "instance_update": "{who} pushed an update to \"{name}\""
+      "instance_update": "{who} pushed an update to \"{name}\"",
+      "instance_collab": "{who} invited you to co-create \"{name}\""
     },
     "update": "Update",
     "updating": "Updating {name}…",
@@ -745,7 +775,8 @@
       "dndHint": "Friends see a red dot — you are around but would rather not be pulled in",
       "hidden": "Hidden",
       "hiddenHint": "Everyone sees you as offline, whatever you are doing"
-    }
+    },
+    "statusLabel": "Your status"
   },
   "snapshots": {
     "title": "Restore points",
@@ -793,7 +824,14 @@
       "useCloud": "Use cloud copy",
       "useComputer": "Use this computer",
       "turnOff": "Turn off sync",
-      "status": { "off": "Off", "idle": "Ready", "synced": "Up to date", "conflict": "Choose a copy to keep", "deferred": "Waiting for the game to close", "signed_out": "Sign in to continue" }
+      "status": {
+        "off": "Off",
+        "idle": "Ready",
+        "synced": "Up to date",
+        "conflict": "Choose a copy to keep",
+        "deferred": "Waiting for the game to close",
+        "signed_out": "Sign in to continue"
+      }
     },
     "title": "Sync across instances",
     "desc": "Keep chosen settings identical in every instance. Changes made in one game are picked up when it closes and applied to the others the next time they start.",

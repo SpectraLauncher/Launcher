@@ -1,54 +1,58 @@
 <template>
-  <div class="app h-full w-full flex">
+  <div class="app flex h-full w-full">
 
-      <div class="flex flex-col w-64 px-4 h-full py-4 backdrop-blur-lg">
-
-        <SelectedInstanceCard />
-
-        <div id="menu" class="flex flex-col gap-2">
+      <nav class="flex w-16 shrink-0 flex-col items-center gap-1 pb-3 pt-1" :aria-label="$t('nav.home')">
+        <UTooltip v-for="item in menu" :key="item.to" :text="$t(item.label)" :content="{ side: 'right' }">
           <NuxtLink
-            v-for="item in menu"
-            :key="item.to"
             :to="item.to"
-            class="flex items-center justify-start gap-2 relative py-1 px-3 rounded-lg overflow-hidden duration-300 hover:bg-primary-500/5"
-            exact-active-class="bg-primary-500/10"
-            v-slot="{ isExactActive }"
+            :aria-label="$t(item.label)"
+            class="flex size-10 items-center justify-center rounded-xl text-muted transition-colors hover:bg-elevated hover:text-highlighted"
+            exact-active-class="!bg-primary/15 !text-primary"
           >
-            <div :class="['absolute left-0 top-1/2 -translate-y-1/2 w-1 rounded-md bg-primary-500 duration-300', isExactActive ? 'opacity-100 h-4' : ' h-0']"></div>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" v-html="item.icon"></svg>
-            <p>{{ $t(item.label) }}</p>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" v-html="item.icon"></svg>
           </NuxtLink>
-          <AddonSlot name="sidebar.menu" variant="sidebar" />
+        </UTooltip>
+        <AddonSlot name="sidebar.menu" variant="rail" />
+
+        <div class="my-2 h-px w-8 shrink-0 bg-(--ui-border-accented)" />
+
+        <div class="flex min-h-0 w-full flex-1 flex-col items-center gap-1.5 overflow-y-auto [scrollbar-width:none]">
+          <template v-if="instances.loading && !instances.loaded">
+            <div v-for="n in 5" :key="`inst-sk-${n}`" class="size-10 shrink-0 animate-pulse rounded-xl bg-elevated" />
+          </template>
+          <SidebarInstanceItem
+            v-for="instance in recent"
+            :key="instance.id"
+            :instance="instance"
+          />
+          <UTooltip :text="$t('nav.newInstance')" :content="{ side: 'right' }">
+            <button
+              type="button"
+              :aria-label="$t('nav.newInstance')"
+              class="flex size-10 shrink-0 items-center justify-center rounded-xl border border-dashed border-(--ui-border-accented) text-muted transition-colors hover:border-primary hover:text-primary"
+              @click="openCreate()"
+            >
+              <UIcon name="i-lucide-plus" class="size-5" />
+            </button>
+          </UTooltip>
         </div>
 
-        <div class="flex flex-1 min-h-0 flex-col gap-2 py-4 mt-4 border-t border-gray-800">
-          <div class="flex-1 min-h-0 overflow-y-auto flex flex-col gap-1">
-            <template v-if="instances.loading && !instances.loaded">
-              <div v-for="n in 6" :key="`inst-sk-${n}`" class="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5">
-                <div class="size-7 shrink-0 animate-pulse rounded-md bg-white/5" />
-                <div class="min-w-0 flex-1 space-y-1.5">
-                  <div class="h-3 w-3/4 animate-pulse rounded bg-white/5" />
-                  <div class="h-2 w-2/5 animate-pulse rounded bg-white/5" />
-                </div>
-              </div>
-            </template>
-            <SidebarInstanceItem
-              v-for="instance in instances.instances"
-              :key="instance.id"
-              :instance="instance"
-            />
-          </div>
+        <AddonSlot name="sidebar.footer" variant="rail" />
+        <UTooltip :text="$t(settingsItem.label)" :content="{ side: 'right' }">
+          <NuxtLink
+            :to="settingsItem.to"
+            :aria-label="$t(settingsItem.label)"
+            class="mt-1 flex size-10 items-center justify-center rounded-xl text-muted transition-colors hover:bg-elevated hover:text-highlighted"
+            exact-active-class="!bg-primary/15 !text-primary"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" v-html="settingsItem.icon"></svg>
+          </NuxtLink>
+        </UTooltip>
+      </nav>
 
-          <AddonSlot name="sidebar.footer" variant="sidebar" />
-          <button class="w-full py-1 px-3 duration-300 hover:bg-primary-500/5 flex justify-start items-center gap-2 rounded-lg" @click="openCreate()">
-            + {{ $t('nav.newInstance') }}
-          </button>
-        </div>
-
-      </div>
-      <div class="flex-1 w-full rounded-tl-xl border-t border-l border-[#13161d]">
+      <main class="min-w-0 flex-1 overflow-hidden rounded-tl-xl border-l border-t border-default bg-default">
         <slot />
-      </div>
+      </main>
 
     <CreateInstanceModal />
     <ExportInstanceModal />
@@ -60,9 +64,9 @@
     <AddonInstallModal />
 
     <Transition name="fade">
-      <div v-if="dragging" class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div class="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-primary-500/60 bg-primary-500/10 px-12 py-10">
-          <UIcon name="i-lucide-download" class="size-10 text-primary-400" />
+      <div v-if="dragging" class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+        <div class="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-primary/70 bg-elevated px-12 py-10 shadow-[0_24px_64px_rgba(0,0,0,0.5)]">
+          <UIcon name="i-lucide-download" class="size-10 text-primary" />
           <p class="text-lg font-semibold">{{ $t('drop.title') }}</p>
           <p class="text-sm text-muted">{{ onInstance ? $t('drop.onInstance') : $t('drop.onHome') }}</p>
         </div>
@@ -178,5 +182,10 @@ const allMenu: MenuItem[] = [
   },
 ]
 
-const menu = computed(() => allMenu.filter(i => !i.microsoftOnly || isMicrosoft.value))
+const menu = computed(() => allMenu.filter(i => i.to !== '/settings' && (!i.microsoftOnly || isMicrosoft.value)))
+const settingsItem = allMenu.find(i => i.to === '/settings')!
+
+const recent = computed(() =>
+  [...instances.instances].sort((a, b) => (b.last_played || '').localeCompare(a.last_played || '')),
+)
 </script>

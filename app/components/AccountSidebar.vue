@@ -12,15 +12,38 @@ const instances = useInstancesStore()
 const activity = useActivityCenter()
 
 const friends = ref<SpectraFriend[]>([])
-const presence = ref<PresenceMode>('visible')
+const presence = account.presence
 
-const STATUS_COLOUR: Record<string, string> = {
-  online: '#3fb877',
-  in_game: '#38bdf8',
-  dnd: '#f87171',
-  offline: '#525252',
-}
+const STATUS_COLOUR: Record<string, string> = SPECTRA_STATUS_COLOUR
 const MODES: PresenceMode[] = ['visible', 'dnd', 'hidden']
+const presenceColour = (m: PresenceMode) => SPECTRA_STATUS_COLOUR[PRESENCE_STATUS[m]]
+
+// Clicking anywhere outside the panel (or pressing Esc) closes it. The titlebar
+// button toggles the panel itself, so a click on it is left to that button.
+const panelEl = ref<HTMLElement | null>(null)
+function onOutsidePointer(e: PointerEvent) {
+  const target = e.target as HTMLElement | null
+  if (!target || panelEl.value?.contains(target) || target.closest('[data-account-toggle]')) return
+  // Dialogs and menus opened from the panel render outside it, in a portal.
+  if (target.closest('[role="dialog"], [role="menu"], [data-reka-popper-content-wrapper]')) return
+  panel.close()
+}
+function onKey(e: KeyboardEvent) {
+  if (e.key === 'Escape') panel.close()
+}
+watch(() => panel.isOpen.value, (open) => {
+  if (open) {
+    document.addEventListener('pointerdown', onOutsidePointer, true)
+    document.addEventListener('keydown', onKey)
+  } else {
+    document.removeEventListener('pointerdown', onOutsidePointer, true)
+    document.removeEventListener('keydown', onKey)
+  }
+}, { immediate: true })
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', onOutsidePointer, true)
+  document.removeEventListener('keydown', onKey)
+})
 
 async function openProfile() {
   const username = account.user.value?.username
@@ -172,7 +195,8 @@ watch(() => panel.isOpen.value, (open) => {
     notifications.markRead()
   }
 })
-watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (friends.value = [])))
+// Immediate so the titlebar shows your status right after start, not only once the panel opens.
+watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (friends.value = [])), { immediate: true })
 </script>
 
 <template>
@@ -184,13 +208,15 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
   >
     <aside
       v-if="panel.isOpen.value"
-      class="absolute top-0 right-0 z-20 flex h-full w-[330px] flex-col border-l border-white/8 bg-[#0b0e14]/95 backdrop-blur-xl"
+      ref="panelEl"
+      :aria-label="$t('spectra.title')"
+      class="absolute top-0 right-0 z-20 flex h-full w-[340px] flex-col border-l border-default bg-elevated shadow-[-16px_0_48px_rgba(0,0,0,0.45)]"
     >
-      <div class="flex items-center gap-2 border-b border-white/8 px-4 py-3">
-        <h2 class="flex-1 text-sm font-semibold text-neutral-200">{{ $t('spectra.title') }}</h2>
+      <div class="flex items-center gap-2 border-b border-default px-4 py-3">
+        <h2 class="flex-1 text-sm font-semibold text-highlighted">{{ $t('spectra.title') }}</h2>
         <button
           type="button"
-          class="rounded-lg p-1.5 text-neutral-500 transition hover:bg-white/5 hover:text-neutral-200 flex items-center justify-center"
+          class="rounded-lg p-1.5 text-neutral-500 transition hover:bg-elevated hover:text-neutral-200 flex items-center justify-center"
           :title="$t('common.close')"
           @click="panel.close()"
         >
@@ -199,8 +225,8 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
       </div>
 
       <div v-if="!account.isSignedIn.value" class="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-        <span class="flex size-14 items-center justify-center rounded-2xl border border-white/10 bg-primary-500/10 ">
-          <UIcon name="i-lucide-users" class="size-6 text-primary-400" />
+        <span class="flex size-14 items-center justify-center rounded-2xl border border-default bg-primary/10">
+          <UIcon name="i-lucide-users" class="size-6 text-primary" />
         </span>
         <div>
           <p class="text-sm font-semibold text-neutral-200">{{ $t('spectra.signedOutTitle') }}</p>
@@ -208,30 +234,36 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
         </div>
         <button
           type="button"
-          class="w-full rounded-lg bg-primary-500 py-2 text-sm font-semibold text-[#04121f] transition hover:bg-primary-400"
+          class="w-full rounded-lg bg-primary py-2 text-sm font-semibold text-inverted transition hover:bg-primary/85"
           @click="account.login()"
         >{{ $t('spectra.signIn') }}</button>
         <p class="text-[11px] text-neutral-600">{{ $t('spectra.browserHint') }}</p>
       </div>
 
       <template v-else>
-        <div class="flex items-center gap-3 border-b border-white/8 px-4 py-3">
-          <img v-if="account.user.value?.image" :src="account.user.value.image" alt="" class="size-9 rounded-full object-cover">
-          <span
-            v-else
-            class="flex size-9 items-center justify-center rounded-full text-sm font-bold text-white/90"
-            :style="`background:hsl(${spectraInitial(account.displayName.value).hue} 55% 30%)`"
-          >{{ spectraInitial(account.displayName.value).letter }}</span>
+        <div class="flex items-center gap-3 px-4 pb-3 pt-4">
+          <span class="relative shrink-0">
+            <img v-if="account.user.value?.image" :src="account.user.value.image" alt="" class="size-11 rounded-full object-cover">
+            <span
+              v-else
+              class="flex size-11 items-center justify-center rounded-full text-base font-bold text-white/90"
+              :style="`background:hsl(${spectraInitial(account.displayName.value).hue} 55% 30%)`"
+            >{{ spectraInitial(account.displayName.value).letter }}</span>
+            <span
+              class="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full border-[3px] border-(--ui-bg-elevated)"
+              :style="`background:${presenceColour(presence)}`"
+            />
+          </span>
           <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-medium text-neutral-100">{{ account.displayName.value }}</p>
-            <p class="truncate text-[11px] text-neutral-500">
+            <p class="truncate text-sm font-semibold text-highlighted">{{ account.displayName.value }}</p>
+            <p class="truncate text-xs text-muted">
               {{ account.user.value?.mcUsername || account.user.value?.email }}
             </p>
           </div>
           <button
             v-if="account.user.value?.username"
             type="button"
-            class="rounded-lg p-1.5 text-neutral-500 transition hover:bg-white/5 hover:text-neutral-200 flex items-center justify-center"
+            class="rounded-lg p-1.5 text-neutral-500 transition hover:bg-elevated hover:text-neutral-200 flex items-center justify-center"
             :title="$t('spectra.viewProfile')"
             @click="openProfile()"
           >
@@ -239,7 +271,7 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
           </button>
           <button
             type="button"
-            class="rounded-lg p-1.5 text-neutral-500 transition hover:bg-white/5 hover:text-neutral-200 flex items-center justify-center"
+            class="rounded-lg p-1.5 text-neutral-500 transition hover:bg-elevated hover:text-neutral-200 flex items-center justify-center"
             :title="$t('spectra.signOut')"
             @click="account.logout()"
           >
@@ -247,24 +279,26 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
           </button>
         </div>
 
-        <div class="flex gap-1 border-b border-white/8 px-4 py-2">
-          <button
-            v-for="m in MODES"
-            :key="m"
-            type="button"
-            class="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-[11px] transition"
-            :class="presence === m
-              ? 'bg-white/8 text-neutral-100'
-              : 'text-neutral-500 hover:bg-white/4 hover:text-neutral-300'"
-            :title="$t(`spectra.mode.${m}Hint`)"
-            @click="setPresence(m)"
-          >
-            <span
-              class="size-2 rounded-full"
-              :style="`background:${m === 'visible' ? STATUS_COLOUR.online : m === 'dnd' ? STATUS_COLOUR.dnd : STATUS_COLOUR.offline}`"
-            />
-            {{ $t(`spectra.mode.${m}`) }}
-          </button>
+        <div class="border-b border-default px-4 pb-4">
+          <div class="flex gap-1 rounded-lg bg-muted p-1 ring-1 ring-inset ring-(--ui-border)" role="radiogroup" :aria-label="$t('spectra.statusLabel')">
+            <button
+              v-for="m in MODES"
+              :key="m"
+              type="button"
+              role="radio"
+              :aria-checked="presence === m"
+              class="flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium transition-colors disabled:opacity-60"
+              :class="presence === m
+                ? 'bg-accented text-highlighted shadow-[0_1px_2px_rgba(0,0,0,0.35)] ring-1 ring-inset ring-(--ui-border-accented)'
+                : 'text-muted hover:text-highlighted'"
+              :disabled="busy === 'presence'"
+              @click="presence !== m && setPresence(m)"
+            >
+              <span class="size-2 rounded-full" :style="`background:${presenceColour(m)}`" />
+              {{ $t(`spectra.mode.${m}`) }}
+            </button>
+          </div>
+          <p class="mt-2 text-xs leading-relaxed text-muted">{{ $t(`spectra.mode.${presence}Hint`) }}</p>
         </div>
 
         <div class="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4">
@@ -276,14 +310,14 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
           </p>
 
           <section v-if="notifications.items.value.length">
-            <p class="text-[10px] font-semibold tracking-[0.14em] text-neutral-500 uppercase">
+            <h3 class="text-[13px] font-semibold text-highlighted">
               {{ $t('spectra.inbox') }}
-            </p>
+            </h3>
             <div class="mt-2 space-y-2">
               <div
                 v-for="n in notifications.items.value"
                 :key="n.id"
-                class="rounded-lg border border-white/8 bg-white/4 p-2.5"
+                class="rounded-lg border border-default bg-muted p-2.5"
               >
                 <div class="flex items-start gap-2.5">
                   <img v-if="n.actor?.image" :src="n.actor.image" alt="" class="size-7 shrink-0 rounded-full object-cover">
@@ -295,7 +329,7 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
                   <p class="flex-1 text-xs leading-relaxed text-neutral-300">{{ notificationText(n) }}</p>
                   <button
                     type="button"
-                    class="flex shrink-0 items-center justify-center rounded-md p-1 text-neutral-600 transition hover:bg-white/5 hover:text-neutral-200"
+                    class="flex shrink-0 items-center justify-center rounded-md p-1 text-neutral-600 transition hover:bg-elevated hover:text-neutral-200"
                     :title="$t('spectra.dismiss')"
                     @click="notifications.remove(n.id)"
                   >
@@ -303,10 +337,13 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
                   </button>
                 </div>
 
-                <div v-if="n.kind === 'instance_invite'" class="mt-2 flex justify-end">
+                <div
+                  v-if="(n.kind === 'instance_invite' || n.kind === 'instance_collab') && !instanceFor(n.shareCode)"
+                  class="mt-2 flex justify-end"
+                >
                   <button
                     type="button"
-                    class="rounded-md bg-primary-500 px-2.5 py-1 text-[11px] font-semibold text-[#04121f] transition hover:bg-primary-400"
+                    class="rounded-md bg-primary px-2.5 py-1 text-[11px] font-semibold text-inverted transition hover:bg-primary/85"
                     @click="install(n)"
                   >{{ $t('spectra.install') }}</button>
                 </div>
@@ -314,7 +351,7 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
                 <div v-else-if="n.kind === 'instance_update'" class="mt-2 flex justify-end">
                   <button
                     type="button"
-                    class="rounded-md bg-primary-500 px-2.5 py-1 text-[11px] font-semibold text-[#04121f] transition hover:bg-primary-400 disabled:opacity-50"
+                    class="rounded-md bg-primary px-2.5 py-1 text-[11px] font-semibold text-inverted transition hover:bg-primary/85 disabled:opacity-50"
                     :disabled="busy === `upd-${n.id}`"
                     @click="update(n)"
                   >{{ instanceFor(n.shareCode) ? $t('spectra.update') : $t('spectra.install') }}</button>
@@ -324,25 +361,25 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
           </section>
 
           <section v-if="incoming.length">
-            <p class="text-[10px] font-semibold tracking-[0.14em] text-neutral-500 uppercase">
+            <h3 class="text-[13px] font-semibold text-highlighted">
               {{ $t('spectra.requests') }}
-            </p>
+            </h3>
             <div class="mt-2 space-y-2">
               <div
                 v-for="r in incoming"
                 :key="r.id"
-                class="flex items-center gap-2.5 rounded-lg border border-primary-500/20 bg-primary-500/8 px-2.5 py-2"
+                class="flex items-center gap-2.5 rounded-lg border border-primary/20 bg-primary/8 px-2.5 py-2"
               >
                 <span class="flex-1 truncate text-xs text-neutral-200">{{ label(r.user) }}</span>
                 <button
                   type="button"
-                  class="rounded-md bg-primary-500 px-2 py-1 text-[11px] font-semibold text-[#04121f] transition hover:bg-primary-400"
+                  class="rounded-md bg-primary px-2 py-1 text-[11px] font-semibold text-inverted transition hover:bg-primary/85"
                   :disabled="busy === `req-${r.id}`"
                   @click="answer(r.id, 'accept')"
                 >{{ $t('spectra.accept') }}</button>
                 <button
                   type="button"
-                  class="rounded-md px-2 py-1 text-[11px] text-neutral-400 transition hover:bg-white/5 hover:text-neutral-200"
+                  class="rounded-md px-2 py-1 text-[11px] text-neutral-400 transition hover:bg-elevated hover:text-neutral-200"
                   :disabled="busy === `req-${r.id}`"
                   @click="answer(r.id, 'reject')"
                 >{{ $t('spectra.reject') }}</button>
@@ -351,19 +388,19 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
           </section>
 
           <section>
-            <p class="text-[10px] font-semibold tracking-[0.14em] text-neutral-500 uppercase">
-              {{ $t('spectra.friends') }} <span v-if="friends.length" class="text-neutral-600">· {{ friends.length }}</span>
-            </p>
+            <h3 class="text-[13px] font-semibold text-highlighted">
+              {{ $t('spectra.friends') }} <span v-if="friends.length" class="font-normal tabular-nums text-dimmed">{{ friends.length }}</span>
+            </h3>
 
             <form class="mt-2 flex gap-1.5" @submit.prevent="addFriend">
               <input
                 v-model="query"
-                class="min-w-0 flex-1 rounded-lg border border-white/8 bg-white/4 px-2.5 py-1.5 text-xs text-neutral-100 outline-none transition placeholder:text-neutral-600 focus:border-primary-500/50"
+                class="min-w-0 flex-1 rounded-lg border border-default bg-muted px-2.5 py-1.5 text-xs text-neutral-100 outline-none transition placeholder:text-neutral-600 focus:border-primary/50"
                 :placeholder="$t('spectra.addPlaceholder')"
               >
               <button
                 type="submit"
-                class="rounded-lg border border-white/8 bg-white/4 px-2.5 text-neutral-300 transition hover:border-primary-500/40 hover:text-neutral-100 disabled:opacity-40 flex items-center justify-center"
+                class="rounded-lg border border-default bg-muted px-2.5 text-neutral-300 transition hover:border-primary/40 hover:text-neutral-100 disabled:opacity-40 flex items-center justify-center"
                 :disabled="!query.trim() || busy === 'add'"
                 :title="$t('spectra.add')"
               >
@@ -380,7 +417,7 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
                 <li
                   v-for="c in results"
                   :key="c.id"
-                  class="flex items-center gap-2.5 rounded-lg border border-white/8 bg-white/4 px-2.5 py-1.5"
+                  class="flex items-center gap-2.5 rounded-lg border border-default bg-muted px-2.5 py-1.5"
                 >
                   <img v-if="c.image" :src="c.image" alt="" class="size-7 shrink-0 rounded-full object-cover">
                   <span
@@ -403,7 +440,7 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
                   <button
                     v-else
                     type="button"
-                    class="shrink-0 rounded-md bg-primary-500 px-2 py-1 text-[11px] font-semibold text-[#04121f] transition hover:bg-primary-400 disabled:opacity-50"
+                    class="shrink-0 rounded-md bg-primary px-2 py-1 text-[11px] font-semibold text-inverted transition hover:bg-primary/85 disabled:opacity-50"
                     :disabled="busy === `add-${c.id}`"
                     @click="invite(c)"
                   >{{ $t('spectra.add') }}</button>
@@ -418,7 +455,7 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
               <li
                 v-for="f in friends"
                 :key="f.id"
-                class="group flex items-center gap-2.5 rounded-lg px-2 py-1.5 transition hover:bg-white/4"
+                class="group flex items-center gap-2.5 rounded-lg px-2 py-1.5 transition hover:bg-muted"
               >
                 <span class="relative shrink-0">
                   <img v-if="f.image" :src="f.image" alt="" class="size-7 rounded-full object-cover">
@@ -428,7 +465,7 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
                     :style="`background:hsl(${spectraInitial(label(f)).hue} 55% 30%)`"
                   >{{ spectraInitial(label(f)).letter }}</span>
                   <span
-                    class="absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full border-2 border-[#0b0e14]"
+                    class="absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full border-2 border-(--ui-bg-elevated)"
                     :style="`background:${STATUS_COLOUR[f.status] ?? STATUS_COLOUR.offline}`"
                     :title="$t(`spectra.status.${f.status}`)"
                   />
@@ -441,7 +478,7 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
                 </span>
                 <button
                   type="button"
-                  class="rounded-md p-1 text-neutral-600 opacity-0 transition group-hover:opacity-100 hover:bg-white/5 hover:text-red-400 flex items-center justify-center"
+                  class="rounded-md p-1 text-neutral-600 opacity-0 transition group-hover:opacity-100 hover:bg-elevated hover:text-red-400 flex items-center justify-center"
                   :title="$t('spectra.removeFriend')"
                   @click="removeFriend(f.friendshipId)"
                 >
@@ -455,14 +492,14 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
             </p>
 
             <div v-if="outgoing.length" class="mt-4">
-              <p class="text-[10px] font-semibold tracking-[0.14em] text-neutral-500 uppercase">
+              <h3 class="text-[13px] font-semibold text-highlighted">
                 {{ $t('spectra.outgoing', { n: outgoing.length }) }}
-              </p>
+              </h3>
               <ul class="mt-2 space-y-1">
                 <li
                   v-for="r in outgoing"
                   :key="r.id"
-                  class="group flex items-center gap-2.5 rounded-lg bg-white/4 px-2.5 py-1.5"
+                  class="group flex items-center gap-2.5 rounded-lg bg-muted px-2.5 py-1.5"
                 >
                   <img v-if="r.user.image" :src="r.user.image" alt="" class="size-7 shrink-0 rounded-full object-cover">
                   <span
@@ -479,7 +516,7 @@ watch(() => account.isSignedIn.value, signedIn => (signedIn ? loadFriends() : (f
                   <span class="shrink-0 text-[10px] text-neutral-600">{{ $t('spectra.pendingShort') }}</span>
                   <button
                     type="button"
-                    class="flex shrink-0 items-center justify-center rounded-md p-1 text-neutral-600 transition hover:bg-white/5 hover:text-red-400"
+                    class="flex shrink-0 items-center justify-center rounded-md p-1 text-neutral-600 transition hover:bg-elevated hover:text-red-400"
                     :title="$t('spectra.cancelRequest')"
                     :disabled="busy === `rm-${r.id}`"
                     @click="cancelRequest(r.id)"

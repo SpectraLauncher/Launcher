@@ -11,8 +11,8 @@
             type="button"
             class="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition"
             :class="loader === l.value
-              ? 'bg-primary-500/15 text-primary-400 ring-1 ring-primary-500/40'
-              : 'bg-white/5 text-neutral-300 hover:bg-white/10'"
+ ? 'bg-primary/15 text-primary ring-1 ring-primary/40'
+ : 'bg-elevated text-neutral-300 hover:bg-accented'"
             @click="loader = l.value"
           >
             <UIcon v-if="loader === l.value" name="i-lucide-check" class="size-3.5" />

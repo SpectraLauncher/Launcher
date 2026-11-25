@@ -1,6 +1,6 @@
 {
   "nav": {
-    "home": "Start",
+    "home": "Bibliothek",
     "worlds": "Welten",
     "screenshots": "Screenshots",
     "skins": "Skins",
@@ -9,12 +9,13 @@
     "newInstance": "Neue Instanz"
   },
   "instanceCard": {
-    "title": "ZULETZT GESPIELT",
-    "nowPlaying": "LÄUFT GERADE",
-    "play": "SPIELEN",
+    "title": "Zuletzt gespielt",
+    "nowPlaying": "Läuft gerade",
+    "play": "Spielen",
     "resume": "Spielen und {name} betreten",
-    "stop": "BEENDEN",
-    "empty": "Du hast noch nicht gespielt"
+    "stop": "Beenden",
+    "empty": "Du hast noch nicht gespielt",
+    "continue": "Weiterspielen"
   },
   "create": {
     "title": "Instanz erstellen",
@@ -62,7 +63,7 @@
     }
   },
   "library": {
-    "title": "Instanzen",
+    "title": "Bibliothek",
     "count": "{n} in deiner Bibliothek",
     "search": "Instanzen suchen...",
     "allLoaders": "Alle Loader",
@@ -349,7 +350,9 @@
     "language": {
       "title": "Sprache",
       "label": "Oberflächensprache",
-      "auto": "Beim ersten Start automatisch erkannt, danach gemerkt."
+      "auto": "Beim ersten Start automatisch erkannt, danach gemerkt.",
+      "search": "Sprachen suchen…",
+      "noMatch": "Keine passende Sprache"
     },
     "accounts": {
       "title": "Konten",
@@ -402,7 +405,8 @@
       "defaultPath": "Standard-Java-Pfad",
       "defaultPathHint": "Wird verwendet, wenn eine Instanz keinen hat (die Engine verwaltet Java weiterhin selbst).",
       "detectedDesc": "Auf deinem System und im Launcher gefundene Java-Versionen."
-    }
+    },
+    "madeBy": "Erstellt von"
   },
   "activity": {
     "idle": "Keine Instanz aktiv",
@@ -428,7 +432,7 @@
   },
   "content": {
     "all": "Alle",
-    "count": "{n} Einträge",
+    "count": "Einträge: {n}",
     "searchPlaceholder": "Inhalte suchen...",
     "refresh": "Aktualisieren",
     "empty": "Hier ist noch nichts",
@@ -693,7 +697,32 @@
     "extendHint": "Verlängerbar in den letzten 48 Stunden",
     "revoke": "Code beenden",
     "revokeConfirm": "Zum Bestätigen erneut klicken",
-    "revokeHint": "Der Code wird sofort ungültig. Freunde behalten, was sie installiert haben, bekommen aber keine Updates mehr."
+    "revokeHint": "Der Code wird sofort ungültig. Freunde behalten, was sie installiert haben, bekommen aber keine Updates mehr.",
+    "collabOf": "Du baust dieses Pack zusammen mit {owner}",
+    "behind": "Revision {n} ist da. Hol sie dir, bevor du sendest.",
+    "pull": "Update holen",
+    "canPush": "Darf Updates senden",
+    "coAuthor": "Mitautor",
+    "allowPush": "Updates senden erlauben",
+    "stopPush": "Updates senden nicht mehr erlauben",
+    "merging": "Änderungen werden in {name} übernommen",
+    "conflict": {
+      "title": "Jemand hat Revision {n} vor dir gesendet",
+      "hint": "Wähle für jeden Eintrag, welche Version in dein Update kommt. Configs und andere Dateien stammen aus deiner Kopie.",
+      "none": "Bei den Mods gibt es keine Unterschiede. Dein Update bringt deine Configs und Dateien mit.",
+      "takeAll": "Alle von ihnen übernehmen",
+      "keepAll": "Alle meine behalten",
+      "mine": "Meine",
+      "theirs": "Ihre",
+      "addedByThem": "Von ihnen hinzugefügt",
+      "removedByThem": "Von ihnen entfernt",
+      "updatedByThem": "Von ihnen aktualisiert",
+      "addedByYou": "Von dir hinzugefügt",
+      "removedByYou": "Von dir entfernt",
+      "updatedByYou": "Von dir aktualisiert",
+      "updatedByBoth": "Auf beiden Seiten geändert",
+      "apply": "Übernehmen und senden"
+    }
   },
   "spectra": {
     "title": "Spectra-Konto",
@@ -722,7 +751,8 @@
       "friend_request": "{who} möchte mit dir befreundet sein",
       "friend_accepted": "{who} hat deine Freundschaftsanfrage angenommen",
       "instance_invite": "{who} hat „{name}“ mit dir geteilt",
-      "instance_update": "{who} hat ein Update für „{name}“ veröffentlicht"
+      "instance_update": "{who} hat ein Update für „{name}“ veröffentlicht",
+      "instance_collab": "{who} lädt dich ein, „{name}“ gemeinsam zu bauen"
     },
     "update": "Aktualisieren",
     "updating": "{name} wird aktualisiert…",
@@ -745,7 +775,8 @@
       "dndHint": "Freunde sehen einen roten Punkt — du bist da, willst aber deine Ruhe",
       "hidden": "Versteckt",
       "hiddenHint": "Alle sehen dich als offline, egal was du gerade tust"
-    }
+    },
+    "statusLabel": "Dein Status"
   },
   "snapshots": {
     "title": "Wiederherstellungspunkte",
@@ -793,7 +824,14 @@
       "useCloud": "Cloud-Kopie verwenden",
       "useComputer": "Diesen Computer verwenden",
       "turnOff": "Synchronisierung ausschalten",
-      "status": { "off": "Aus", "idle": "Bereit", "synced": "Aktuell", "conflict": "Version auswählen", "deferred": "Wartet auf das Spielende", "signed_out": "Zum Fortfahren anmelden" }
+      "status": {
+        "off": "Aus",
+        "idle": "Bereit",
+        "synced": "Aktuell",
+        "conflict": "Version auswählen",
+        "deferred": "Wartet auf das Spielende",
+        "signed_out": "Zum Fortfahren anmelden"
+      }
     },
     "title": "Instanzen synchronisieren",
     "desc": "Hält ausgewählte Einstellungen in allen Instanzen gleich. Änderungen werden nach dem Beenden übernommen und beim nächsten Start verteilt.",

@@ -3,7 +3,7 @@
     <template #body>
       <div class="grid gap-4 sm:grid-cols-[13rem_minmax(0,1fr)]">
         <div class="space-y-3">
-          <div class="flex flex-col items-center gap-4 rounded-xl border border-default bg-white/3 p-4">
+          <div class="flex flex-col items-center gap-4 rounded-xl border border-default bg-muted p-4">
             <div class="size-28 overflow-hidden rounded-2xl" :style="tileStyle">
               <img :src="symbolUrl" alt="" class="size-full object-contain" :style="symbolStyle" />
             </div>
@@ -47,7 +47,7 @@
             <div class="grid max-h-64 grid-cols-6 gap-2 overflow-y-auto pr-1">
               <button
                 type="button"
-                class="flex aspect-square cursor-pointer items-center justify-center rounded-xl border border-dashed border-default text-muted transition hover:border-primary-400 hover:text-primary-400"
+                class="flex aspect-square cursor-pointer items-center justify-center rounded-xl border border-dashed border-default text-muted transition hover:border-primary-400 hover:text-primary"
                 :title="$t('iconEditor.addSymbol')"
                 :aria-label="$t('iconEditor.addSymbol')"
                 :disabled="adding"
@@ -59,7 +59,7 @@
                 <button
                   type="button"
                   class="flex aspect-square w-full cursor-pointer items-center justify-center rounded-xl border p-1.5 transition"
-                  :class="s.id === symbol?.id ? 'border-primary-400 bg-primary-500/10' : 'border-default bg-white/3 hover:bg-white/6'"
+                  :class="s.id === symbol?.id ? 'border-primary-400 bg-primary/10' : 'border-default bg-muted hover:bg-elevated'"
                   :aria-label="s.id"
                   @click="symbol = s"
                 >

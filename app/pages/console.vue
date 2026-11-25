@@ -13,7 +13,7 @@
       <span class="flex items-center gap-1.5 text-xs text-muted">
         <span
           class="size-2 rounded-full"
-          :class="isRunning ? 'bg-[#3fb877] shadow-[0_0_8px_#3fb877]' : 'bg-neutral-600'"
+          :class="isRunning ? 'bg-primary ' : 'bg-neutral-600'"
         />
         {{ isRunning ? $t('logs.live') : $t('activity.idle') }} · {{ lines.length }}
       </span>
@@ -24,7 +24,7 @@
           color="neutral"
           variant="ghost"
           size="xs"
-          :class="autoscroll ? 'text-primary-400' : ''"
+          :class="autoscroll ? 'text-primary' : ''"
           :title="$t('logs.autoscroll')"
           square
           @click="toggleAutoscroll"

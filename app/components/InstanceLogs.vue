@@ -12,7 +12,7 @@
           :key="f.rel"
           type="button"
           class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm transition"
-          :class="selected === f.rel ? 'bg-primary-500/15 text-primary-400' : 'text-neutral-300 hover:bg-white/5'"
+          :class="selected === f.rel ? 'bg-primary/15 text-primary' : 'text-neutral-300 hover:bg-elevated'"
           @click="open(f.rel)"
         >
           <UIcon :name="kindIcon(f.kind)" class="size-4 shrink-0" :class="f.kind === 'crash' ? 'text-error' : 'text-neutral-500'" />

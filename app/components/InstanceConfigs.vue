@@ -9,7 +9,7 @@
         class="mb-2 w-full"
       />
       <div v-if="loadingList" class="space-y-1.5">
-        <div v-for="n in 8" :key="n" class="h-7 animate-pulse rounded-lg bg-white/5" />
+        <div v-for="n in 8" :key="n" class="h-7 animate-pulse rounded-lg bg-elevated" />
       </div>
       <p v-else-if="!files.length" class="px-2 py-4 text-sm text-muted">{{ $t('configs.empty') }}</p>
       <div v-else class="max-h-[68vh] space-y-3 overflow-y-auto pr-1">
@@ -20,7 +20,7 @@
             :key="file.rel"
             type="button"
             class="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-sm transition"
-            :class="current?.rel === file.rel ? 'bg-primary-500/15 text-primary-300' : 'text-neutral-300 hover:bg-white/5'"
+            :class="current?.rel === file.rel ? 'bg-primary/15 text-primary' : 'text-neutral-300 hover:bg-elevated'"
             @click="open(file)"
           >
             <span class="min-w-0 flex-1 truncate">{{ label(file.rel) }}</span>
@@ -64,7 +64,7 @@
         />
 
         <div v-if="loadingDoc" class="space-y-2">
-          <div v-for="n in 6" :key="n" class="h-12 animate-pulse rounded-lg bg-white/5" />
+          <div v-for="n in 6" :key="n" class="h-12 animate-pulse rounded-lg bg-elevated" />
         </div>
 
         <p v-else-if="docError" class="py-10 text-center text-sm text-muted">
@@ -86,13 +86,13 @@
 
             <div
               v-else
-              class="flex flex-wrap items-start gap-x-4 gap-y-2 rounded-lg py-2 pr-2 transition hover:bg-white/3"
+              class="flex flex-wrap items-start gap-x-4 gap-y-2 rounded-lg py-2 pr-2 transition hover:bg-muted"
               :style="{ paddingLeft: `${indent(entry) + 8}px` }"
             >
               <div class="min-w-48 flex-1">
                 <p class="break-words text-sm font-medium">
                   {{ nameOf(entry) }}
-                  <span v-if="edits.has(keyOf(entry))" class="text-primary-400">•</span>
+                  <span v-if="edits.has(keyOf(entry))" class="text-primary">•</span>
                 </p>
                 <p v-if="entry.comment" class="mt-0.5 whitespace-pre-line text-xs text-muted">{{ entry.comment }}</p>
                 <p v-if="entry.default !== null" class="mt-0.5 text-[11px] text-dimmed">
@@ -176,7 +176,7 @@
 
         <div
           v-if="edits.size"
-          class="sticky bottom-0 mt-2 flex items-center gap-2 rounded-xl border border-default bg-elevated/95 px-4 py-2 backdrop-blur"
+          class="sticky bottom-0 mt-2 flex items-center gap-2 rounded-xl border border-default bg-elevated/95 px-4 py-2"
         >
           <span class="flex-1 text-sm text-muted">{{ $t('configs.changes', { n: edits.size }, edits.size) }}</span>
           <UButton color="neutral" variant="ghost" :label="$t('configs.discard')" @click="edits.clear()" />

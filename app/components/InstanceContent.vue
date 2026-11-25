@@ -1,80 +1,53 @@
 <template>
   <div class="space-y-4">
-    <div class="flex flex-wrap items-center gap-1.5">
-      <button
-        v-for="k in kindTabs"
-        :key="k.key"
-        type="button"
-        class="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition"
-        :class="kind === k.key
-          ? 'bg-primary-500/15 text-primary-400'
-          : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'"
-        @click="kind = k.key"
-      >
-        <UIcon :name="k.icon" class="size-3.5" />
-        {{ $t(k.label) }}
-        <span v-if="counts[k.key]" class="rounded bg-white/8 px-1 tabular-nums">{{ counts[k.key] }}</span>
-      </button>
-    </div>
-
     <div class="flex flex-wrap items-center gap-2">
+      <div class="flex flex-wrap items-center gap-0.5 rounded-lg bg-muted p-0.5 ring-1 ring-inset ring-(--ui-border)" role="radiogroup" :aria-label="$t('instance.tabs.content')">
+        <button
+          v-for="k in kindTabs"
+          :key="k.key"
+          type="button"
+          role="radio"
+          :aria-checked="kind === k.key"
+          class="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[13px] font-medium transition-colors"
+          :class="kind === k.key
+            ? 'bg-accented text-highlighted'
+            : 'text-muted hover:text-highlighted'"
+          @click="kind = k.key"
+        >
+          <UIcon :name="k.icon" class="size-3.5" />
+          {{ $t(k.label) }}
+          <span v-if="counts[k.key]" class="tabular-nums text-dimmed">{{ counts[k.key] }}</span>
+        </button>
+      </div>
+
       <UInput
         v-model="search"
         icon="i-lucide-search"
         variant="soft"
         :placeholder="$t('content.searchPlaceholder')"
-        class="min-w-44 flex-1"
+        class="ml-auto w-64"
       />
-      <USelect v-model="perPage" :items="perPageItems" value-key="value" class="w-28" />
       <UButton
         v-if="updateCount"
         icon="i-lucide-circle-arrow-up"
         color="primary"
-        size="sm"
+        variant="soft"
         :loading="updatingAll"
         :label="$t('mods.updateAll', { n: updateCount })"
         @click="updateAll"
-      />
-      <UButton
-        v-if="hasLocal"
-        icon="i-lucide-link"
-        color="neutral"
-        variant="soft"
-        size="sm"
-        :loading="linking"
-        :label="$t('mods.link')"
-        :title="$t('mods.linkHint')"
-        @click="linkLocal"
       />
       <UButton
         v-if="blockedCount"
         icon="i-lucide-file-warning"
         color="warning"
         variant="soft"
-        size="sm"
         :label="$t('blocked.resolve', { n: blockedCount })"
         @click="openBlocked"
       />
-      <UButton icon="i-lucide-package-search" size="sm" :label="$t('modrinth.add')" @click="openBrowser" />
-      <UButton
-        v-if="hasMods"
-        icon="i-lucide-file-text"
-        color="neutral"
-        variant="soft"
-        size="sm"
-        :label="$t('modlist.export')"
-        @click="modList.open(props.instanceId)"
-      />
-      <UButton
-        icon="i-lucide-refresh-cw"
-        color="neutral"
-        variant="ghost"
-        size="sm"
-        :loading="loading"
-        :title="$t('content.refresh')"
-        square
-        @click="load"
-      />
+      <UButton icon="i-lucide-plus" color="neutral" variant="soft" :label="$t('modrinth.add')" @click="openBrowser" />
+      <UDropdownMenu :items="moreItems" :content="{ align: 'end' }">
+        <UButton icon="i-lucide-ellipsis" color="neutral" variant="ghost" square :loading="loading || linking" :aria-label="$t('content.refresh')" />
+      </UDropdownMenu>
     </div>
 
     <p v-if="error" class="text-sm text-error">{{ error }}</p>
@@ -93,12 +66,12 @@
 
     <div v-if="loading" class="overflow-hidden rounded-xl border border-default">
       <div v-for="n in 8" :key="`mod-sk-${n}`" class="flex items-center gap-3 border-b border-default/50 px-3 py-2.5 last:border-0">
-        <div class="size-9 shrink-0 animate-pulse rounded-lg bg-white/5" />
+        <div class="size-9 shrink-0 animate-pulse rounded-lg bg-elevated" />
         <div class="min-w-0 flex-1 space-y-2">
-          <div class="h-3.5 w-1/3 animate-pulse rounded bg-white/5" />
-          <div class="h-2.5 w-1/2 animate-pulse rounded bg-white/5" />
+          <div class="h-3.5 w-1/3 animate-pulse rounded bg-elevated" />
+          <div class="h-2.5 w-1/2 animate-pulse rounded bg-elevated" />
         </div>
-        <div class="h-3 w-16 shrink-0 animate-pulse rounded bg-white/5" />
+        <div class="h-3 w-16 shrink-0 animate-pulse rounded bg-elevated" />
       </div>
     </div>
 
@@ -111,28 +84,26 @@
     <div v-else-if="!filtered.length" class="py-12 text-center text-sm text-muted">{{ $t('content.empty') }}</div>
 
     <template v-else>
-      <p class="text-xs text-muted">{{ $t('content.count', { n: filtered.length }) }}</p>
-
       <div class="overflow-hidden rounded-xl border border-default">
-        <div class="grid grid-cols-[auto_2.75rem_minmax(0,1fr)_8rem_7rem_4rem_auto] items-center gap-3 border-b border-default bg-white/4 px-3 py-2 text-[11px] font-medium tracking-wide text-neutral-500 uppercase">
+        <div class="grid grid-cols-[auto_2.75rem_minmax(0,1fr)_8rem_7rem_4rem_auto] items-center gap-3 border-b border-default bg-muted px-3 py-2 text-[11px] font-medium tracking-wide text-neutral-500 uppercase">
           <span />
-          <button type="button" class="flex items-center justify-center gap-1 transition hover:text-neutral-200" :class="{ 'text-primary-400': sortCol === 'state' }" @click="toggleSort('state')">
+          <button type="button" class="flex items-center justify-center gap-1 transition hover:text-neutral-200" :class="{ 'text-primary': sortCol === 'state' }" @click="toggleSort('state')">
             {{ $t('mods.col.enabled') }}
             <UIcon :name="sortIcon('state')" class="size-3" :class="{ 'opacity-30': sortCol !== 'state' }" />
           </button>
-          <button type="button" class="flex items-center gap-1 transition hover:text-neutral-200" :class="{ 'text-primary-400': sortCol === 'name' }" @click="toggleSort('name')">
+          <button type="button" class="flex items-center gap-1 transition hover:text-neutral-200" :class="{ 'text-primary': sortCol === 'name' }" @click="toggleSort('name')">
             {{ $t('mods.col.name') }}
             <UIcon :name="sortIcon('name')" class="size-3" :class="{ 'opacity-30': sortCol !== 'name' }" />
           </button>
-          <button type="button" class="flex items-center gap-1 transition hover:text-neutral-200" :class="{ 'text-primary-400': sortCol === 'version' }" @click="toggleSort('version')">
+          <button type="button" class="flex items-center gap-1 transition hover:text-neutral-200" :class="{ 'text-primary': sortCol === 'version' }" @click="toggleSort('version')">
             {{ $t('mods.col.version') }}
             <UIcon :name="sortIcon('version')" class="size-3" :class="{ 'opacity-30': sortCol !== 'version' }" />
           </button>
-          <button type="button" class="flex items-center gap-1 transition hover:text-neutral-200" :class="{ 'text-primary-400': sortCol === 'updated' }" @click="toggleSort('updated')">
+          <button type="button" class="flex items-center gap-1 transition hover:text-neutral-200" :class="{ 'text-primary': sortCol === 'updated' }" @click="toggleSort('updated')">
             {{ $t('mods.col.updated') }}
             <UIcon :name="sortIcon('updated')" class="size-3" :class="{ 'opacity-30': sortCol !== 'updated' }" />
           </button>
-          <button type="button" class="flex items-center justify-center gap-1 transition hover:text-neutral-200" :class="{ 'text-primary-400': sortCol === 'update' }" :title="$t('mods.col.update')" @click="toggleSort('update')">
+          <button type="button" class="flex items-center justify-center gap-1 transition hover:text-neutral-200" :class="{ 'text-primary': sortCol === 'update' }" :title="$t('mods.col.update')" @click="toggleSort('update')">
             <UIcon name="i-lucide-circle-arrow-up" class="size-3.5" />
             <UIcon :name="sortIcon('update')" class="size-3" :class="{ 'opacity-30': sortCol !== 'update' }" />
           </button>
@@ -142,7 +113,7 @@
         <div
           v-for="m in paged"
           :key="`${m.kind}/${m.filename}`"
-          class="grid grid-cols-[auto_2.75rem_minmax(0,1fr)_8rem_7rem_4rem_auto] items-center gap-3 border-b border-default/50 px-3 py-2 transition last:border-0 hover:bg-white/3"
+          class="grid grid-cols-[auto_2.75rem_minmax(0,1fr)_8rem_7rem_4rem_auto] items-center gap-3 border-b border-default/50 px-3 py-2 transition last:border-0 hover:bg-muted"
           :class="{ 'opacity-55': !m.enabled }"
         >
           <div class="flex justify-center">
@@ -153,7 +124,7 @@
             />
           </div>
           <img v-if="contentIconUrl(m)" :src="contentIconUrl(m)" loading="lazy" class="size-9 rounded-lg object-cover" :alt="m.name ?? m.filename" />
-          <div v-else class="flex size-9 items-center justify-center rounded-lg bg-white/5">
+          <div v-else class="flex size-9 items-center justify-center rounded-lg bg-elevated">
             <UIcon :name="kindIcon(m.kind)" class="size-4.5 text-neutral-500" />
           </div>
 
@@ -182,7 +153,7 @@
             </div>
           </div>
 
-          <span class="truncate font-mono text-xs text-neutral-400" :title="m.version ?? ''">{{ m.version ?? '—' }}</span>
+          <span class="truncate tabular-nums text-xs text-neutral-400" :title="m.version ?? ''">{{ m.version ?? '—' }}</span>
 
           <span class="text-xs text-neutral-500">{{ formatDate(m.modified) }}</span>
 
@@ -227,18 +198,21 @@
             />
             <UButton
               icon="i-lucide-trash-2"
-              color="error"
+              color="neutral"
               variant="ghost"
               size="xs"
+              class="hover:text-error"
               :title="$t('common.remove')"
+              :aria-label="$t('common.remove')"
               @click="remove(m)"
             />
           </div>
         </div>
       </div>
 
-      <div v-if="filtered.length > perPage" class="flex justify-center pt-1">
-        <UPagination v-model:page="page" :total="filtered.length" :items-per-page="perPage" />
+      <div class="flex items-center justify-between gap-3 pt-1">
+        <p class="text-xs tabular-nums text-muted">{{ $t('content.count', { n: filtered.length }) }}</p>
+        <UPagination v-if="filtered.length > perPage" v-model:page="page" :total="filtered.length" :items-per-page="perPage" />
       </div>
     </template>
 
@@ -253,7 +227,7 @@
           <div
             v-for="v in modVersions"
             :key="v.id"
-            class="flex items-center gap-3 rounded-lg border border-default bg-white/3 p-2.5"
+            class="flex items-center gap-3 rounded-lg border border-default bg-muted p-2.5"
           >
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-2">
@@ -285,14 +259,14 @@
           <label
             v-for="d in deps"
             :key="d.filename"
-            class="flex cursor-pointer items-center gap-3 rounded-lg border border-default bg-white/3 p-2.5"
+            class="flex cursor-pointer items-center gap-3 rounded-lg border border-default bg-muted p-2.5"
           >
             <UCheckbox
               :model-value="depsChecked.has(d.filename)"
               @update:model-value="toggleDep(d.filename, $event === true)"
             />
             <img v-if="d.icon_url" :src="d.icon_url" class="size-8 shrink-0 rounded-md object-cover" :alt="d.name" >
-            <div v-else class="flex size-8 shrink-0 items-center justify-center rounded-md bg-white/5">
+            <div v-else class="flex size-8 shrink-0 items-center justify-center rounded-md bg-elevated">
               <UIcon name="i-lucide-blocks" class="size-4 text-neutral-500" />
             </div>
             <span class="min-w-0 flex-1 truncate text-sm">{{ d.name }}</span>
@@ -522,16 +496,27 @@ function toggleSort(col: SortCol) {
 const sortIcon = (col: SortCol) =>
   sortCol.value === col ? (sortDir.value === 'asc' ? 'i-lucide-arrow-up' : 'i-lucide-arrow-down') : 'i-lucide-chevrons-up-down'
 
-const perPageItems = [10, 25, 50, 100].map(n => ({ label: t('mods.perPage', { n }), value: n }))
+// Occasional actions live behind the "…" menu so the toolbar stays one row.
+const moreItems = computed(() => [
+  [
+    ...(hasMods.value ? [{ label: t('modlist.export'), icon: 'i-lucide-file-text', onSelect: () => modList.open(props.instanceId) }] : []),
+    ...(hasLocal.value ? [{ label: t('mods.link'), icon: 'i-lucide-link', onSelect: () => linkLocal() }] : []),
+    { label: t('content.refresh'), icon: 'i-lucide-refresh-cw', onSelect: () => load() },
+  ],
+  [
+    ...[10, 25, 50, 100].map(n => ({
+      label: t('mods.perPage', { n }),
+      type: 'checkbox' as const,
+      checked: perPage.value === n,
+      onSelect: (e: Event) => { e.preventDefault(); perPage.value = n },
+    })),
+  ],
+])
 
 const nameOf = (m: Entry) => (m.name ?? m.filename).toLowerCase()
 const formatDate = (ms: number) => (ms ? new Date(ms).toLocaleDateString() : '—')
 
-const providerBadgeClass = (provider: string) => {
-  if (provider === 'curseforge') return 'bg-orange-500/10 text-orange-400 ring-1 ring-inset ring-orange-500/25'
-  if (provider === 'modrinth') return 'bg-green-500/10 text-green-400 ring-1 ring-inset ring-green-500/25'
-  return 'bg-neutral-500/10 text-neutral-400 ring-1 ring-inset ring-neutral-500/25'
-}
+const providerBadgeClass = (_provider: string) => 'bg-elevated text-muted ring-1 ring-inset ring-(--ui-border)'
 
 function compare(a: Entry, b: Entry, col: SortCol): number {
   switch (col) {

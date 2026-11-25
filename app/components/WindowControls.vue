@@ -1,12 +1,12 @@
 <template>
   <div v-if="showControls" class="flex gap-1" style="-webkit-app-region: no-drag">
-    <button class="flex items-center justify-center p-1 bg-gray-800/20 hover:bg-gray-800 rounded-md h-6 w-6 duration-300 cursor-pointer" title="Minimize" @click="minimize">
+    <button class="flex h-7 w-8 cursor-pointer items-center justify-center rounded-md text-muted transition-colors hover:bg-elevated hover:text-highlighted" title="Minimize" @click="minimize">
       <svg width="8" height="1" viewBox="0 0 10 1">
         <rect width="10" height="1" fill="currentColor" />
       </svg>
     </button>
 
-    <button class="flex items-center justify-center p-1 bg-gray-800/20 hover:bg-gray-800 rounded-md h-6 w-6 duration-300 cursor-pointer" :title="isMaximized ? 'Restore' : 'Maximize'" @click="toggleMaximize">
+    <button class="flex h-7 w-8 cursor-pointer items-center justify-center rounded-md text-muted transition-colors hover:bg-elevated hover:text-highlighted" :title="isMaximized ? 'Restore' : 'Maximize'" @click="toggleMaximize">
       <svg v-if="isMaximized" width="8" height="8" viewBox="0 0 10 10">
         <path
           fill="none"
@@ -20,7 +20,7 @@
       </svg>
     </button>
 
-    <button class="flex items-center justify-center p-1 bg-gray-800/20 hover:bg-gray-800 rounded-md h-6 w-6 duration-300 cursor-pointer close" title="Close" @click="close">
+    <button class="flex h-7 w-8 cursor-pointer items-center justify-center rounded-md text-muted transition-colors hover:bg-error hover:text-white close" title="Close" @click="close">
       <svg width="8" height="8" viewBox="0 0 10 10">
         <path fill="none" stroke="currentColor" stroke-width="1.2" d="M1,1 L9,9 M9,1 L1,9" />
       </svg>

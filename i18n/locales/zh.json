@@ -1,6 +1,6 @@
 {
   "nav": {
-    "home": "首页",
+    "home": "库",
     "worlds": "世界",
     "screenshots": "截图",
     "skins": "皮肤",
@@ -14,7 +14,8 @@
     "play": "开始游戏",
     "resume": "开始游戏并进入 {name}",
     "stop": "停止",
-    "empty": "你还没有游玩过"
+    "empty": "你还没有游玩过",
+    "continue": "继续游戏"
   },
   "create": {
     "title": "创建实例",
@@ -62,7 +63,7 @@
     }
   },
   "library": {
-    "title": "实例",
+    "title": "库",
     "count": "你的库中有 {n} 个",
     "search": "搜索实例...",
     "allLoaders": "所有加载器",
@@ -349,7 +350,9 @@
     "language": {
       "title": "语言",
       "label": "界面语言",
-      "auto": "首次运行时自动检测，之后记住。"
+      "auto": "首次运行时自动检测，之后记住。",
+      "search": "搜索语言…",
+      "noMatch": "没有匹配的语言"
     },
     "accounts": {
       "title": "账户",
@@ -402,7 +405,8 @@
       "defaultPath": "默认 Java 路径",
       "defaultPathHint": "当实例没有时使用（引擎仍会自行管理 Java）。",
       "detectedDesc": "在你的系统和启动器中找到的 Java 版本。"
-    }
+    },
+    "madeBy": "作者"
   },
   "activity": {
     "idle": "没有实例在运行",
@@ -692,7 +696,32 @@
     "extendHint": "可在最后 48 小时内延长",
     "revoke": "作废此代码",
     "revokeConfirm": "再点一次以确认",
-    "revokeHint": "代码会立即失效。好友保留已安装的内容，只是不再收到更新。"
+    "revokeHint": "代码会立即失效。好友保留已安装的内容，只是不再收到更新。",
+    "collabOf": "你和 {owner} 共同制作这个整合包",
+    "behind": "版本 {n} 已发布。推送前请先获取它。",
+    "pull": "获取更新",
+    "canPush": "可以推送更新",
+    "coAuthor": "共同作者",
+    "allowPush": "允许其推送更新",
+    "stopPush": "取消其推送权限",
+    "merging": "正在将更改合并到 {name}",
+    "conflict": {
+      "title": "有人在你之前推送了版本 {n}",
+      "hint": "为每一项选择要放进你这次推送的版本。配置和其他文件来自你的副本。",
+      "none": "模组没有差异。你的推送会带上你的配置和文件。",
+      "takeAll": "全部采用对方的",
+      "keepAll": "全部保留我的",
+      "mine": "我的",
+      "theirs": "对方的",
+      "addedByThem": "对方添加",
+      "removedByThem": "对方移除",
+      "updatedByThem": "对方更新",
+      "addedByYou": "你添加",
+      "removedByYou": "你移除",
+      "updatedByYou": "你更新",
+      "updatedByBoth": "双方都有改动",
+      "apply": "应用并推送"
+    }
   },
   "spectra": {
     "title": "Spectra 账户",
@@ -721,7 +750,8 @@
       "friend_request": "{who} 想添加你为好友",
       "friend_accepted": "{who} 接受了你的好友请求",
       "instance_invite": "{who} 与你分享了「{name}」",
-      "instance_update": "{who} 为「{name}」推送了更新"
+      "instance_update": "{who} 为「{name}」推送了更新",
+      "instance_collab": "{who} 邀请你一起制作「{name}」"
     },
     "update": "更新",
     "updating": "正在更新 {name}…",
@@ -744,7 +774,8 @@
       "dndHint": "好友会看到红点——你在，但不想被打扰",
       "hidden": "隐身",
       "hiddenHint": "无论你在做什么，所有人都看到你离线"
-    }
+    },
+    "statusLabel": "你的状态"
   },
   "snapshots": {
     "title": "还原点",
@@ -792,7 +823,14 @@
       "useCloud": "使用云端副本",
       "useComputer": "使用本机副本",
       "turnOff": "关闭同步",
-      "status": { "off": "已关闭", "idle": "已就绪", "synced": "已是最新", "conflict": "请选择副本", "deferred": "等待游戏关闭", "signed_out": "请登录后继续" }
+      "status": {
+        "off": "已关闭",
+        "idle": "已就绪",
+        "synced": "已是最新",
+        "conflict": "请选择副本",
+        "deferred": "等待游戏关闭",
+        "signed_out": "请登录后继续"
+      }
     },
     "title": "跨实例同步",
     "desc": "让所选设置在所有实例中保持一致。游戏关闭后收集改动，并在其他实例下次启动时应用。",

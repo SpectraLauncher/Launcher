@@ -36,6 +36,8 @@ export const useSpectraAccount = () => {
   const error = useState<string | null>('spectra-error', () => null)
 
   const isSignedIn = computed(() => user.value != null)
+  // How friends see you; shared so the titlebar avatar and the account panel agree.
+  const presence = useState<PresenceMode>('spectra-presence', () => 'visible')
 
   async function api<T>(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', path: string, body?: unknown) {
     return invoke<T>('spectra_api', { method, path, body: body ?? null })
@@ -73,7 +75,7 @@ export const useSpectraAccount = () => {
 
   const displayName = computed(() => user.value?.username || user.value?.name || '')
 
-  return { user, loading, error, isSignedIn, displayName, api, refresh, login, logout, linkMinecraft }
+  return { user, loading, error, isSignedIn, presence, displayName, api, refresh, login, logout, linkMinecraft }
 }
 
 export function spectraInitial(name?: string | null) {
@@ -81,4 +83,18 @@ export function spectraInitial(name?: string | null) {
   let hue = 0
   for (const ch of label) hue = (hue * 31 + ch.charCodeAt(0)) % 360
   return { letter: label[0]!.toUpperCase(), hue }
+}
+
+export const SPECTRA_STATUS_COLOUR: Record<FriendStatus, string> = {
+  online: '#3fb877',
+  in_game: '#38bdf8',
+  dnd: '#f87171',
+  offline: '#6b7079',
+}
+
+/** The dot others see for each presence mode you pick. */
+export const PRESENCE_STATUS: Record<PresenceMode, FriendStatus> = {
+  visible: 'online',
+  dnd: 'dnd',
+  hidden: 'offline',
 }

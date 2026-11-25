@@ -4,7 +4,7 @@
     <template v-else>
       <div v-for="child in children" :key="child.name">
         <div
-          class="flex items-center gap-1.5 rounded-md py-1 pr-2 hover:bg-white/5"
+          class="flex items-center gap-1.5 rounded-md py-1 pr-2 hover:bg-elevated"
           :style="indent"
         >
           <button
@@ -96,7 +96,7 @@ function state(c: DirChild): State {
   return isIncluded(path) ? 'checked' : 'unchecked'
 }
 function checkboxClass(c: DirChild) {
-  return state(c) === 'unchecked' ? 'border-white/25 hover:border-white/40' : 'border-primary-500 bg-primary-500'
+  return state(c) === 'unchecked' ? 'border-(--ui-border-accented) hover:border-white/40' : 'border-primary bg-primary'
 }
 
 function toggleExpand(name: string) {

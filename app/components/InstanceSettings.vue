@@ -6,7 +6,7 @@
         :key="s.key"
         type="button"
         class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition"
-        :class="section === s.key ? 'bg-primary-500/15 text-primary-400' : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'"
+        :class="section === s.key ? 'bg-primary/15 text-primary' : 'text-neutral-400 hover:bg-elevated hover:text-neutral-200'"
         @click="section = s.key"
       >
         <UIcon :name="s.icon" class="size-4" />
@@ -53,7 +53,7 @@
         <div>
           <p class="mb-1.5 text-sm font-medium">{{ $t('changeLoader.menu') }}</p>
           <div class="flex items-center gap-2">
-            <span class="rounded-md bg-white/7 px-2.5 py-1 text-sm font-medium">{{ loaderLabel(form.loader.type) }}<span v-if="'version' in form.loader" class="ml-1 font-mono text-xs opacity-70">{{ form.loader.version }}</span></span>
+            <span class="rounded-md bg-elevated px-2.5 py-1 text-sm font-medium">{{ loaderLabel(form.loader.type) }}<span v-if="'version' in form.loader" class="ml-1 tabular-nums text-xs opacity-70">{{ form.loader.version }}</span></span>
             <UButton icon="i-lucide-layers" color="neutral" variant="soft" size="sm" :label="$t('changeLoader.change')" @click="changeLoaderModal.open(props.instanceId)" />
           </div>
           <p class="mt-1.5 text-xs text-muted">{{ $t('changeLoader.settingsHint') }}</p>
@@ -73,9 +73,9 @@
       </template>
 
       <template v-else-if="section === 'install'">
-        <div class="rounded-xl border border-default bg-white/3 p-4 text-sm">
+        <div class="rounded-xl border border-default bg-muted p-4 text-sm">
           <div class="flex justify-between py-1"><span class="text-muted">{{ $t('instSettings.platform') }}</span><span class="font-medium">{{ loaderLabel(form.loader.type) }}</span></div>
-          <div class="flex justify-between py-1"><span class="text-muted">{{ $t('instSettings.gameVersion') }}</span><span class="font-mono">{{ form.mc_version }}</span></div>
+          <div class="flex justify-between py-1"><span class="text-muted">{{ $t('instSettings.gameVersion') }}</span><span class="tabular-nums">{{ form.mc_version }}</span></div>
           <div v-if="loaderVersion" class="flex justify-between py-1"><span class="text-muted">{{ $t('instSettings.loaderVersion') }}</span><span class="font-mono">{{ loaderVersion }}</span></div>
         </div>
         <div>
@@ -105,8 +105,8 @@
       </template>
 
       <template v-else-if="section === 'java'">
-        <div class="flex items-start gap-3 rounded-xl border border-default bg-white/3 p-3">
-          <UIcon name="i-lucide-coffee" class="mt-0.5 size-5 shrink-0 text-primary-400" />
+        <div class="flex items-start gap-3 rounded-xl border border-default bg-muted p-3">
+          <UIcon name="i-lucide-coffee" class="mt-0.5 size-5 shrink-0 text-primary" />
           <div class="min-w-0 text-sm">
             <p class="font-medium">{{ $t('instSettings.requiredJava', { version: form.mc_version, major: requiredJava }) }}</p>
             <p v-if="matchedJava" class="mt-0.5 text-xs text-success">
@@ -133,7 +133,7 @@
             <UFormField :label="$t('instSettings.memory')" :description="$t('instSettings.memoryDesc')">
               <div class="flex items-center gap-3 pt-1">
                 <USlider v-model="memoryMb" :min="sysMem.minMb" :max="sysMem.maxMb.value" :step="256" class="flex-1" />
-                <span class="w-24 shrink-0 text-right font-mono text-sm">{{ memoryMb }} MB</span>
+                <span class="w-24 shrink-0 text-right tabular-nums text-sm">{{ memoryMb }} MB</span>
               </div>
             </UFormField>
           </fieldset>
@@ -151,8 +151,8 @@
                   type="button"
                   class="rounded-md border px-2.5 py-1 text-xs font-medium transition"
                   :class="activePreset === p.key
-                    ? 'border-primary-500/60 bg-primary-500/15 text-primary-300'
-                    : 'border-default bg-white/3 text-neutral-400 hover:border-white/20 hover:text-neutral-200'"
+ ? 'border-primary/60 bg-primary/15 text-primary'
+ : 'border-default bg-muted text-neutral-400 hover:border-(--ui-border-accented) hover:text-neutral-200'"
                   @click="applyPreset(p.key)"
                 >
                   {{ $t(p.label) }}
@@ -187,7 +187,7 @@
         <div
           v-for="option in syncableOptions"
           :key="option"
-          class="flex items-start gap-3 rounded-lg px-3 py-2.5 transition hover:bg-white/3"
+          class="flex items-start gap-3 rounded-lg px-3 py-2.5 transition hover:bg-muted"
         >
           <div class="min-w-0 flex-1">
             <p class="text-sm font-medium">{{ $t(`sync.options.${option}.label`) }}</p>

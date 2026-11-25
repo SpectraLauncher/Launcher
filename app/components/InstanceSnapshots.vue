@@ -138,7 +138,7 @@ onMounted(load)
     </div>
 
     <div v-if="loading" class="flex items-center gap-2 rounded-xl border border-default px-3 py-4 text-sm text-muted">
-      <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin text-primary-400" />
+      <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin text-primary" />
       {{ $t('common.loading') }}
     </div>
 
@@ -155,7 +155,7 @@ onMounted(load)
         <div class="min-w-[180px] flex-1">
           <p class="text-sm">
             {{ s.label || $t('snapshots.manual') }}
-            <span v-if="s.auto" class="ml-1 rounded-full bg-white/6 px-1.5 py-0.5 text-[10px] text-neutral-400">
+            <span v-if="s.auto" class="ml-1 rounded-full bg-elevated px-1.5 py-0.5 text-[10px] text-neutral-400">
               {{ $t('snapshots.autoBadge') }}
             </span>
           </p>

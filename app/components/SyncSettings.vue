@@ -53,7 +53,7 @@
       <div
         v-for="option in SYNC_OPTIONS"
         :key="option"
-        class="flex items-start gap-3 rounded-lg px-3 py-2.5 transition hover:bg-white/3"
+        class="flex items-start gap-3 rounded-lg px-3 py-2.5 transition hover:bg-muted"
       >
         <UIcon :name="OPTION_ICONS[option]" class="mt-0.5 size-4 shrink-0 text-neutral-500" />
         <div class="min-w-0 flex-1">
@@ -98,11 +98,11 @@
             <tr
               v-for="source in sources"
               :key="source.id"
-              class="border-b border-default/50 last:border-0 hover:bg-white/3"
+              class="border-b border-default/50 last:border-0 hover:bg-muted"
             >
               <td class="px-3 py-2">
                 <span class="block truncate font-medium">{{ source.name }}</span>
-                <span class="font-mono text-[11px] text-neutral-500">{{ source.mc_version }}</span>
+                <span class="tabular-nums text-[11px] text-neutral-500">{{ source.mc_version }}</span>
               </td>
               <td v-for="option in activeOptions" :key="option" class="px-2 py-2 text-center">
                 <UCheckbox

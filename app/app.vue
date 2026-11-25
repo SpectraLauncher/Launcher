@@ -3,57 +3,57 @@
     <Teleport to="body">
       <div
         data-tauri-drag-region
-        class="pointer-events-auto fixed inset-x-0 top-0 z-[100] flex justify-between items-center h-10 px-2 text-gray-100 select-none"
+        class="pointer-events-auto fixed inset-x-0 top-0 z-[100] flex h-10 items-center gap-3 bg-(--mk-chrome) pr-2 text-sm text-toned select-none"
+        :class="isMac ? 'pl-[80px]' : ''"
         @pointerdown.self.stop
       >
-        <template v-if="isMac">
-          <!-- The system draws its traffic lights over this corner; the spacer
-               keeps the right-hand group where justify-between expects it. -->
-          <div class="w-[72px]" />
-          <div class="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
-            <img src="/logo-transparent.png" alt="Spectra Launcher Icon" class="h-5 object-contain" />
-            <span>{{ windowTitle }}</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <template v-if="!isContentWindow && !booting">
-              <AddonSlot name="titlebar" variant="icon" />
-              <TitlebarActivity />
-              <AccountButton />
-            </template>
-          </div>
-        </template>
-        <template v-else>
-          <div class="flex items-center gap-2 pl-2">
-            <img src="/logo-transparent.png" alt="Spectra Launcher Icon" class="h-5 object-contain" />
-            <span>{{ windowTitle }}</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <template v-if="!isContentWindow && !booting">
-              <AddonSlot name="titlebar" variant="icon" />
-              <TitlebarActivity />
-              <AccountButton />
-            </template>
-            <WindowControls />
-          </div>
-        </template>
+        <div v-if="!isMac" data-tauri-drag-region class="flex w-16 shrink-0 justify-center">
+          <img src="/logo-transparent.png" alt="" class="pointer-events-none h-5 object-contain" />
+        </div>
+        <span v-if="isContentWindow || booting" data-tauri-drag-region class="truncate font-medium text-highlighted">{{ windowTitle }}</span>
+        <UInput
+          v-else
+          ref="searchInput"
+          v-model="librarySearch"
+          icon="i-lucide-search"
+          size="sm"
+          variant="soft"
+          :placeholder="$t('library.search')"
+          class="w-72"
+          :ui="{ base: 'bg-elevated/70 hover:bg-elevated focus:bg-elevated' }"
+          style="-webkit-app-region: no-drag"
+          @update:model-value="onLibrarySearch"
+          @keydown.esc="librarySearch = ''; searchInput?.inputRef?.blur()"
+        >
+          <template #trailing>
+            <span v-if="!librarySearch" class="pointer-events-none flex gap-0.5">
+              <UKbd value="meta" size="sm" />
+              <UKbd value="k" size="sm" />
+            </span>
+          </template>
+        </UInput>
+        <div data-tauri-drag-region class="flex-1 self-stretch" />
+        <div class="flex items-center gap-2">
+          <template v-if="!isContentWindow && !booting">
+            <AddonSlot name="titlebar" variant="icon" />
+            <TitlebarActivity />
+            <AccountButton />
+          </template>
+          <WindowControls v-if="!isMac" />
+        </div>
       </div>
 
-      <NuxtLoadingIndicator color="aqua" errorColor="red" />
+      <NuxtLoadingIndicator color="var(--ui-primary)" error-color="var(--ui-error)" />
     </Teleport>
 
     <div class="h-10" />
 
-    <div :class="['relative w-screen h-[calc(100vh-2.5rem)] overflow-hidden text-(--mk-text)', theme.bgClass]">
+    <div class="relative h-[calc(100vh-2.5rem)] w-screen overflow-hidden bg-(--mk-chrome) text-default">
 
       <div
         v-if="themeBackground"
         class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-30"
         :style="{ backgroundImage: `url('${themeBackground}')` }"
-      />
-
-      <div
-        class="pointer-events-none absolute inset-0"
-        style="background-image:radial-gradient(rgba(255,255,255,0.035) 1px,transparent 1px);background-size:26px 26px;"
       />
 
       <div class="relative z-[1] flex h-full flex-col">
@@ -110,6 +110,13 @@ const windowTitle = computed(() => {
   if (isConsoleWindow.value) return t('logs.window')
   return isContentWindow.value ? 'Spectra — content' : 'Spectra Launcher'
 })
+
+const librarySearch = useState('library-search', () => '')
+const searchInput = ref<{ inputRef?: HTMLInputElement } | null>(null)
+defineShortcuts({ meta_k: { usingInput: true, handler: () => searchInput.value?.inputRef?.focus() } })
+function onLibrarySearch() {
+  if (route.path !== '/') router.push('/')
+}
 
 const { platform } = usePlatform()
 const isMac = computed(() => platform.value === 'macos')

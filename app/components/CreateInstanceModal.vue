@@ -7,10 +7,10 @@
           v-for="c in choices"
           :key="c.key"
           type="button"
-          class="flex w-full items-start gap-3 rounded-xl border border-default p-4 text-left transition hover:border-primary-500 hover:bg-primary-500/5"
+          class="flex w-full items-start gap-3 rounded-xl border border-default p-4 text-left transition hover:border-primary hover:bg-primary/5"
           @click="selectChoice(c.key)"
         >
-          <UIcon :name="c.icon" class="mt-0.5 size-5 shrink-0 text-primary-400" />
+          <UIcon :name="c.icon" class="mt-0.5 size-5 shrink-0 text-primary" />
           <div>
             <div class="font-medium">{{ $t(c.title) }}</div>
             <div class="mt-0.5 text-sm text-muted">{{ $t(c.desc) }}</div>
@@ -20,7 +20,7 @@
 
       <form v-else-if="step === 'custom'" class="space-y-4" @submit.prevent="submit">
         <div class="flex items-center gap-4">
-          <div class="flex size-16 flex-none items-center justify-center overflow-hidden rounded-xl bg-white/5 ring-1 ring-white/10">
+          <div class="flex size-16 flex-none items-center justify-center overflow-hidden rounded-xl bg-elevated ring-1 ring-white/10">
             <img v-if="form.iconPreview" :src="form.iconPreview" alt="" class="size-full object-cover" />
             <UIcon v-else name="i-lucide-box" class="size-7 text-neutral-400" />
           </div>
@@ -52,8 +52,8 @@
               type="button"
               class="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition"
               :class="form.loader === l.value
-                ? 'bg-primary-500/15 text-primary-400 ring-1 ring-primary-500/40'
-                : 'bg-white/5 text-neutral-300 hover:bg-white/10'"
+ ? 'bg-primary/15 text-primary ring-1 ring-primary/40'
+ : 'bg-elevated text-neutral-300 hover:bg-accented'"
               @click="form.loader = l.value"
             >
               <UIcon v-if="form.loader === l.value" name="i-lucide-check" class="size-3.5" />

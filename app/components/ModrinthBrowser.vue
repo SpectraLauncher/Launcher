@@ -72,8 +72,8 @@
               type="button"
               class="rounded-md px-2 py-1 text-xs font-medium capitalize transition"
               :class="selectedCategories.includes(c.name)
-                ? 'bg-primary-500/15 text-primary-400'
-                : 'bg-white/5 text-neutral-400 hover:bg-white/10'"
+ ? 'bg-primary/15 text-primary'
+ : 'bg-elevated text-neutral-400 hover:bg-accented'"
               @click="toggleCategory(c.name)"
             >
               {{ c.name }}
@@ -88,7 +88,7 @@
             v-for="hit in recent"
             :key="hit.project_id"
             type="button"
-            class="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/8 bg-white/4 px-2 py-1 text-xs text-neutral-300 transition hover:bg-white/10"
+            class="flex shrink-0 items-center gap-1.5 rounded-lg border border-default bg-muted px-2 py-1 text-xs text-neutral-300 transition hover:bg-accented"
             @click="selectHit(hit)"
           >
             <img v-if="hit.icon_url" :src="hit.icon_url" alt="" class="size-4 rounded">
@@ -109,8 +109,8 @@
                 :key="hit.project_id"
                 class="group relative flex cursor-pointer flex-col overflow-hidden rounded-xl border transition"
                 :class="selected?.project_id === hit.project_id
-                  ? 'border-primary-500/60 bg-primary-500/10'
-                  : 'border-white/8 bg-white/4 hover:border-white/20 hover:bg-white/8'"
+ ? 'border-primary/60 bg-primary/10'
+ : 'border-default bg-muted hover:border-(--ui-border-accented) hover:bg-elevated'"
                 @click="selectHit(hit)"
               >
                 <UCheckbox
@@ -122,7 +122,7 @@
                 />
                 <div class="flex items-start gap-3 p-3">
                   <img v-if="hit.icon_url" :src="hit.icon_url" class="size-12 shrink-0 rounded-lg object-cover" :alt="hit.title">
-                  <div v-else class="flex size-12 shrink-0 items-center justify-center rounded-lg bg-white/5">
+                  <div v-else class="flex size-12 shrink-0 items-center justify-center rounded-lg bg-elevated">
                     <UIcon name="i-lucide-box" class="size-5 text-neutral-500" />
                   </div>
                   <div class="min-w-0 flex-1">
@@ -151,9 +151,9 @@
               type="button"
               class="flex w-full items-start gap-3 border-b border-default/60 text-left transition"
               :class="[
-                selected?.project_id === hit.project_id ? 'bg-primary-500/10' : 'hover:bg-white/4',
-                density === 'compact' ? 'p-2' : 'p-3',
-              ]"
+ selected?.project_id === hit.project_id ? 'bg-primary/10' : 'hover:bg-muted',
+ density === 'compact' ? 'p-2' : 'p-3',
+ ]"
               @click="selectHit(hit)"
             >
               <UCheckbox
@@ -164,7 +164,7 @@
                 @click.stop
               />
               <img v-if="hit.icon_url" :src="hit.icon_url" class="size-11 shrink-0 rounded-lg object-cover" :alt="hit.title" />
-              <div v-else class="flex size-11 shrink-0 items-center justify-center rounded-lg bg-white/5">
+              <div v-else class="flex size-11 shrink-0 items-center justify-center rounded-lg bg-elevated">
                 <UIcon name="i-lucide-box" class="size-5 text-neutral-500" />
               </div>
               <div class="min-w-0 flex-1">
@@ -230,7 +230,7 @@
                     <div class="flex items-center gap-2">
                       <button
                         type="button"
-                        class="group/title flex min-w-0 items-center gap-1.5 text-left transition hover:text-primary-400"
+                        class="group/title flex min-w-0 items-center gap-1.5 text-left transition hover:text-primary"
                         :title="$t('mods.openPage')"
                         @click="openProjectPage(selected)"
                       >
@@ -242,7 +242,8 @@
                     <div class="text-xs text-neutral-500">{{ $t('modrinth.by', { author: selected.author }) }}</div>
                   </div>
                 </div>
-                <div v-if="selectedInstalled" class="flex shrink-0 items-center gap-1.5">
+                <div class="flex shrink-0 items-center gap-1.5">
+                <template v-if="selectedInstalled">
                   <UButton
                     icon="i-lucide-replace"
                     color="neutral"
@@ -260,20 +261,29 @@
                     :title="$t('common.remove')"
                     @click="doUninstall"
                   />
-                </div>
+                </template>
                 <UButton
                   v-else
-                  class="shrink-0"
                   :loading="!!installing"
                   :disabled="!latest || loadingVersions"
                   :label="installLabel"
                   @click="latest && doInstall(latest)"
                 />
+                <UButton
+                  icon="i-lucide-x"
+                  color="neutral"
+                  variant="ghost"
+                  square
+                  :title="`${$t('common.close')} (Esc)`"
+                  :aria-label="$t('common.close')"
+                  @click="selected = null"
+                />
+                </div>
               </div>
 
               <p class="mt-2 text-[13px] text-neutral-400">{{ selected.description }}</p>
               <p v-if="latest" class="mt-1 text-[11px] text-neutral-500">
-                {{ $t('modrinth.latest') }}: <span class="font-mono">{{ latest.version_number }}</span>
+                {{ $t('modrinth.latest') }}: <span class="tabular-nums">{{ latest.version_number }}</span>
               </p>
 
               <div v-if="modpackProgress" class="mt-4 space-y-1.5">
@@ -300,7 +310,7 @@
                 <div
                   v-for="v in versions"
                   :key="v.id"
-                  class="flex items-center gap-3 rounded-lg border border-default bg-white/3 p-2.5"
+                  class="flex items-center gap-3 rounded-lg border border-default bg-muted p-2.5"
                 >
                   <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2">
@@ -329,7 +339,7 @@
                   <button
                     type="button"
                     class="rounded-md px-3 py-1 text-sm font-medium transition"
-                    :class="detailTab === 'description' ? 'bg-primary-500/15 text-primary-400' : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'"
+                    :class="detailTab === 'description' ? 'bg-primary/15 text-primary' : 'text-neutral-400 hover:bg-elevated hover:text-neutral-200'"
                     @click="detailTab = 'description'"
                   >
                     {{ $t('modrinth.tabDescription') }}
@@ -337,7 +347,7 @@
                   <button
                     type="button"
                     class="flex items-center gap-1.5 rounded-md px-3 py-1 text-sm font-medium transition"
-                    :class="detailTab === 'gallery' ? 'bg-primary-500/15 text-primary-400' : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'"
+                    :class="detailTab === 'gallery' ? 'bg-primary/15 text-primary' : 'text-neutral-400 hover:bg-elevated hover:text-neutral-200'"
                     @click="detailTab = 'gallery'"
                   >
                     {{ $t('modrinth.tabGallery') }}
@@ -359,7 +369,7 @@
                       v-for="(g, i) in gallery"
                       :key="g.url"
                       type="button"
-                      class="overflow-hidden rounded-lg border border-default bg-white/3 transition hover:border-primary-500/40"
+                      class="overflow-hidden rounded-lg border border-default bg-muted transition hover:border-primary/40"
                       @click="galleryIndex = i"
                     >
                       <img :src="g.url" loading="lazy" class="aspect-video w-full object-cover" :alt="g.title ?? ''" >
@@ -466,6 +476,9 @@ const gameVersionItems = computed(() => [
 
 const { view, density, recent, loadPrefs, rememberRecent } = prefs
 const picked = ref<string[]>([])
+// Picks outlive the search and the source that found them, so keep each picked hit
+// together with the provider it came from, not just its id.
+const pickedHits = new Map<string, { hit: ModrinthHit, provider: Provider }>()
 const searchInput = ref<{ inputRef?: HTMLInputElement, $el?: HTMLElement } | null>(null)
 
 const resultsClass = computed(() => {
@@ -623,17 +636,17 @@ const batchBusy = ref(false)
 async function installPicked() {
   const cfg = config.value
   if (!cfg?.instanceId || !picked.value.length) return
-  const api = isCf.value ? curseforge : modrinth
-  const targets = hits.value.filter(h => picked.value.includes(h.project_id))
+  const targets = picked.value.map(id => pickedHits.get(id)).filter(p => !!p)
 
   batchBusy.value = true
   const taskId = activity.startTask(t('activity.installingMods', { n: targets.length }))
   let done = 0
 
   try {
-    for (const hit of targets) {
+    for (const { hit, provider: source } of targets) {
+      const fromCf = source === 'curseforge'
       try {
-        const list = await api.versions(
+        const list = await (fromCf ? curseforge : modrinth).versions(
           hit.project_id,
           loaderFacetFor(kind.value, loaderValue.value) || undefined,
           gameVersionValue.value ? [gameVersionValue.value] : undefined,
@@ -641,7 +654,7 @@ async function installPicked() {
         const version = list[0]
         if (!version) continue
 
-        if (isCf.value) {
+        if (fromCf) {
           const res = await curseforge.installWithDeps(cfg.instanceId, version.project_id, version.id, gameVersionValue.value, loaderValue.value)
           installedIds.value = new Set([...installedIds.value, ...res.added.map(i => i.project_id)])
           rememberInstalled(res.added)
@@ -702,10 +715,17 @@ function toggleCategory(name: string) {
 }
 
 function togglePick(projectId: string) {
-  picked.value = picked.value.includes(projectId)
-    ? picked.value.filter(id => id !== projectId)
-    : [...picked.value, projectId]
+  if (picked.value.includes(projectId)) {
+    picked.value = picked.value.filter(id => id !== projectId)
+    return
+  }
+  const hit = hits.value.find(h => h.project_id === projectId)
+  if (hit) pickedHits.set(projectId, { hit, provider: provider.value })
+  picked.value = [...picked.value, projectId]
 }
+watch(picked, (ids) => {
+  for (const id of pickedHits.keys()) if (!ids.includes(id)) pickedHits.delete(id)
+})
 
 const canPick = computed(() => mode.value === 'install' && !!config.value?.instanceId)
 

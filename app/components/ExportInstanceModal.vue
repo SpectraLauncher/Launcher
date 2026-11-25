@@ -10,7 +10,7 @@
               :key="f.value"
               type="button"
               class="rounded-lg border px-3 py-2.5 text-left transition"
-              :class="format === f.value ? 'border-primary-500 bg-primary-500/10' : 'border-default hover:border-neutral-500'"
+              :class="format === f.value ? 'border-primary bg-primary/10' : 'border-default hover:border-neutral-500'"
               @click="format = f.value"
             >
               <div class="flex items-center gap-1.5 text-sm font-medium">

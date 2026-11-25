@@ -32,13 +32,13 @@
         >
           <div class="flex items-center gap-3">
             <img v-if="a.icon" :src="a.icon" alt="" class="size-9 shrink-0 rounded-lg object-cover">
-            <div v-else class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/5">
+            <div v-else class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-elevated">
               <UIcon name="i-lucide-puzzle" class="size-4" />
             </div>
             <div class="min-w-0 flex-1">
               <div class="flex flex-wrap items-center gap-2">
                 <p class="truncate text-sm font-medium">{{ a.name }}</p>
-                <span class="font-mono text-xs text-muted">{{ a.version }}</span>
+                <span class="tabular-nums text-xs text-muted">{{ a.version }}</span>
                 <UBadge v-if="a.source !== 'catalog'" color="warning" variant="soft" size="sm" :label="t('addons.unverified')" />
                 <UBadge v-if="a.revoked" color="error" variant="soft" size="sm" :label="t('addons.revoked')" />
               </div>
@@ -139,12 +139,12 @@
           v-for="hit in hits"
           :key="hit.slug"
           type="button"
-          class="flex flex-col gap-3 rounded-xl border border-default p-3 text-left transition hover:border-primary-500/40 hover:bg-white/3"
+          class="flex flex-col gap-3 rounded-xl border border-default p-3 text-left transition hover:border-primary/40 hover:bg-muted"
           @click="previewSlug = hit.slug"
         >
           <div class="flex items-center gap-3">
             <img v-if="hit.icon" :src="hit.icon" alt="" class="size-11 shrink-0 rounded-lg object-cover">
-            <div v-else class="flex size-11 shrink-0 items-center justify-center rounded-lg bg-white/5">
+            <div v-else class="flex size-11 shrink-0 items-center justify-center rounded-lg bg-elevated">
               <UIcon name="i-lucide-puzzle" class="size-5" />
             </div>
             <p class="min-w-0 truncate text-sm font-medium">{{ hit.title }}</p>
@@ -168,11 +168,11 @@
         <li
           v-for="hit in hits"
           :key="hit.slug"
-          class="flex cursor-pointer items-center gap-3 rounded-xl border border-default px-3 py-2 transition hover:border-primary-500/40 hover:bg-white/3"
+          class="flex cursor-pointer items-center gap-3 rounded-xl border border-default px-3 py-2 transition hover:border-primary/40 hover:bg-muted"
           @click="previewSlug = hit.slug"
         >
           <img v-if="hit.icon" :src="hit.icon" alt="" class="size-9 shrink-0 rounded-lg object-cover">
-          <div v-else class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/5">
+          <div v-else class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-elevated">
             <UIcon name="i-lucide-puzzle" class="size-4" />
           </div>
           <div class="min-w-0 flex-1">

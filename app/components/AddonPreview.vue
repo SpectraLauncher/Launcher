@@ -3,13 +3,13 @@
     <template #body>
       <div v-if="loading" class="space-y-3">
         <div class="flex gap-4">
-          <div class="size-16 shrink-0 animate-pulse rounded-xl bg-white/5" />
+          <div class="size-16 shrink-0 animate-pulse rounded-xl bg-elevated" />
           <div class="flex-1 space-y-2">
-            <div class="h-3 w-3/4 animate-pulse rounded bg-white/5" />
-            <div class="h-3 w-1/2 animate-pulse rounded bg-white/5" />
+            <div class="h-3 w-3/4 animate-pulse rounded bg-elevated" />
+            <div class="h-3 w-1/2 animate-pulse rounded bg-elevated" />
           </div>
         </div>
-        <div class="h-32 animate-pulse rounded-xl bg-white/5" />
+        <div class="h-32 animate-pulse rounded-xl bg-elevated" />
       </div>
 
       <p v-else-if="failed" class="py-6 text-center text-sm text-muted">{{ $t('addons.previewFailed') }}</p>
@@ -17,7 +17,7 @@
       <div v-else-if="project" class="space-y-5">
         <div class="flex items-start gap-4">
           <img v-if="project.icon" :src="project.icon" alt="" class="size-16 shrink-0 rounded-xl object-cover">
-          <div v-else class="flex size-16 shrink-0 items-center justify-center rounded-xl bg-white/5">
+          <div v-else class="flex size-16 shrink-0 items-center justify-center rounded-xl bg-elevated">
             <UIcon name="i-lucide-puzzle" class="size-7" />
           </div>
           <div class="min-w-0 flex-1">
@@ -59,7 +59,7 @@
               :key="g.url"
               type="button"
               class="shrink-0 overflow-hidden rounded-lg ring-2 transition"
-              :class="big === i ? 'ring-primary-500' : 'ring-transparent hover:ring-white/20'"
+              :class="big === i ? 'ring-primary' : 'ring-transparent hover:ring-white/20'"
               @click="big = big === i ? null : i"
             >
               <img :src="g.url" :alt="g.title" class="h-20 w-32 object-cover">

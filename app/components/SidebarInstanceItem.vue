@@ -1,16 +1,20 @@
 <template>
-  <button
-    type="button"
-    class="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition"
-    :class="active ? 'bg-primary-500/10' : 'hover:bg-white/5'"
-    @click="onClick"
-  >
-    <InstanceIcon :instance="instance" class="size-7 rounded-md text-[12px]" />
-    <div class="min-w-0 flex-1">
-      <div class="truncate text-[13px] font-medium">{{ instance.name }}</div>
-      <div class="font-mono text-[10px] text-neutral-500">{{ instance.mc_version }}</div>
-    </div>
-  </button>
+  <UTooltip :text="instance.name" :content="{ side: 'right' }">
+    <button
+      type="button"
+      :aria-label="instance.name"
+      :aria-current="active ? 'page' : undefined"
+      class="relative shrink-0 rounded-xl p-0.5 ring-2 transition"
+      :class="active ? 'ring-primary' : 'ring-transparent hover:ring-(--ui-border-accented)'"
+      @click="onClick"
+    >
+      <InstanceIcon :instance="instance" class="size-9 rounded-[10px] text-[14px]" />
+      <span
+        v-if="running"
+        class="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-(--mk-chrome) bg-primary"
+      />
+    </button>
+  </UTooltip>
 </template>
 
 <script setup lang="ts">
@@ -20,8 +24,10 @@ const props = defineProps<{ instance: Instance }>()
 
 const router = useRouter()
 const route = useRoute()
+const activity = useActivityCenter()
 
 const active = computed(() => route.params.id === props.instance.id)
+const running = computed(() => activity.list.value.some(a => a.kind === 'running' && a.instanceId === props.instance.id))
 
 const onClick = () => {
   router.push(`/instance/${props.instance.id}`)

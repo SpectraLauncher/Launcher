@@ -12,12 +12,14 @@ export function loaderLabel(type: LoaderType): string {
   return LOADER_LABELS[type] ?? type
 }
 
+const NEUTRAL_BADGE = 'bg-elevated text-toned ring-1 ring-inset ring-(--ui-border-accented)'
+
 export const LOADER_BADGE_CLASS: Record<LoaderType, string> = {
-  vanilla: 'bg-green-500/10 text-green-400 ring-1 ring-inset ring-green-500/25',
-  fabric: 'bg-blue-500/10 text-blue-400 ring-1 ring-inset ring-blue-500/25',
-  quilt: 'bg-purple-500/10 text-purple-400 ring-1 ring-inset ring-purple-500/25',
-  forge: 'bg-red-500/10 text-red-400 ring-1 ring-inset ring-red-500/25',
-  neoforge: 'bg-orange-500/10 text-orange-400 ring-1 ring-inset ring-orange-500/25',
+  vanilla: NEUTRAL_BADGE,
+  fabric: NEUTRAL_BADGE,
+  quilt: NEUTRAL_BADGE,
+  forge: NEUTRAL_BADGE,
+  neoforge: NEUTRAL_BADGE,
 }
 
 export function loaderBadgeClass(type: LoaderType): string {
@@ -32,7 +34,7 @@ function hueFromString(s: string): number {
 
 export function instanceIconBg(instance: Pick<Instance, 'id' | 'name'>): string {
   const h = hueFromString(instance.id || instance.name)
-  return `linear-gradient(135deg, hsl(${h} 65% 52%), hsl(${(h + 28) % 360} 60% 42%))`
+  return `linear-gradient(160deg, hsl(${h} 42% 44%), hsl(${(h + 16) % 360} 40% 33%))`
 }
 
 export function instanceInitial(instance: Pick<Instance, 'name'>): string {

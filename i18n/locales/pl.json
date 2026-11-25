@@ -1,6 +1,6 @@
 {
   "nav": {
-    "home": "Start",
+    "home": "Biblioteka",
     "worlds": "Światy",
     "screenshots": "Zrzuty ekranu",
     "skins": "Skórki",
@@ -9,12 +9,13 @@
     "newInstance": "Nowa instancja"
   },
   "instanceCard": {
-    "title": "OSTATNIO GRANE",
-    "nowPlaying": "TERAZ GRASZ",
-    "play": "GRAJ",
+    "title": "Ostatnio grane",
+    "nowPlaying": "Teraz grasz",
+    "play": "Graj",
     "resume": "Graj i wejdź do {name}",
-    "stop": "ZATRZYMAJ",
-    "empty": "Jeszcze nie grałeś"
+    "stop": "Zatrzymaj",
+    "empty": "Jeszcze nie grałeś",
+    "continue": "Wróć do gry"
   },
   "create": {
     "title": "Utwórz instancję",
@@ -62,7 +63,7 @@
     }
   },
   "library": {
-    "title": "Instancje",
+    "title": "Biblioteka",
     "count": "{n} w Twojej bibliotece",
     "search": "Szukaj instancji...",
     "allLoaders": "Wszystkie loadery",
@@ -349,7 +350,9 @@
     "language": {
       "title": "Język",
       "label": "Język interfejsu",
-      "auto": "Wykrywany automatycznie przy pierwszym uruchomieniu, potem zapamiętywany."
+      "auto": "Wykrywany automatycznie przy pierwszym uruchomieniu, potem zapamiętywany.",
+      "search": "Szukaj języka…",
+      "noMatch": "Brak pasującego języka"
     },
     "accounts": {
       "title": "Konta",
@@ -402,7 +405,8 @@
       "defaultPath": "Domyślna ścieżka Javy",
       "defaultPathHint": "Używana, gdy instancja nie ma własnej (silnik gry i tak sam zarządza Javą).",
       "detectedDesc": "Wersje Javy znalezione w systemie i w launcherze."
-    }
+    },
+    "madeBy": "Autor:"
   },
   "activity": {
     "idle": "Żadna instancja nie jest włączona",
@@ -428,7 +432,7 @@
   },
   "content": {
     "all": "Wszystko",
-    "count": "{n} elementów",
+    "count": "Elementy: {n}",
     "searchPlaceholder": "Szukaj zawartości...",
     "refresh": "Odśwież",
     "empty": "Nic tu jeszcze nie ma",
@@ -693,7 +697,32 @@
     "extendHint": "Można przedłużyć w ostatnich 48 godzinach",
     "revoke": "Wygaś kod",
     "revokeConfirm": "Kliknij ponownie, aby potwierdzić",
-    "revokeHint": "Kod przestanie działać od razu. Znajomi zachowają to, co już zainstalowali — po prostu przestaną dostawać aktualizacje."
+    "revokeHint": "Kod przestanie działać od razu. Znajomi zachowają to, co już zainstalowali — po prostu przestaną dostawać aktualizacje.",
+    "collabOf": "Współtworzysz tę paczkę z {owner}",
+    "behind": "Jest już wersja {n}. Pobierz ją przed wypchnięciem.",
+    "pull": "Pobierz aktualizację",
+    "canPush": "Może wypychać aktualizacje",
+    "coAuthor": "Współtwórca",
+    "allowPush": "Pozwól wypychać aktualizacje",
+    "stopPush": "Odbierz prawo wypychania",
+    "merging": "Scalanie zmian w {name}",
+    "conflict": {
+      "title": "Ktoś wypchnął wersję {n} przed Tobą",
+      "hint": "Wybierz, która wersja każdej pozycji trafi do Twojego wypchnięcia. Konfiguracje i pozostałe pliki pochodzą z Twojej kopii.",
+      "none": "Mody się nie różnią. Wypchnięcie zabierze Twoje konfiguracje i pliki.",
+      "takeAll": "Weź wszystkie ich",
+      "keepAll": "Zostaw wszystkie moje",
+      "mine": "Moja",
+      "theirs": "Ich",
+      "addedByThem": "Dodane przez nich",
+      "removedByThem": "Usunięte przez nich",
+      "updatedByThem": "Zaktualizowane przez nich",
+      "addedByYou": "Dodane przez Ciebie",
+      "removedByYou": "Usunięte przez Ciebie",
+      "updatedByYou": "Zaktualizowane przez Ciebie",
+      "updatedByBoth": "Zmienione po obu stronach",
+      "apply": "Zastosuj i wypchnij"
+    }
   },
   "spectra": {
     "title": "Konto Spectra",
@@ -722,7 +751,8 @@
       "friend_request": "{who} chce dodać Cię do znajomych",
       "friend_accepted": "{who} przyjął Twoje zaproszenie",
       "instance_invite": "{who} udostępnia Ci „{name}”",
-      "instance_update": "{who} wypchnął aktualizację paczki „{name}”"
+      "instance_update": "{who} wypchnął aktualizację paczki „{name}”",
+      "instance_collab": "{who} zaprasza Cię do wspólnego tworzenia „{name}”"
     },
     "update": "Aktualizuj",
     "updating": "Aktualizowanie {name}…",
@@ -745,7 +775,8 @@
       "dndHint": "Znajomi widzą czerwoną kropkę — jesteś, ale wolisz nie być zaczepiany",
       "hidden": "Ukryty",
       "hiddenHint": "Wszyscy widzą Cię jako offline, cokolwiek robisz"
-    }
+    },
+    "statusLabel": "Twój status"
   },
   "snapshots": {
     "title": "Punkty przywracania",
@@ -793,7 +824,14 @@
       "useCloud": "Użyj kopii z chmury",
       "useComputer": "Użyj tego komputera",
       "turnOff": "Wyłącz synchronizację",
-      "status": { "off": "Wyłączona", "idle": "Gotowa", "synced": "Aktualna", "conflict": "Wybierz kopię", "deferred": "Czeka na zamknięcie gry", "signed_out": "Zaloguj się, aby kontynuować" }
+      "status": {
+        "off": "Wyłączona",
+        "idle": "Gotowa",
+        "synced": "Aktualna",
+        "conflict": "Wybierz kopię",
+        "deferred": "Czeka na zamknięcie gry",
+        "signed_out": "Zaloguj się, aby kontynuować"
+      }
     },
     "title": "Synchronizacja instancji",
     "desc": "Trzyma wybrane ustawienia identyczne we wszystkich instancjach. Zmiany z jednej gry są zbierane po jej zamknięciu i wchodzą do pozostałych przy następnym starcie.",

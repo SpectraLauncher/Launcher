@@ -27,28 +27,24 @@ const known = computed(() => updater.total.value > 0)
     <div
       v-if="updater.gate.value !== 'done'"
       data-tauri-drag-region
-      class="fixed inset-0 z-[90] flex flex-col items-center justify-center gap-6 bg-[#0b0e14]"
+      class="fixed inset-0 z-[90] flex flex-col items-center justify-center gap-6 bg-default"
     >
-      <div
-        class="pointer-events-none absolute inset-0"
-        style="background-image:radial-gradient(rgba(255,255,255,0.035) 1px,transparent 1px);background-size:26px 26px;"
-      />
 
       <div class="relative flex flex-col items-center gap-5 px-8 text-center">
         <img src="/logo-transparent.png" alt="" class="h-16 w-16 object-contain" >
 
         <div class="space-y-1.5">
-          <p class="text-lg font-semibold text-(--mk-text)">{{ t('update.startupTitle') }}</p>
-          <p class="text-sm text-gray-400">{{ message }}</p>
+          <p class="text-lg font-semibold text-highlighted">{{ t('update.startupTitle') }}</p>
+          <p class="text-sm text-muted">{{ message }}</p>
         </div>
 
-        <div class="h-1 w-64 overflow-hidden rounded-full bg-white/10">
+        <div class="h-1 w-64 overflow-hidden rounded-full bg-accented">
           <div
             v-if="known"
-            class="h-full rounded-full bg-primary-500 transition-[width] duration-200"
+            class="h-full rounded-full bg-primary transition-[width] duration-200"
             :style="{ width: `${updater.progress.value}%` }"
           />
-          <div v-else class="h-full w-1/3 animate-[startup-scan_1.2s_ease-in-out_infinite] rounded-full bg-primary-500" />
+          <div v-else class="h-full w-1/3 animate-[startup-scan_1.2s_ease-in-out_infinite] rounded-full bg-primary" />
         </div>
 
         <p v-if="known" class="text-xs tabular-nums text-gray-500">{{ updater.progress.value }}%</p>

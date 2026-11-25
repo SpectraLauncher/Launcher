@@ -3,12 +3,12 @@
     <template #content>
       <div class="grid grid-cols-1 sm:grid-cols-[1fr_320px]">
         <div class="flex flex-col gap-4 p-7">
-          <span class="w-fit rounded-full bg-primary-500/15 px-3 py-1 text-xs font-semibold text-primary-400">
+          <span class="w-fit rounded-full bg-primary/15 px-3 py-1 text-xs font-semibold text-primary">
             {{ $t('syncAnnounce.badge') }} · 0.9.0
           </span>
 
           <div class="flex items-center gap-3">
-            <UIcon name="i-lucide-cloud" class="size-7 shrink-0 text-primary-400" />
+            <UIcon name="i-lucide-cloud" class="size-7 shrink-0 text-primary" />
             <h2 class="text-2xl font-bold tracking-tight">{{ $t('syncAnnounce.title') }}</h2>
           </div>
 
@@ -53,11 +53,11 @@
           <p class="text-xs font-semibold uppercase tracking-wide text-muted">{{ $t('syncAnnounce.included') }}</p>
           <div class="space-y-2">
             <div class="flex items-center gap-2 text-sm">
-              <UIcon name="i-lucide-list" class="size-4 shrink-0 text-primary-400" />
+              <UIcon name="i-lucide-list" class="size-4 shrink-0 text-primary" />
               <span>{{ $t('syncAnnounce.instances') }}</span>
             </div>
             <div v-for="option in SYNC_OPTIONS" :key="option" class="flex items-center gap-2 text-sm">
-              <UIcon :name="OPTION_ICONS[option]" class="size-4 shrink-0 text-primary-400" />
+              <UIcon :name="OPTION_ICONS[option]" class="size-4 shrink-0 text-primary" />
               <span>{{ $t(`sync.options.${option}.label`) }}</span>
             </div>
           </div>

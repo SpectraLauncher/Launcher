@@ -5,14 +5,20 @@ export default defineAppConfig({
       neutral: 'neutral',
     },
 
+    button: {
+      slots: {
+        base: 'rounded-lg font-medium',
+      },
+    },
+
     card: {
       slots: {
-        root: 'rounded-lg overflow-hidden',
-        header: 'p-4 sm:px-6',
+        root: 'rounded-xl overflow-hidden',
+        header: 'p-4 sm:px-5',
         title: 'text-highlighted font-semibold',
         description: 'mt-1 text-muted text-sm',
-        body: 'p-4 sm:p-6',
-        footer: 'p-4 sm:px-6'
+        body: 'p-4 sm:p-5',
+        footer: 'p-4 sm:px-5'
       },
       variants: {
         variant: {
@@ -22,13 +28,13 @@ export default defineAppConfig({
             description: 'text-dimmed'
           },
           outline: {
-            root: 'bg-white/3 backdrop-blur-xs ring ring-default divide-y divide-default'
+            root: 'bg-muted ring ring-default divide-y divide-default'
           },
           soft: {
-            root: 'bg-white/3 backdrop-blur-xs divide-y divide-default'
+            root: 'bg-elevated divide-y divide-default'
           },
           subtle: {
-            root: 'bg-white/3 backdrop-blur-xs ring-default divide-y divide-default'
+            root: 'bg-elevated ring ring-default divide-y divide-default'
           }
         }
       },
@@ -39,16 +45,15 @@ export default defineAppConfig({
 
     modal: {
       slots: {
-        overlay: 'fixed inset-0 backdrop-blur-sm'
+        overlay: 'fixed inset-0 bg-black/60',
+        content: 'bg-elevated ring-default rounded-xl shadow-[0_24px_64px_rgba(0,0,0,0.5)]',
       },
-      variants: {
-        overlay: {
-          true: {
-            overlay: 'bg-primary-500/10 '
-          }
-        },
-      }
-    }
-  },
+    },
 
+    tooltip: {
+      slots: {
+        content: 'bg-elevated ring-default text-highlighted',
+      },
+    },
+  },
 })

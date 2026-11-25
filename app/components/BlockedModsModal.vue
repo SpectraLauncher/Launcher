@@ -47,7 +47,7 @@
           <div class="space-y-1.5 rounded-lg border border-dashed border-default p-3">
             <div class="flex items-center justify-between gap-2">
               <span class="flex items-center gap-1.5 text-xs text-muted">
-                <UIcon v-if="scanning" name="i-lucide-loader-circle" class="size-3.5 animate-spin text-primary-400" />
+                <UIcon v-if="scanning" name="i-lucide-loader-circle" class="size-3.5 animate-spin text-primary" />
                 <UIcon v-else name="i-lucide-folder-search" class="size-3.5" />
                 {{ $t('blocked.watching') }}
               </span>

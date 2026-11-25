@@ -1,63 +1,67 @@
 <template>
   <div v-if="instance" class="h-full overflow-y-auto">
-    <div class="space-y-6 p-6 lg:p-8">
+    <div class="mx-auto max-w-[1400px] space-y-6 px-8 pb-10 pt-7">
       <button
         type="button"
-        class="flex items-center gap-1.5 text-sm text-muted transition hover:text-default"
+        class="-ml-1 flex items-center gap-1 rounded-md px-1 text-[13px] text-muted transition-colors hover:text-highlighted"
         @click="router.push('/')"
       >
-        <UIcon name="i-lucide-arrow-left" class="size-4" /> {{ $t('instance.back') }}
+        <UIcon name="i-lucide-chevron-left" class="size-4" /> {{ $t('instance.back') }}
       </button>
 
-      <div class="relative overflow-hidden rounded-2xl border border-default bg-linear-[135deg] from-primary-500/12 to-transparent p-6">
+      <div ref="headerEl">
         <div class="flex flex-wrap items-center gap-5">
-          <div class="size-20 shrink-0 overflow-hidden rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.4)]">
-            <InstanceIcon :key="iconKey" :instance="instance" class="size-full rounded-2xl text-3xl" />
-          </div>
+          <InstanceIcon :key="iconKey" :instance="instance" class="size-[72px] rounded-xl text-3xl" />
           <div class="min-w-0 flex-1">
-            <h1 class="truncate text-2xl font-bold tracking-tight">{{ instance.name }}</h1>
-            <div class="mt-2 flex flex-wrap items-center gap-2">
-              <span class="rounded-md bg-white/7 px-2.5 py-1 font-mono text-xs">Minecraft {{ instance.mc_version }}</span>
-              <span
-                class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium"
-                :class="loaderBadgeClass(instance.loader.type)"
-              >
-                {{ loaderLabel(instance.loader.type) }}
-                <span v-if="loaderVersion" class="ml-1 font-mono opacity-70">{{ loaderVersion }}</span>
+            <h1 class="truncate text-[22px] font-semibold tracking-[-0.01em] text-highlighted">{{ instance.name }}</h1>
+            <div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] tabular-nums text-muted">
+              <span class="inline-flex items-center gap-1.5">
+                <UIcon name="i-lucide-gamepad-2" class="size-3.5 text-dimmed" />
+                {{ loaderLabel(instance.loader.type) }} {{ instance.mc_version }}<template v-if="loaderVersion"> · {{ loaderVersion }}</template>
+              </span>
+              <span class="inline-flex items-center gap-1.5">
+                <UIcon name="i-lucide-clock" class="size-3.5 text-dimmed" />
+                {{ instance.playtime_seconds ? playtime : $t('instance.neverPlayed') }}
+              </span>
+              <span v-if="instance.last_played" class="inline-flex items-center gap-1.5">
+                <UIcon name="i-lucide-calendar" class="size-3.5 text-dimmed" />
+                {{ lastPlayed }}
               </span>
               <UBadge v-if="instance.group" color="neutral" variant="soft" size="sm" :label="instance.group" />
             </div>
-            <p class="mt-2 text-xs text-muted">
-              {{ instance.last_played ? `${$t('instance.lastPlayed')}: ${lastPlayed}` : $t('instance.neverPlayed') }}
-              <span v-if="instance.playtime_seconds">· {{ $t('instance.playtime') }}: {{ playtime }}</span>
-            </p>
           </div>
 
-          <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
             <AddonSlot name="instance.header" :context="{ instanceId: id }" />
             <UButton
-              icon="i-lucide-folder"
+              icon="i-lucide-folder-open"
               color="neutral"
               variant="soft"
-              :label="$t('instance.openGameFolder')"
+              size="lg"
+              square
+              :title="$t('instance.openGameFolder')"
+              :aria-label="$t('instance.openGameFolder')"
               @click="openGameFolder"
             />
             <UButton
               icon="i-lucide-settings"
               color="neutral"
               variant="soft"
+              size="lg"
               square
               :title="$t('instance.tabs.settings')"
+              :aria-label="$t('instance.tabs.settings')"
               @click="settingsOpen = true"
             />
             <UDropdownMenu :items="menuItems">
-              <UButton icon="i-lucide-ellipsis-vertical" color="neutral" variant="soft" square />
+              <UButton icon="i-lucide-ellipsis" color="neutral" variant="soft" size="lg" square aria-label="…" />
             </UDropdownMenu>
             <template v-if="mc.stage.value === 'running'">
               <UButton
                 icon="i-lucide-square"
                 color="neutral"
                 variant="soft"
+                size="lg"
                 :loading="stopping"
                 :label="$t('instance.close')"
                 :title="$t('instance.closeHint')"
@@ -67,32 +71,38 @@
                 icon="i-lucide-skull"
                 color="error"
                 variant="soft"
+                size="lg"
                 :loading="killing"
                 :label="$t('instance.kill')"
                 :title="$t('instance.killHint')"
                 @click="stopInstance(true)"
               />
             </template>
-            <button
-              type="button"
+            <UButton
+              v-else
+              size="lg"
               :disabled="isBusy"
-              class="flex items-center justify-center gap-2 rounded-xl bg-[#3fb877] px-7 py-3 text-[15px] font-bold tracking-[0.02em] text-[#06210f] shadow-[0_6px_22px_rgba(63,184,119,0.32)] transition hover:bg-[#4bcb86] active:scale-[0.99] disabled:opacity-60"
+              :loading="isBusy"
+              :label="playLabel"
+              class="px-6"
               @click="play"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5l13 7-13 7z" /></svg>
-              {{ playLabel }}
-            </button>
+              <template #leading>
+                <svg v-if="!isBusy" class="size-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z" /></svg>
+              </template>
+            </UButton>
           </div>
         </div>
 
-        <div v-if="mc.stage.value !== 'idle'" class="mt-5 space-y-2">
-          <div class="flex items-center justify-between text-xs text-muted">
+        <div v-if="mc.stage.value !== 'idle' && mc.stage.value !== 'running'" class="mt-5 space-y-2">
+          <div class="flex items-center justify-between text-[13px] text-muted">
             <span>{{ stageLabel }}</span>
-            <span v-if="mc.stage.value === 'installing' && mc.progress.value.total">
+            <span v-if="mc.stage.value === 'installing' && mc.progress.value.total" class="tabular-nums">
               {{ mc.progress.value.current }} / {{ mc.progress.value.total }}
             </span>
           </div>
           <UProgress
+            size="sm"
             :model-value="mc.stage.value === 'installing' ? mc.progress.value.current : undefined"
             :max="mc.progress.value.total || 100"
           />
@@ -100,11 +110,11 @@
 
         <p v-if="mc.error.value" class="mt-3 text-sm text-error">{{ mc.error.value }}</p>
 
-        <div v-if="modpackUpdate" class="mt-4 rounded-xl border border-primary-500/40 bg-primary-500/10 p-3">
+        <div v-if="modpackUpdate" class="mt-5 rounded-xl border border-primary/40 bg-primary/8 p-3.5">
           <div class="flex flex-wrap items-center gap-2">
-            <UIcon name="i-lucide-circle-arrow-up" class="size-4 text-primary-400" />
-            <span class="text-sm font-medium">{{ $t('instance.updateAvailable', { v: modpackUpdate.version_number }) }}</span>
-            <UBadge v-if="modpackUpdate.version_type === 'beta'" color="warning" variant="solid" size="xs" label="BETA" />
+            <UIcon name="i-lucide-circle-arrow-up" class="size-4 text-primary" />
+            <span class="text-sm font-medium text-highlighted">{{ $t('instance.updateAvailable', { v: modpackUpdate.version_number }) }}</span>
+            <UBadge v-if="modpackUpdate.version_type === 'beta'" color="warning" variant="subtle" size="xs" label="BETA" />
             <div class="ml-auto flex items-center gap-2">
               <UButton
                 v-if="modpackUpdate.changelog"
@@ -118,7 +128,7 @@
               <UButton color="primary" size="xs" :loading="updatingModpack" :label="$t('instance.updateNow')" @click="updateModpack" />
             </div>
           </div>
-          <div v-if="showChangelog && changelogHtml" class="mk-md mt-3 max-h-64 overflow-y-auto border-t border-primary-500/20 pt-3 text-sm" v-html="changelogHtml" />
+          <div v-if="showChangelog && changelogHtml" class="mk-md mt-3 max-h-64 overflow-y-auto border-t border-primary/20 pt-3 text-sm" v-html="changelogHtml" />
         </div>
       </div>
 
@@ -134,34 +144,81 @@
 
       <ChangeLoaderModal />
 
-      <div class="flex flex-wrap gap-1.5 border-b border-default pb-3">
-        <button
-          v-for="tab in tabs"
-          :key="tab.key"
-          type="button"
-          class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition"
-          :class="activeTab === tab.key && !addonTab
-            ? 'bg-primary-500/15 text-primary-400'
-            : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'"
-          @click="activeTab = tab.key; addonTab = null"
-        >
-          <UIcon :name="tab.icon" class="size-4" />
-          {{ $t(tab.label) }}
-        </button>
-        <button
-          v-for="tab in addonTabs"
-          :key="tab.key"
-          type="button"
-          class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition"
-          :class="addonTab === tab.key
-            ? 'bg-primary-500/15 text-primary-400'
-            : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'"
-          @click="addonTab = tab.key"
-        >
-          <img v-if="tab.icon" :src="convertFileSrc(tab.icon)" alt="" class="size-4 object-contain">
-          <UIcon v-else name="i-lucide-puzzle" class="size-4" />
-          {{ tab.label }}
-        </button>
+      <div class="sticky top-0 z-20 -mx-8 border-b border-default bg-default px-8">
+        <div class="flex items-center gap-1">
+          <Transition
+            enter-active-class="transition duration-150 ease-out"
+            enter-from-class="opacity-0 -translate-x-1"
+            leave-active-class="transition duration-100 ease-in"
+            leave-to-class="opacity-0"
+          >
+            <div v-if="compact" class="mr-2 flex min-w-0 shrink items-center gap-2 border-r border-default py-1.5 pr-3">
+              <InstanceIcon :instance="instance" class="size-6 rounded-md text-[11px]" />
+              <span class="max-w-40 truncate text-sm font-semibold text-highlighted">{{ instance.name }}</span>
+            </div>
+          </Transition>
+          <div class="flex min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:none]" role="tablist">
+            <button
+              v-for="tab in tabs"
+              :key="tab.key"
+              type="button"
+              role="tab"
+              :aria-selected="activeTab === tab.key && !addonTab"
+              class="-mb-px flex shrink-0 items-center gap-1.5 border-b-2 px-3 pb-2.5 pt-2.5 text-sm font-medium transition-colors"
+              :class="[
+                activeTab === tab.key && !addonTab
+                  ? 'border-primary text-highlighted'
+                  : 'border-transparent text-muted hover:text-highlighted',
+                tab.key === firstManageTab ? 'ml-auto' : '',
+              ]"
+              :title="$t(tab.label)"
+              @click="selectTab(tab.key)"
+            >
+              <UIcon :name="tab.icon" class="size-4" />
+              <span :class="{ 'sr-only': compact && MANAGE_TABS.includes(tab.key) }">{{ $t(tab.label) }}</span>
+            </button>
+            <button
+              v-for="tab in addonTabs"
+              :key="tab.key"
+              type="button"
+              role="tab"
+              :aria-selected="addonTab === tab.key"
+              class="-mb-px flex shrink-0 items-center gap-1.5 border-b-2 px-3 pb-2.5 pt-2.5 text-sm font-medium transition-colors"
+              :class="addonTab === tab.key
+                ? 'border-primary text-highlighted'
+                : 'border-transparent text-muted hover:text-highlighted'"
+              @click="addonTab = tab.key"
+            >
+              <img v-if="tab.icon" :src="convertFileSrc(tab.icon)" alt="" class="size-4 object-contain">
+              <UIcon v-else name="i-lucide-puzzle" class="size-4" />
+              {{ tab.label }}
+            </button>
+          </div>
+          <Transition
+            enter-active-class="transition duration-150 ease-out"
+            enter-from-class="opacity-0 translate-x-1"
+            leave-active-class="transition duration-100 ease-in"
+            leave-to-class="opacity-0"
+          >
+            <div v-if="compact" class="ml-2 shrink-0 py-1.5">
+              <UButton
+                v-if="mc.stage.value === 'running'"
+                icon="i-lucide-square"
+                color="neutral"
+                variant="soft"
+                size="sm"
+                :loading="stopping"
+                :label="$t('instance.close')"
+                @click="stopInstance(false)"
+              />
+              <UButton v-else size="sm" :disabled="isBusy" :loading="isBusy" :label="playLabel" @click="play">
+                <template #leading>
+                  <svg v-if="!isBusy" class="size-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z" /></svg>
+                </template>
+              </UButton>
+            </div>
+          </Transition>
+        </div>
       </div>
 
       <AddonFrame
@@ -341,13 +398,34 @@ type TabKey = 'content' | 'worlds' | 'screenshots' | 'servers' | 'configs' | 'lo
 const tabs: { key: TabKey; label: string; icon: string }[] = [
   { key: 'content', label: 'instance.tabs.content', icon: 'i-lucide-blocks' },
   { key: 'worlds', label: 'instance.tabs.worlds', icon: 'i-lucide-globe' },
-  { key: 'screenshots', label: 'instance.tabs.screenshots', icon: 'i-lucide-camera' },
   { key: 'servers', label: 'instance.tabs.servers', icon: 'i-lucide-server' },
-  { key: 'configs', label: 'instance.tabs.configs', icon: 'i-lucide-sliders-horizontal' },
+  { key: 'screenshots', label: 'instance.tabs.screenshots', icon: 'i-lucide-camera' },
   { key: 'logs', label: 'instance.tabs.logs', icon: 'i-lucide-scroll-text' },
-  { key: 'share', label: 'instance.tabs.share', icon: 'i-lucide-share-2' },
+  { key: 'configs', label: 'instance.tabs.configs', icon: 'i-lucide-sliders-horizontal' },
   { key: 'snapshots', label: 'instance.tabs.snapshots', icon: 'i-lucide-history' },
+  { key: 'share', label: 'instance.tabs.share', icon: 'i-lucide-share-2' },
 ]
+const MANAGE_TABS: TabKey[] = ['configs', 'snapshots', 'share']
+const firstManageTab = MANAGE_TABS[0]
+
+// The open tab lives in the URL, so coming back to an instance returns to the same tab.
+function selectTab(key: TabKey) {
+  activeTab.value = key
+  addonTab.value = null
+  router.replace({ query: { ...route.query, tab: key === 'content' ? undefined : key } })
+}
+
+const headerEl = ref<HTMLElement | null>(null)
+const compact = ref(false)
+let headerObserver: IntersectionObserver | null = null
+onMounted(() => {
+  headerObserver = new IntersectionObserver(([e]) => { compact.value = !e!.isIntersecting }, { threshold: 0 })
+  watchEffect(() => {
+    headerObserver?.disconnect()
+    if (headerEl.value) headerObserver?.observe(headerEl.value)
+  })
+})
+onBeforeUnmount(() => headerObserver?.disconnect())
 const activeTab = ref<TabKey>('content')
 const settingsOpen = ref(false)
 

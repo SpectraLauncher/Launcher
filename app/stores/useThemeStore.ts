@@ -9,8 +9,6 @@ export const ACCENT_COLORS = [
   'violet',
   'purple',
   'pink',
-  'rose',
-  'red',
   'orange',
   'amber',
   'green',
@@ -71,6 +69,7 @@ function loadPersisted(): PersistedTheme {
     if (!raw) return fallback
     const saved = { ...fallback, ...JSON.parse(raw) }
     if ((saved.mode as string) === 'zebatkowo') saved.mode = 'squared'
+    if (!(ACCENT_COLORS as readonly string[]).includes(saved.accent)) saved.accent = 'sky'
     if (typeof saved.tint !== 'string' || !/^#[0-9a-f]{6}$/i.test(saved.tint)) saved.tint = null
     return saved
   } catch {
@@ -80,12 +79,6 @@ function loadPersisted(): PersistedTheme {
 
 export const useThemeStore = defineStore('theme', {
   state: () => loadPersisted() as PersistedTheme,
-  getters: {
-    bgClass(state): string {
-      if (state.mode === 'oled') return 'bg-black'
-      return 'bg-primary-950/5'
-    },
-  },
   actions: {
     persist() {
       if (!import.meta.client) return

@@ -19,17 +19,17 @@
             type="button"
             class="flex w-full items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition"
             :class="picked === s.id
-              ? 'border-primary-500/60 bg-primary-500/10'
-              : 'border-transparent hover:bg-white/5'"
+ ? 'border-primary/60 bg-primary/10'
+ : 'border-transparent hover:bg-elevated'"
             @click="picked = s.id"
           >
             <UIcon name="i-lucide-box" class="size-4 shrink-0 text-neutral-500" />
             <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ s.name }}</span>
-            <span class="shrink-0 font-mono text-[11px] text-neutral-500">{{ s.mc_version }}</span>
+            <span class="shrink-0 tabular-nums text-[11px] text-neutral-500">{{ s.mc_version }}</span>
             <UIcon
               v-if="picked === s.id"
               name="i-lucide-circle-check"
-              class="size-4 shrink-0 text-primary-400"
+              class="size-4 shrink-0 text-primary"
             />
           </button>
           <p v-if="!filtered.length" class="py-6 text-center text-sm text-muted">

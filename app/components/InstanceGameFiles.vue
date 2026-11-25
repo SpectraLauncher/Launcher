@@ -37,17 +37,17 @@
       :style="tab === 'screenshots' ? 'grid-template-columns:repeat(auto-fill,minmax(220px,1fr))' : undefined"
     >
       <template v-if="tab === 'screenshots'">
-        <div v-for="n in 6" :key="`ss-sk-${n}`" class="overflow-hidden rounded-xl border border-default bg-white/3">
-          <div class="aspect-video w-full animate-pulse bg-white/5" />
-          <div class="px-2.5 py-1.5"><div class="h-3 w-2/3 animate-pulse rounded bg-white/5" /></div>
+        <div v-for="n in 6" :key="`ss-sk-${n}`" class="overflow-hidden rounded-xl border border-default bg-muted">
+          <div class="aspect-video w-full animate-pulse bg-elevated" />
+          <div class="px-2.5 py-1.5"><div class="h-3 w-2/3 animate-pulse rounded bg-elevated" /></div>
         </div>
       </template>
       <template v-else>
-        <div v-for="n in 6" :key="`row-sk-${n}`" class="flex items-center gap-3 rounded-xl border border-default bg-white/3 p-3">
-          <div class="size-11 shrink-0 animate-pulse rounded-lg bg-white/5" />
+        <div v-for="n in 6" :key="`row-sk-${n}`" class="flex items-center gap-3 rounded-xl border border-default bg-muted p-3">
+          <div class="size-11 shrink-0 animate-pulse rounded-lg bg-elevated" />
           <div class="min-w-0 flex-1 space-y-2">
-            <div class="h-3.5 w-1/3 animate-pulse rounded bg-white/5" />
-            <div class="h-2.5 w-1/2 animate-pulse rounded bg-white/5" />
+            <div class="h-3.5 w-1/3 animate-pulse rounded bg-elevated" />
+            <div class="h-2.5 w-1/2 animate-pulse rounded bg-elevated" />
           </div>
         </div>
       </template>
@@ -62,7 +62,7 @@
         v-for="(s, i) in screenshots"
         :key="s.path"
         type="button"
-        class="group overflow-hidden rounded-xl border border-default bg-white/3 text-left transition hover:border-primary-500/40"
+        class="group overflow-hidden rounded-xl border border-default bg-muted text-left transition hover:border-primary/40"
         @click="lightboxIndex = i"
       >
         <ThumbImage :path="s.path" :size="440" :alt="s.name" class="aspect-video w-full object-cover transition group-hover:opacity-90" />
@@ -74,7 +74,7 @@
       <div
         v-for="w in worlds"
         :key="w.folder"
-        class="flex items-center gap-3 rounded-xl border border-default bg-white/3 p-3"
+        class="flex items-center gap-3 rounded-xl border border-default bg-muted p-3"
       >
         <img
           v-if="w.icon_path"
@@ -82,13 +82,13 @@
           class="size-11 shrink-0 rounded-lg object-cover"
           :alt="w.name"
         />
-        <div v-else class="flex size-11 shrink-0 items-center justify-center rounded-lg bg-white/5">
+        <div v-else class="flex size-11 shrink-0 items-center justify-center rounded-lg bg-elevated">
           <UIcon name="i-lucide-globe" class="size-5 text-neutral-500" />
         </div>
         <div class="min-w-0 flex-1">
           <div class="truncate font-medium">{{ w.name }}</div>
           <div class="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-neutral-400">
-            <span v-if="w.version" class="font-mono">{{ w.version }}</span>
+            <span v-if="w.version" class="tabular-nums">{{ w.version }}</span>
             <span v-if="w.game_mode">· {{ $t(`content.gameMode.${w.game_mode}`) }}</span>
             <span v-if="w.last_played">· {{ formatDate(w.last_played) }}</span>
           </div>
@@ -130,7 +130,7 @@
       <div
         v-for="(s, i) in servers"
         :key="`${s.ip}-${i}`"
-        class="flex items-center gap-3 rounded-xl border border-default bg-white/3 p-3"
+        class="flex items-center gap-3 rounded-xl border border-default bg-muted p-3"
         :class="{ 'opacity-55': s.hidden }"
       >
         <div class="relative size-11 shrink-0">
@@ -140,7 +140,7 @@
             class="size-11 rounded-lg object-cover [image-rendering:pixelated]"
             :alt="s.name"
           />
-          <div v-else class="flex size-11 items-center justify-center rounded-lg bg-white/5">
+          <div v-else class="flex size-11 items-center justify-center rounded-lg bg-elevated">
             <UIcon name="i-lucide-server" class="size-5 text-neutral-500" />
           </div>
         </div>
