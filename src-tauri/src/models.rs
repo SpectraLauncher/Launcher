@@ -28,6 +28,10 @@ pub struct ShareOrigin {
     pub revision: u32,
     #[serde(default)]
     pub item_ids: Vec<String>,
+    /// project_id -> version_id as of `revision`, so a push that lost a race can
+    /// tell who changed what.
+    #[serde(default)]
+    pub versions: std::collections::HashMap<String, String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

@@ -1,4 +1,4 @@
-export type NotificationKind = 'friend_request' | 'friend_accepted' | 'instance_invite' | 'instance_update'
+export type NotificationKind = 'friend_request' | 'friend_accepted' | 'instance_invite' | 'instance_update' | 'instance_collab'
 
 export interface SpectraNotification {
   id: number

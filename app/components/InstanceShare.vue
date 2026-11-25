@@ -2,6 +2,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import type { SharePreview, ShareResult, UnresolvedFile } from '~/types/launcher'
+import type { AppError } from '~/utils/errors'
 import type { SpectraFriend } from '~/composables/useSpectraAccount'
 
 const props = defineProps<{ instanceId: string, instanceName: string }>()
@@ -9,11 +10,14 @@ const props = defineProps<{ instanceId: string, instanceName: string }>()
 const { t } = useI18n()
 const account = useSpectraAccount()
 const activity = useActivityCenter()
+const instances = useInstancesStore()
 
+interface Person { id: string, name: string | null, username: string | null, image: string | null }
 interface Recipient {
-  user: { id: string, name: string | null, username: string | null, image: string | null }
+  user: Person
   importedRevision: number | null
   outdated: boolean
+  canPush?: boolean
 }
 interface OwnedShare {
   code: string
@@ -26,6 +30,17 @@ interface OwnedShare {
   expires: number
   canExtend: boolean
   recipients: Recipient[]
+  /** Missing on a site older than collaboration, where every listed share was yours. */
+  role?: 'owner' | 'collaborator'
+  owner?: Person
+}
+interface ShareChange {
+  project_id: string
+  name: string
+  kind: string
+  ours: string | null
+  theirs: string | null
+  by: 'them' | 'you' | 'both'
 }
 
 const preview = ref<SharePreview | null>(null)
@@ -110,7 +125,7 @@ function toggleExpand(dir: string) {
 }
 
 const boxClass = (state: string) =>
-  state === 'unchecked' ? 'border-white/25 hover:border-white/40' : 'border-primary-500 bg-primary-500'
+  state === 'unchecked' ? 'border-(--ui-border-accented) hover:border-white/40' : 'border-primary bg-primary'
 
 function fmtSize(n: number) {
   if (n < 1024) return `${n} B`
@@ -133,8 +148,16 @@ const shareUrl = computed(() => {
 })
 const code = computed(() => share.value?.code ?? anonymous.value?.code ?? '')
 
+const origin = computed(() => instances.instances.find(i => i.id === props.instanceId)?.share_origin ?? null)
+const isOwner = computed(() => share.value?.role !== 'collaborator')
+// Pushing from an older revision is refused anyway; offering the update first
+// saves a round through the conflict screen when nothing changed here.
+const behind = computed(() =>
+  !!share.value && origin.value?.code === share.value.code && origin.value.revision < share.value.revision)
+
 const invitable = computed(() => {
   const have = new Set(share.value?.recipients.map(r => r.user.id) ?? [])
+  if (share.value?.owner) have.add(share.value.owner.id)
   return friends.value.filter(f => !have.has(f.id))
 })
 
@@ -165,7 +188,9 @@ async function loadShare() {
   if (!account.isSignedIn.value) return
   try {
     const res = await account.api<{ shares: OwnedShare[] }>('GET', '/api/shares')
-    share.value = res.shares.find(s => s.instance_id === props.instanceId) ?? null
+    share.value = res.shares.find(s => s.instance_id === props.instanceId)
+      ?? res.shares.find(s => !!origin.value && s.code === origin.value.code)
+      ?? null
   } catch (e) {
     error.value = errorText(e)
   }
@@ -179,19 +204,70 @@ async function loadFriends() {
   } catch {  }
 }
 
+const conflict = ref<{ revision: number, changes: ShareChange[] } | null>(null)
+const take = ref(new Set<string>())
+
 const upload = () => run('upload', async () => {
   progress.value = { stage: 'scanning', current: 0, total: 0 }
   try {
+    const target = share.value
     const result = await activity.withTask(t('share.working', { name: props.instanceName }), () =>
       invoke<ShareResult>('share_instance', {
         id: props.instanceId,
         include: [...selected.value],
+        code: target?.code ?? null,
+        base: target && origin.value?.code === target.code ? origin.value.revision : null,
       }))
-    if (account.isSignedIn.value) await loadShare()
+    conflict.value = null
+    if (account.isSignedIn.value) await Promise.all([loadShare(), instances.load()])
     else anonymous.value = result
+  } catch (e) {
+    if ((e as AppError | null)?.code !== 'share_stale' || !share.value) throw e
+    const diff = await invoke<{ revision: number, changes: ShareChange[] }>(
+      'share_changes', { id: props.instanceId, code: share.value.code })
+    take.value = new Set(diff.changes.filter(c => c.by === 'them').map(c => c.project_id))
+    conflict.value = diff
   } finally {
     progress.value = null
   }
+})
+
+function pick(id: string, theirs: boolean) {
+  const next = new Set(take.value)
+  theirs ? next.add(id) : next.delete(id)
+  take.value = next
+}
+
+function pickAll(theirs: boolean) {
+  take.value = new Set(theirs ? conflict.value?.changes.map(c => c.project_id) : [])
+}
+
+function changeLabel(c: ShareChange) {
+  if (c.by === 'both') return t('share.conflict.updatedByBoth')
+  const mine = c.by === 'you'
+  // Only in the live pack: they added it, or you removed it. Only here: the other way round.
+  const verb = c.ours === null ? (mine ? 'removed' : 'added')
+    : c.theirs === null ? (mine ? 'added' : 'removed')
+      : 'updated'
+  return t(`share.conflict.${verb}By${mine ? 'You' : 'Them'}`)
+}
+
+const resolveAndPush = () => run('resolve', async () => {
+  if (!share.value) return
+  const code = share.value.code
+  await activity.withTask(t('share.merging', { name: props.instanceName }), () =>
+    invoke('share_resolve', { id: props.instanceId, code, take: [...take.value] }))
+  await instances.load()
+  conflict.value = null
+  await upload()
+})
+
+const pull = () => run('pull', async () => {
+  if (!share.value) return
+  const code = share.value.code
+  await activity.withTask(t('spectra.updating', { name: props.instanceName }), () =>
+    invoke('sync_share', { id: props.instanceId, code }))
+  await Promise.all([instances.load(), loadShare()])
 })
 
 const confirmingRevoke = ref(false)
@@ -226,9 +302,20 @@ function expiresIn(expires: number) {
   return t('share.expiresDays', { n: Math.round(hours / 24) })
 }
 
+const inviteCanPush = ref(false)
+
 const invite = (userId: string) => run(`inv-${userId}`, async () => {
   if (!share.value) return
-  await account.api('POST', `/api/share/${share.value.code}/invite`, { userIds: [userId] })
+  await account.api('POST', `/api/share/${share.value.code}/invite`, {
+    userIds: [userId],
+    canPush: isOwner.value && inviteCanPush.value,
+  })
+  await loadShare()
+})
+
+const setPush = (userId: string, canPush: boolean) => run(`push-${userId}`, async () => {
+  if (!share.value) return
+  await account.api('PATCH', `/api/share/${share.value.code}/invite`, { userId, canPush })
   await loadShare()
 })
 
@@ -272,7 +359,7 @@ watch(() => account.isSignedIn.value, () => {
       <p class="mt-1 text-sm text-muted">{{ $t('share.intro') }}</p>
 
       <div v-if="loadingPreview" class="mt-4 flex items-center gap-2 rounded-lg border border-default px-3 py-4 text-sm text-muted">
-        <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin text-primary-400" />
+        <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin text-primary" />
         {{ $t('share.scanning') }}
       </div>
 
@@ -297,7 +384,7 @@ watch(() => account.isSignedIn.value, () => {
 
         <div class="mt-2 max-h-56 overflow-y-auto">
           <div v-for="g in groups" :key="g.dir">
-            <div class="flex items-center gap-1.5 rounded-md py-1 pr-2 hover:bg-white/5">
+            <div class="flex items-center gap-1.5 rounded-md py-1 pr-2 hover:bg-elevated">
               <button
                 type="button"
                 class="flex size-4 shrink-0 items-center justify-center text-neutral-500 hover:text-neutral-300"
@@ -323,17 +410,17 @@ watch(() => account.isSignedIn.value, () => {
               </button>
               <UIcon name="i-lucide-folder" class="size-4 shrink-0 text-neutral-500" />
               <span class="min-w-0 flex-1 truncate text-sm">{{ g.dir }}</span>
-              <span class="shrink-0 rounded-full bg-white/8 px-1.5 py-0.5 text-[10px] text-neutral-400">
+              <span class="shrink-0 rounded-full bg-elevated px-1.5 py-0.5 text-[10px] text-neutral-400">
                 {{ g.files.length }}
               </span>
-              <span class="w-16 shrink-0 text-right font-mono text-[11px] text-muted">{{ fmtSize(g.bytes) }}</span>
+              <span class="w-16 shrink-0 text-right tabular-nums text-[11px] text-muted">{{ fmtSize(g.bytes) }}</span>
             </div>
 
             <template v-if="expanded.has(g.dir)">
               <div
                 v-for="f in g.files"
                 :key="f.path"
-                class="flex items-center gap-1.5 rounded-md py-1 pr-2 pl-6 hover:bg-white/5"
+                class="flex items-center gap-1.5 rounded-md py-1 pr-2 pl-6 hover:bg-elevated"
               >
                 <button
                   type="button"
@@ -348,13 +435,13 @@ watch(() => account.isSignedIn.value, () => {
                   class="min-w-0 flex-1 truncate text-sm"
                   :class="{ 'text-neutral-500 line-through': !selected.has(f.path) }"
                 >{{ f.path.split('/').slice(1).join('/') }}</span>
-                <span class="w-16 shrink-0 text-right font-mono text-[11px] text-muted">{{ fmtSize(f.size) }}</span>
+                <span class="w-16 shrink-0 text-right tabular-nums text-[11px] text-muted">{{ fmtSize(f.size) }}</span>
               </div>
             </template>
           </div>
         </div>
 
-        <p class="mt-2 border-t border-default pt-2 text-xs" :class="selected.size ? 'text-primary-400' : 'text-muted'">
+        <p class="mt-2 border-t border-default pt-2 text-xs" :class="selected.size ? 'text-primary' : 'text-muted'">
           {{ $t('share.extraFilesSelected', { n: selected.size, size: fmtSize(selectedBytes) }) }}
         </p>
       </div>
@@ -372,13 +459,13 @@ watch(() => account.isSignedIn.value, () => {
 
       <div v-if="progress" class="mt-4 space-y-2 rounded-lg border border-default bg-elevated/30 p-3">
         <div class="flex items-center gap-2 text-xs">
-          <UIcon name="i-lucide-loader-circle" class="size-3.5 shrink-0 animate-spin text-primary-400" />
+          <UIcon name="i-lucide-loader-circle" class="size-3.5 shrink-0 animate-spin text-primary" />
           <span class="flex-1 text-neutral-200">{{ $t(`share.stage.${progress.stage}`) }}</span>
-          <span v-if="stagePercent !== null" class="font-mono text-neutral-400">{{ stagePercent }}%</span>
+          <span v-if="stagePercent !== null" class="tabular-nums text-neutral-400">{{ stagePercent }}%</span>
         </div>
-        <div class="h-1.5 overflow-hidden rounded-full bg-white/10">
+        <div class="h-1.5 overflow-hidden rounded-full bg-accented">
           <div
-            class="h-full rounded-full bg-primary-500 transition-[width] duration-200"
+            class="h-full rounded-full bg-primary transition-[width] duration-200"
             :class="stagePercent === null && 'w-1/3 animate-pulse'"
             :style="stagePercent !== null ? { width: stagePercent + '%' } : undefined"
           />
@@ -386,9 +473,9 @@ watch(() => account.isSignedIn.value, () => {
 
         <div class="flex items-center gap-2 pt-1 text-[11px] text-muted">
           <span class="flex-1">{{ $t('share.overall') }}</span>
-          <span class="font-mono">{{ overallPercent }}%</span>
+          <span class="tabular-nums">{{ overallPercent }}%</span>
         </div>
-        <div class="h-1 overflow-hidden rounded-full bg-white/8">
+        <div class="h-1 overflow-hidden rounded-full bg-elevated">
           <div
             class="h-full rounded-full bg-primary-400/70 transition-[width] duration-300"
             :style="{ width: overallPercent + '%' }"
@@ -399,6 +486,10 @@ watch(() => account.isSignedIn.value, () => {
     </div>
 
     <div v-else class="rounded-xl border border-default p-4">
+      <p v-if="share && !isOwner && share.owner" class="mb-3 flex items-center gap-2 text-sm text-muted">
+        <UIcon name="i-lucide-users" class="size-4 shrink-0 text-dimmed" />
+        {{ $t('share.collabOf', { owner: label(share.owner) }) }}
+      </p>
       <div class="flex flex-wrap items-center gap-3">
         <div class="rounded-lg border border-default bg-elevated/40 px-4 py-2">
           <p class="text-[10px] tracking-wider text-muted uppercase">{{ $t('share.codeLabel') }}</p>
@@ -426,19 +517,81 @@ watch(() => account.isSignedIn.value, () => {
 
       <div v-if="share" class="mt-4 flex flex-wrap items-center gap-3 border-t border-default pt-4">
         <div class="min-w-[200px] flex-1">
-          <p class="text-sm font-medium">{{ $t('share.revision', { n: share.revision }) }}</p>
-          <p class="text-xs text-muted">{{ $t('share.pushHint') }}</p>
+          <p class="text-sm font-medium tabular-nums">{{ $t('share.revision', { n: share.revision }) }}</p>
+          <p class="text-xs" :class="behind ? 'text-amber-300' : 'text-muted'">
+            {{ behind ? $t('share.behind', { n: share.revision }) : $t('share.pushHint') }}
+          </p>
         </div>
+        <UButton
+          v-if="behind"
+          icon="i-lucide-download"
+          size="sm"
+          color="neutral"
+          variant="soft"
+          :label="$t('share.pull')"
+          :loading="busy === 'pull'"
+          :disabled="!!busy"
+          @click="pull"
+        />
         <UButton
           icon="i-lucide-upload"
           size="sm"
           :label="$t('share.push')"
           :loading="busy === 'upload'"
+          :disabled="!!busy || !!conflict"
           @click="upload"
         />
       </div>
 
-      <div v-if="share" class="mt-4 flex flex-wrap items-center gap-3 border-t border-default pt-4">
+      <div v-if="share && conflict" class="mt-4 border-t border-default pt-4">
+        <p class="text-sm font-medium text-highlighted">{{ $t('share.conflict.title', { n: conflict.revision }) }}</p>
+        <p class="mt-0.5 text-xs text-muted">{{ $t('share.conflict.hint') }}</p>
+
+        <template v-if="conflict.changes.length">
+          <div class="mt-3 flex flex-wrap gap-2">
+            <UButton size="xs" color="neutral" variant="soft" :label="$t('share.conflict.takeAll')" @click="pickAll(true)" />
+            <UButton size="xs" color="neutral" variant="soft" :label="$t('share.conflict.keepAll')" @click="pickAll(false)" />
+          </div>
+
+          <ul class="mt-3 max-h-72 divide-y divide-(--ui-border-muted) overflow-y-auto rounded-lg border border-default">
+            <li v-for="c in conflict.changes" :key="c.project_id" class="flex items-center gap-3 px-3 py-2">
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm">{{ c.name }}</p>
+                <p class="truncate text-xs text-muted tabular-nums">
+                  {{ changeLabel(c) }}<template v-if="c.ours && c.theirs"> · {{ c.ours }} → {{ c.theirs }}</template>
+                </p>
+              </div>
+              <div class="flex shrink-0 rounded-lg bg-muted p-0.5 ring-1 ring-default ring-inset" role="radiogroup" :aria-label="c.name">
+                <button
+                  v-for="side in [false, true]"
+                  :key="String(side)"
+                  type="button"
+                  role="radio"
+                  :aria-checked="take.has(c.project_id) === side"
+                  class="rounded-md px-2.5 py-1 text-xs font-medium transition"
+                  :class="take.has(c.project_id) === side ? 'bg-accented text-highlighted' : 'text-muted hover:text-default'"
+                  @click="pick(c.project_id, side)"
+                >{{ side ? $t('share.conflict.theirs') : $t('share.conflict.mine') }}</button>
+              </div>
+            </li>
+          </ul>
+        </template>
+        <p v-else class="mt-3 text-sm text-muted">{{ $t('share.conflict.none') }}</p>
+
+        <div class="mt-3 flex justify-end gap-2">
+          <UButton size="sm" color="neutral" variant="ghost" :label="$t('common.cancel')" @click="conflict = null" />
+          <UButton
+            size="sm"
+            icon="i-lucide-upload"
+            :label="$t('share.conflict.apply')"
+            :loading="busy === 'resolve' || busy === 'upload'"
+            :disabled="!!busy"
+            @click="resolveAndPush"
+          />
+        </div>
+      </div>
+
+      <div v-if="share && isOwner" class="mt-4 flex flex-wrap items-center gap-3 border-t border-default pt-4">
         <UIcon name="i-lucide-clock" class="size-4 shrink-0 text-neutral-500" />
         <p class="min-w-[180px] flex-1 text-sm" :class="share.canExtend ? 'text-amber-300' : 'text-muted'">
           {{ $t('share.expires', { when: expiresIn(share.expires) }) }}
@@ -469,22 +622,22 @@ watch(() => account.isSignedIn.value, () => {
 
       <div v-if="progress" class="mt-3">
         <div class="flex items-center gap-2 text-xs">
-          <UIcon name="i-lucide-loader-circle" class="size-3.5 shrink-0 animate-spin text-primary-400" />
+          <UIcon name="i-lucide-loader-circle" class="size-3.5 shrink-0 animate-spin text-primary" />
           <span class="flex-1 text-neutral-200">{{ $t(`share.stage.${progress.stage}`) }}</span>
-          <span v-if="stagePercent !== null" class="font-mono text-neutral-400">{{ stagePercent }}%</span>
+          <span v-if="stagePercent !== null" class="tabular-nums text-neutral-400">{{ stagePercent }}%</span>
         </div>
-        <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
+        <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-accented">
           <div
-            class="h-full rounded-full bg-primary-500 transition-[width] duration-200"
+            class="h-full rounded-full bg-primary transition-[width] duration-200"
             :class="stagePercent === null && 'w-1/3 animate-pulse'"
             :style="stagePercent !== null ? { width: stagePercent + '%' } : undefined"
           />
         </div>
         <div class="mt-2 flex items-center gap-2 text-[11px] text-muted">
           <span class="flex-1">{{ $t('share.overall') }}</span>
-          <span class="font-mono">{{ overallPercent }}%</span>
+          <span class="tabular-nums">{{ overallPercent }}%</span>
         </div>
-        <div class="mt-1 h-1 overflow-hidden rounded-full bg-white/8">
+        <div class="mt-1 h-1 overflow-hidden rounded-full bg-elevated">
           <div
             class="h-full rounded-full bg-primary-400/70 transition-[width] duration-300"
             :style="{ width: overallPercent + '%' }"
@@ -507,7 +660,7 @@ watch(() => account.isSignedIn.value, () => {
         <li
           v-for="r in share.recipients"
           :key="r.user.id"
-          class="group flex items-center gap-2.5 rounded-lg bg-white/4 px-2.5 py-2"
+          class="group flex items-center gap-2.5 rounded-lg bg-muted px-2.5 py-2"
         >
           <img v-if="r.user.image" :src="r.user.image" alt="" class="size-7 rounded-full object-cover">
           <span
@@ -517,8 +670,12 @@ watch(() => account.isSignedIn.value, () => {
           >{{ spectraInitial(label(r.user)).letter }}</span>
           <span class="flex-1 truncate text-sm">{{ label(r.user) }}</span>
           <span
+            v-if="r.canPush"
+            class="rounded-md bg-elevated px-2 py-0.5 text-[11px] text-toned ring-1 ring-default ring-inset"
+          >{{ $t('share.coAuthor') }}</span>
+          <span
             v-if="r.importedRevision === null"
-            class="rounded-full bg-white/6 px-2 py-0.5 text-[11px] text-neutral-400"
+            class="rounded-full bg-elevated px-2 py-0.5 text-[11px] text-neutral-400"
           >{{ $t('share.notInstalled') }}</span>
           <span
             v-else-if="r.outdated"
@@ -528,25 +685,40 @@ watch(() => account.isSignedIn.value, () => {
             v-else
             class="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-300"
           >{{ $t('share.upToDate') }}</span>
-          <button
-            type="button"
-            class="rounded-md p-1 text-neutral-600 opacity-0 transition group-hover:opacity-100 hover:bg-white/5 hover:text-red-400"
-            :title="$t('share.uninvite')"
-            @click="uninvite(r.user.id)"
-          >
-            <UIcon name="i-lucide-x" class="size-3.5" />
-          </button>
+          <template v-if="isOwner">
+            <button
+              type="button"
+              class="rounded-md p-1 text-dimmed opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 hover:bg-elevated hover:text-highlighted disabled:opacity-50"
+              :title="r.canPush ? $t('share.stopPush') : $t('share.allowPush')"
+              :aria-label="r.canPush ? $t('share.stopPush') : $t('share.allowPush')"
+              :disabled="busy === `push-${r.user.id}`"
+              @click="setPush(r.user.id, !r.canPush)"
+            >
+              <UIcon :name="r.canPush ? 'i-lucide-pencil-off' : 'i-lucide-pencil'" class="size-3.5" />
+            </button>
+            <button
+              type="button"
+              class="rounded-md p-1 text-neutral-600 opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 hover:bg-elevated hover:text-red-400"
+              :title="$t('share.uninvite')"
+              @click="uninvite(r.user.id)"
+            >
+              <UIcon name="i-lucide-x" class="size-3.5" />
+            </button>
+          </template>
         </li>
       </ul>
       <p v-else class="mt-2 text-sm text-muted">{{ $t('share.nobodyYet') }}</p>
 
       <div class="mt-4 border-t border-default pt-4">
-        <h4 class="text-xs font-semibold tracking-wide text-muted uppercase">{{ $t('share.invite') }}</h4>
+        <div class="flex flex-wrap items-center gap-3">
+          <h4 class="flex-1 text-xs font-semibold tracking-wide text-muted uppercase">{{ $t('share.invite') }}</h4>
+          <USwitch v-if="isOwner" v-model="inviteCanPush" size="sm" :label="$t('share.canPush')" />
+        </div>
         <ul v-if="invitable.length" class="mt-2 space-y-1.5">
           <li
             v-for="f in invitable"
             :key="f.id"
-            class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 hover:bg-white/4"
+            class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 hover:bg-muted"
           >
             <img v-if="f.image" :src="f.image" alt="" class="size-7 rounded-full object-cover">
             <span

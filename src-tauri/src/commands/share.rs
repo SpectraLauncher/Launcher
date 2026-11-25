@@ -7,7 +7,7 @@ use tauri::{AppHandle, Emitter};
 
 use crate::commands::modrinth::InstalledItem;
 use crate::commands::{curseforge, import, instances, modrinth};
-use crate::models::{Instance, Loader};
+use crate::models::{Instance, Loader, ShareOrigin};
 use crate::{paths, store};
 use crate::error::{AppError, AppResult};
 
@@ -138,11 +138,16 @@ pub async fn share_preview(id: String) -> AppResult<SharePreview> {
     })
 }
 
+/// `code` and `base` are sent when pushing to a pack that already exists: the
+/// code it lives under and the revision this copy started from. The server
+/// refuses a push from an old revision with the `share_stale` error code.
 #[tauri::command]
 pub async fn share_instance(
     app: AppHandle,
     id: String,
     include: Vec<String>,
+    code: Option<String>,
+    base: Option<u32>,
 ) -> AppResult<ShareResult> {
     // Uploads are tied to an account — the server has no anonymous route any
     // more. Check before packing so a gigabyte of mods is not zipped for nothing.
@@ -182,10 +187,51 @@ pub async fn share_instance(
         })?;
     }
 
-    let result = upload_to_storage(&app, &tmp, &instance, &id, items.len(), &token).await;
+    let target = Target { code: code.as_deref(), base };
+    let result = upload_to_storage(&app, &tmp, &instance, &id, items.len(), &token, target).await;
     let _ = std::fs::remove_file(&tmp);
     emit_progress(&app, "done", 1, 1);
+
+    // What was just pushed is now this copy's base, so the next push starts
+    // from it and updates pushed by others reach this instance too. A copy that
+    // came from someone else's code and was shared under a new one keeps
+    // following the original.
+    if let Ok(done) = &result {
+        let path = paths::instance_config_file(&id);
+        if let Ok(Some(mut fresh)) = store::read_json::<Instance>(&path) {
+            if fresh.share_origin.as_ref().is_none_or(|o| o.code == done.code) {
+                fresh.share_origin = Some(origin_for(&done.code, done.revision, &items));
+                let _ = store::write_json(&path, &fresh);
+            }
+        }
+    }
     result
+}
+
+pub(crate) fn origin_for(code: &str, revision: u32, items: &[InstalledItem]) -> ShareOrigin {
+    ShareOrigin {
+        code: code.to_string(),
+        revision,
+        item_ids: items.iter().map(|i| i.project_id.clone()).collect(),
+        versions: items.iter().map(|i| (i.project_id.clone(), i.version_id.clone())).collect(),
+    }
+}
+
+struct Target<'a> {
+    code: Option<&'a str>,
+    base: Option<u32>,
+}
+
+fn server_error(body: &str, fallback: String) -> AppError {
+    let reason = serde_json::from_str::<serde_json::Value>(body)
+        .ok()
+        .and_then(|v| v.pointer("/data/reason")?.as_str().map(str::to_string));
+    let message = extract_message(body).unwrap_or(fallback);
+    match reason.as_deref() {
+        Some("stale") => AppError::new("share_stale", message),
+        Some("busy") => AppError::busy(message),
+        _ => message.into(),
+    }
 }
 
 fn emit_progress(app: &AppHandle, stage: &str, current: u64, total: u64) {
@@ -224,6 +270,7 @@ async fn upload_to_storage(
     id: &str,
     mods: usize,
     token: &str,
+    target: Target<'_>,
 ) -> AppResult<ShareResult> {
     let size = std::fs::metadata(path).map_err(|e| format!("stat pack: {e}"))?.len();
     let client = crate::http();
@@ -249,6 +296,8 @@ async fn upload_to_storage(
                 "loader": loader_str(&instance.loader).unwrap_or_else(|| "vanilla".into()),
                 "mods": mods,
                 "instance": id,
+                "code": target.code,
+                "base": target.base,
             }))
             .send()
             .await
@@ -256,7 +305,7 @@ async fn upload_to_storage(
         if !resp.status().is_success() {
             let status = resp.status();
             let detail = resp.text().await.unwrap_or_default();
-            return Err((extract_message(&detail).unwrap_or_else(|| format!("upload failed ({status})"))).into());
+            return Err(server_error(&detail, format!("upload failed ({status})")));
         }
         resp.json().await.map_err(|e| format!("bad server reply: {e}"))?
     };
@@ -394,7 +443,7 @@ pub async fn import_share(app: AppHandle, code: String) -> AppResult<ShareImport
     }
 
     let code = normalize_code(&code)?;
-    let (manifest, bytes) = fetch_pack(&code).await?;
+    let (manifest, bytes) = fetch_pack(&code, true).await?;
     let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes))
         .map_err(|e| format!("open pack: {e}"))?;
 
@@ -487,11 +536,7 @@ pub async fn import_share(app: AppHandle, code: String) -> AppResult<ShareImport
     }
 
     if let Ok(revision) = revision_of(&code).await {
-        instance.share_origin = Some(crate::models::ShareOrigin {
-            code: code.clone(),
-            revision,
-            item_ids: manifest.items.iter().map(|i| i.project_id.clone()).collect(),
-        });
+        instance.share_origin = Some(origin_for(&code, revision, &manifest.items));
         let _ = store::write_json(&paths::instance_config_file(&instance.id), &instance);
     }
 
@@ -542,13 +587,15 @@ struct ShareMeta {
     revision: u32,
 }
 
-async fn fetch_pack(code: &str) -> AppResult<(ShareManifest, Vec<u8>)> {
+/// `identify` sends the account along, which tells the owner this person now
+/// has that revision. Looking at a pack only to compare it must not say that.
+async fn fetch_pack(code: &str, identify: bool) -> AppResult<(ShareManifest, Vec<u8>)> {
     let client = crate::http();
     let mut req = client
         .get(format!("{SHARE_API}/{code}"))
         .query(&[("url", "1")])
         .header("origin", crate::commands::spectra::ORIGIN);
-    if let Some(token) = crate::commands::spectra::stored_token() {
+    if let Some(token) = crate::commands::spectra::stored_token().filter(|_| identify) {
         req = req.bearer_auth(token);
     }
     let resp = req.send().await.map_err(|e| format!("download failed: {e}"))?;
@@ -635,7 +682,7 @@ pub async fn sync_share(app: AppHandle, id: String, code: String) -> AppResult<S
 
     let revision = revision_of(&code).await?;
 
-    let (manifest, bytes) = fetch_pack(&code).await?;
+    let (manifest, bytes) = fetch_pack(&code, true).await?;
 
     crate::commands::snapshots::snapshot_before(&app, &id, "before update").await;
 
@@ -743,12 +790,165 @@ pub async fn sync_share(app: AppHandle, id: String, code: String) -> AppResult<S
         );
     }
 
-    instance.share_origin = Some(crate::models::ShareOrigin {
-        code: code.clone(),
-        revision,
-        item_ids: manifest.items.iter().map(|i| i.project_id.clone()).collect(),
-    });
+    instance.share_origin = Some(origin_for(&code, revision, &manifest.items));
     store::write_json(&paths::instance_config_file(&id), &instance)?;
+
+    Ok(ShareSyncResult { revision, installed, removed, failed, needs_curseforge })
+}
+
+#[derive(Serialize, Debug)]
+pub struct ShareChange {
+    pub project_id: String,
+    pub name: String,
+    pub kind: String,
+    /// version_number on each side; `None` where that side does not have it.
+    pub ours: Option<String>,
+    pub theirs: Option<String>,
+    /// Who moved it away from the revision both copies started from:
+    /// "them", "you", or "both" when that cannot be told apart.
+    pub by: &'static str,
+}
+
+#[derive(Serialize)]
+pub struct ShareDiff {
+    pub revision: u32,
+    pub changes: Vec<ShareChange>,
+}
+
+/// Differences between this copy and the pack now live, for a push that was
+/// refused because someone else pushed first. Dependencies are left out: they
+/// come and go with the item that pulled them in.
+pub(crate) fn diff_items(
+    base: Option<&ShareOrigin>,
+    ours: &[InstalledItem],
+    theirs: &[InstalledItem],
+) -> Vec<ShareChange> {
+    let in_base = |id: &str| base.is_some_and(|b| b.item_ids.iter().any(|i| i == id));
+    let ours_by: HashMap<&str, &InstalledItem> = ours.iter().map(|i| (i.project_id.as_str(), i)).collect();
+    let theirs_by: HashMap<&str, &InstalledItem> =
+        theirs.iter().map(|i| (i.project_id.as_str(), i)).collect();
+    let change = |item: &InstalledItem, o: Option<&InstalledItem>, t: Option<&InstalledItem>, by| ShareChange {
+        project_id: item.project_id.clone(),
+        name: item.name.clone(),
+        kind: item.kind.clone(),
+        ours: o.map(|i| i.version_number.clone()),
+        theirs: t.map(|i| i.version_number.clone()),
+        by,
+    };
+
+    let mut out = Vec::new();
+    for t in theirs.iter().filter(|i| !i.dependency) {
+        match ours_by.get(t.project_id.as_str()) {
+            None => out.push(change(t, None, Some(t), if in_base(&t.project_id) { "you" } else { "them" })),
+            Some(o) if o.version_id != t.version_id => {
+                let by = match base.and_then(|b| b.versions.get(&t.project_id)) {
+                    Some(v) if *v == o.version_id => "them",
+                    Some(v) if *v == t.version_id => "you",
+                    _ => "both",
+                };
+                out.push(change(t, Some(o), Some(t), by));
+            }
+            Some(_) => {}
+        }
+    }
+    for o in ours.iter().filter(|i| !i.dependency && !theirs_by.contains_key(i.project_id.as_str())) {
+        out.push(change(o, Some(o), None, if in_base(&o.project_id) { "them" } else { "you" }));
+    }
+    out.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    out
+}
+
+#[tauri::command]
+pub async fn share_changes(id: String, code: String) -> AppResult<ShareDiff> {
+    let code = normalize_code(&code)?;
+    let instance: Instance =
+        store::read_json(&paths::instance_config_file(&id))?.ok_or("instance not found")?;
+    let revision = revision_of(&code).await?;
+    let (manifest, _) = fetch_pack(&code, false).await?;
+    let ours = modrinth::read_content_index(&id).items;
+    let base = instance.share_origin.as_ref().filter(|o| o.code == code);
+    Ok(ShareDiff { revision, changes: diff_items(base, &ours, &manifest.items) })
+}
+
+/// Takes the live version of every item in `take` and makes the live revision
+/// this copy's base, so the push that follows is accepted. Items left out of
+/// `take` stay as they are here and win when this copy is pushed.
+// ponytail: downloads the pack a second time after share_changes; keep the
+// manifest from that call if packs with large overrides make this slow.
+#[tauri::command]
+pub async fn share_resolve(
+    app: AppHandle,
+    id: String,
+    code: String,
+    take: Vec<String>,
+) -> AppResult<ShareSyncResult> {
+    let code = normalize_code(&code)?;
+    let revision = revision_of(&code).await?;
+    let (manifest, _) = fetch_pack(&code, false).await?;
+
+    crate::commands::snapshots::snapshot_before(&app, &id, "before merge").await;
+
+    let ours = modrinth::read_content_index(&id).items;
+    let game_dir = paths::instance_game_dir(&id);
+    let loader = loader_str(&manifest.loader);
+    let mc = Some(manifest.mc_version.clone());
+    let cf_enabled = curseforge::cf_enabled();
+    let (mut installed, mut removed, mut needs_curseforge) = (0usize, 0usize, 0usize);
+    let mut failed: Vec<String> = Vec::new();
+
+    for project in &take {
+        let mine = ours.iter().find(|i| &i.project_id == project);
+        let Some(item) = manifest.items.iter().find(|i| &i.project_id == project) else {
+            if let Some(mine) = mine {
+                let path = game_dir.join(folder_for_kind(&mine.kind)).join(&mine.filename);
+                let _ = std::fs::remove_file(&path);
+                let _ = std::fs::remove_file(path.with_extension("jar.disabled"));
+                modrinth::remove_index_entry(&id, &mine.filename);
+                removed += 1;
+            }
+            continue;
+        };
+
+        let result = if item.provider == "curseforge" {
+            if !cf_enabled {
+                needs_curseforge += 1;
+                continue;
+            }
+            curseforge::curseforge_install_with_deps(
+                id.clone(),
+                item.project_id.clone(),
+                item.version_id.clone(),
+                mc.clone(),
+                loader.clone(),
+            )
+            .await
+            .map(|_| ())
+        } else {
+            modrinth::modrinth_install_with_deps(id.clone(), item.version_id.clone(), mc.clone(), loader.clone())
+                .await
+                .map(|_| ())
+        };
+        match result {
+            Ok(()) => {
+                installed += 1;
+                // The install replaced the index entry; the old jar is still on disk.
+                if let Some(mine) = mine.filter(|m| m.filename != item.filename) {
+                    let path = game_dir.join(folder_for_kind(&mine.kind)).join(&mine.filename);
+                    let _ = std::fs::remove_file(&path);
+                    let _ = std::fs::remove_file(path.with_extension("jar.disabled"));
+                }
+            }
+            Err(e) => {
+                log::warn!("merge: {} failed: {e}", item.name);
+                failed.push(item.name.clone());
+            }
+        }
+    }
+
+    let path = paths::instance_config_file(&id);
+    let mut instance: Instance = store::read_json(&path)?.ok_or("instance not found")?;
+    instance.share_origin = Some(origin_for(&code, revision, &manifest.items));
+    store::write_json(&path, &instance)?;
 
     Ok(ShareSyncResult { revision, installed, removed, failed, needs_curseforge })
 }
@@ -767,7 +967,7 @@ pub fn take_pending_share(state: tauri::State<'_, crate::AppState>) -> Option<St
 
 #[cfg(test)]
 mod tests {
-    use super::{code_from_url, plan_sync};
+    use super::{code_from_url, diff_items, origin_for, plan_sync};
     use crate::commands::modrinth::InstalledItem;
     use std::collections::HashSet;
 
@@ -807,6 +1007,47 @@ mod tests {
 
         assert!(plan.install.is_empty());
         assert!(plan.remove.is_empty());
+    }
+
+    fn by(changes: &[super::ShareChange], project: &str) -> &'static str {
+        changes.iter().find(|c| c.project_id == project).expect(project).by
+    }
+
+    #[test]
+    fn a_lost_race_says_who_changed_what() {
+        let base = origin_for("ABC123", 3, &[item("kept", "v1"), item("gone", "v1"), item("bumped", "v1")]);
+        // They dropped "gone", bumped "bumped" and added "theirs".
+        let theirs = vec![item("kept", "v1"), item("bumped", "v2"), item("theirs", "v1")];
+        // I added "mine" and still have everything else as it was.
+        let ours = vec![item("kept", "v1"), item("gone", "v1"), item("bumped", "v1"), item("mine", "v1")];
+
+        let changes = diff_items(Some(&base), &ours, &theirs);
+
+        assert_eq!(changes.len(), 4, "the untouched item is not a change");
+        assert_eq!(by(&changes, "theirs"), "them");
+        assert_eq!(by(&changes, "gone"), "them");
+        assert_eq!(by(&changes, "bumped"), "them");
+        assert_eq!(by(&changes, "mine"), "you");
+    }
+
+    #[test]
+    fn both_sides_moving_one_item_is_a_real_conflict() {
+        let base = origin_for("ABC123", 3, &[item("a", "v1"), item("b", "v1")]);
+        let theirs = vec![item("a", "v2"), item("b", "v1")];
+        let ours = vec![item("a", "v3")];
+
+        let changes = diff_items(Some(&base), &ours, &theirs);
+
+        assert_eq!(by(&changes, "a"), "both");
+        assert_eq!(by(&changes, "b"), "you", "I removed b, they did not touch it");
+    }
+
+    #[test]
+    fn dependencies_are_not_listed() {
+        let mut dep = item("lib", "v1");
+        dep.dependency = true;
+        let changes = diff_items(None, &[], &[dep]);
+        assert!(changes.is_empty());
     }
 
     #[test]

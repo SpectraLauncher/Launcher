@@ -354,6 +354,8 @@ pub fn run() {
             commands::share::share_instance,
             commands::share::import_share,
             commands::share::sync_share,
+            commands::share::share_changes,
+            commands::share::share_resolve,
             commands::snapshots::list_snapshots,
             commands::snapshots::create_snapshot,
             commands::snapshots::restore_snapshot,
