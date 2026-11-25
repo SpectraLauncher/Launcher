@@ -1,3 +1,20 @@
+## Changes (v1.1.0)
+
+### ✨ Features & Improvements
+- **A new look for the whole launcher**: Every screen, window and dialog got a calmer, cleaner design. The wide sidebar is now a slim bar of icons on the left with all your instances in it, so the rest of the window is free for what you are doing. Search sits at the top of the window and opens with Ctrl+K (⌘K on a Mac).
+- **Faster to play**: The Library opens with the instance you played last and a big Play button, plus a button that jumps straight back into the world or server you were in. Every instance card has its own Play button too.
+- **Dark, OLED and Squared styles**: Pick how dark the launcher is and whether it has rounded corners, then choose an accent colour. The style previews in Settings now show a small picture of the launcher. Red is no longer offered as an accent so it always means Stop or Delete; if you used red or rose, the launcher switches you to blue.
+- **An easier instance page**: When you scroll through a long mod list, the instance name, the tabs and the Play button stay at the top. The tabs you use most are on the left and the ones for managing the instance (configs, restore points, sharing) are on the right. The launcher remembers which tab you had open, and Worlds and Screenshots take you straight to the right tab of an instance.
+- **A tidier mod list**: Filters, search and Add sit in one row, and the occasional actions (export the list, link mods, refresh, how many per page) are in the "…" menu. The delete button only turns red when you point at it.
+- **Settings remember where you were**: The section you had open in Settings stays open when you come back.
+- **Build a modpack together with friends**: When you share an instance with a friend, you can let them push updates too. Turn on "Can push updates" when inviting, or allow or stop it later for anyone in the "Who has it" list. Co-authors get a "Push update" button on the same share code, and everyone who has the pack, you included, gets the update with one click. Co-authors can also invite their own friends.
+- **No more overwriting each other's changes**: If someone pushed a newer version while you were working, the launcher shows what changed instead of overwriting it: which mods were added, removed or updated, and by whom. Keep your version or take theirs for each one, or all at once, then push. Configs and other files come from your copy.
+
+### 🐛 Bug Fixes
+- **Picking mods from several searches installs all of them**: When adding mods, picking one, searching for another and picking that too used to install only the last one. Now everything you picked is installed together, even if you switched between Modrinth and CurseForge in between.
+- **The mod preview can be closed**: The preview panel in the mod browser has a close button, next to Install.
+- **Cloud sync stops retrying mods that were removed**: If a mod in a synced instance was deleted from Modrinth or CurseForge, cloud sync tried to download it again every minute. It now skips it with a single note in the launcher log. A removed mod also shows "Not found" instead of a misleading "No connection" message.
+
 ## Changes (v1.0.5)
 
 ### 🐛 Bug Fixes
